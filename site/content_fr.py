@@ -28,7 +28,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.3.0 · open source</p>
+<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.4.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Spatial choisit où et comment exécuter une charge de travail à partir de mesures, et ne revendique un gain que s'il est mesuré. Pas de RAM en plus : de l'utilisation en mieux.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -87,8 +87,9 @@ def landing():
 <tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
 <tr><td>SPATIAL Q</td><td><span class="tag ok">prototype opérationnel</span></td><td>QPU réel, QIR, sous-noyaux</td></tr>
+<tr><td>AI</td><td><span class="tag part">premiers composants</span></td><td>Modèle jouet seulement : ni vrai LLM ni GPU</td></tr>
 <tr><td>Scientifique, Simulation, Intelligence</td><td><span class="tag part">premiers composants</span></td><td>Solveurs métier, multiphysique, modèles appris</td></tr>
-<tr><td>AI, Holographique</td><td><span class="tag no">interface seule</span></td><td>Inférence réelle ; affichage et synthèse</td></tr>
+<tr><td>Holographique</td><td><span class="tag part">premiers composants</span></td><td>Optique numérique seulement : aucun écran</td></tr>
 </tbody></table>
 </div></section>
 
@@ -107,7 +108,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.3.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.4.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -124,7 +125,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.3.0. Quatre moteurs sont opérationnels et testés (64 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.4.0. Quatre moteurs sont opérationnels et testés (69 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -153,7 +154,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Binaires de test (facultatif)</h2>
 <p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p>''',
         [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">55 passed, 9 skipped</span>\n<span class="d"># les ignorés demandent benchmarks/build, QEMU ou Wine</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">60 passed, 9 skipped</span>\n<span class="d"># les ignorés demandent benchmarks/build, QEMU ou Wine</span>')])
 
     doc("compute", "Compute Engine", "Détecte le matériel, mesure son usage, compare des stratégies d'exécution et choisit la meilleure.",
         '''<h2>Détecter et surveiller</h2>
@@ -212,14 +213,15 @@ print(st.stats())</code></pre>
 <tr><td><code>microvm-hvf</code></td><td>ELF Linux x86_64 sur hôte x86_64</td><td>VM matérielle, sans réseau ni disque</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Autre processeur, en émulation logicielle</td><td>VM émulée</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>Modules WASM</td><td>Bac à sable WASI</td></tr>
-<tr><td><code>wine</code>, <code>windows-vm</code></td><td>Binaires Windows</td><td>Non disponibles sur cette machine</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>Un binaire Windows est identifié mais pas exécuté : ni Wine ni image Windows ne sont installés. Wine n'est pas installé automatiquement (binaire tiers non signé, accord de l'utilisateur requis).</div>
+<tr><td><code>wine</code></td><td>Binaires Windows (programme console testé)</td><td>Processus hôte (faible)</td></tr></tbody></table>
+<div class="callout warn"><b>Windows</b>Avec Wine présent, un binaire Windows console s'exécute et rend la somme de référence. Sans Wine, le moteur le dit au lieu de faire semblant. Wine n'est jamais installé automatiquement (binaire tiers, accord de l'utilisateur requis). Les applications graphiques ne sont pas testées.</div>
 <h2>Mesuré sur un même programme C</h2>
 <table><thead><tr><th>Route</th><th>Calcul</th><th>Démarrage</th></tr></thead><tbody>
 <tr><td>natif</td><td>1,00×</td><td>0,005 s</td></tr>
 <tr><td>WASM / WASI</td><td>1,48×</td><td>0,07 s</td></tr>
 <tr><td>micro-VM HVF</td><td>1,04×</td><td>0,88 s</td></tr>
-<tr><td>micro-VM TCG (émulation)</td><td>23,8×</td><td>3,4 s</td></tr></tbody></table>
+<tr><td>micro-VM TCG (émulation)</td><td>23,8×</td><td>3,4 s</td></tr>
+<tr><td>.exe Windows sous Wine</td><td>1,35 à 1,59×</td><td>environ 4,5 s</td></tr></tbody></table>
 <p>Comparaison avec Docker Desktop, UTM, Parallels ou CrossOver : non faite, aucun n'est installé ici.</p>''',
         [("Binaire Windows", f'<span class="k">$ spatial plan bench-windows.exe</span>\n<span class="d">{out_block("plan_exe")}</span>'),
          ("ELF Linux", f'<span class="k">$ spatial plan bench-linux.elf</span>\n<span class="d">{out_block("plan_elf")}</span>\n\n<span class="k">$ spatial run bench-linux.elf 300 200</span>\n<span class="g">{out_block("run_elf")}</span>')])
@@ -314,13 +316,12 @@ main {
 <tr><td>2 cœurs, GPU intégré sans float64</td><td>Parallélisme borné à ~2× ; pas d'inférence de modèle</td></tr>
 <tr><td>Pas de CXL, RDMA, NPU, QPU</td><td>Étudiés sur documents seulement</td></tr>
 <tr><td>Énergie non mesurable</td><td>Coûts énergétiques estimés</td></tr>
-<tr><td>Windows non exécuté</td><td>Ni Wine ni image Windows</td></tr>
+<tr><td>Windows</td><td>Un programme console exécuté sous Wine ; applications graphiques non testées</td></tr>
 <tr><td>Ni confidentialité persistante ni identité par utilisateur</td><td>Ne pas exposer à un réseau non maîtrisé</td></tr>
 <tr><td>Simulation quantique exacte</td><td>~27 qubits ici, bornés par la RAM</td></tr>
-<tr><td>Domaines scientifique, simulation, intelligence</td><td>Premiers composants seulement</td></tr>
-<tr><td>Domaines AI et holographie</td><td>Interface seule dans le dépôt public</td></tr></tbody></table>
+<tr><td>Domaines AI, scientifique, simulation, intelligence, holographie</td><td>Premiers composants seulement (modèle jouet, petits solveurs, optique numérique)</td></tr></tbody></table>
 <p>La liste détaillée est dans <code>docs/10_LIMITATIONS.md</code>.</p>''',
-        [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nscientifique / simulation / intelligence\n  first-components\nAI / holographique\n  interface-only</span>')])
+        [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nAI / scientifique / simulation /\nintelligence / holographique\n  first-components</span>')])
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
 
 Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
 
-> **Status: v0.3.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/10_LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
+> **Status: v0.4.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/10_LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
 
 [Français](README.fr.md)
 
@@ -58,8 +58,7 @@ st.put(0, b"..." * 1000); st.get(0); print(st.stats())
 | Tiered memory (hot / compressed / far) | operational prototype | `tests/test_memory.py`, `benchmarks/bench_memory.py` |
 | Runtime Engine (inspect binaries, route, micro-VM, WASI) | operational prototype | `tests/test_runtime.py`, `benchmarks/bench_runtime.py` |
 | SPATIAL Q (language, compiler, IR, OpenQASM 3, simulators) | operational prototype | `tests/test_q.py`, `benchmarks/bench_q.py` |
-| Scientific, Simulation, Intelligence | first components | `tests/test_domains.py` |
-| AI, Holographic | interface only | `spatial/ai`, `spatial/holographic` |
+| AI, Scientific, Simulation, Intelligence, Holographic | first components (toy model, small solvers, numerical optics) | `tests/test_engines.py`, `tests/test_domains.py` |
 
 Measured on the reference machine (AC power): Numba JIT ×31.6 over pure Python with an identical result; 0.88 s to boot an isolated Linux micro-VM on macOS; −75 % local RAM for a skewed-access dataset at 107× the mean access latency; SPATIAL Q simulator fidelity 1.000 against Qiskit up to 16 qubits. Full table and conditions: [docs/RESULTATS.fr.md](docs/RESULTATS.fr.md).
 

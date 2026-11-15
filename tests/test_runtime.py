@@ -7,6 +7,7 @@ from spatial.compute import workloads
 from spatial.runtime import execute, inspect, plan
 from spatial.runtime import microvm
 from spatial.runtime.envs import IsolatedEnv, detect_interpreters
+from spatial.runtime.planner import find_wine
 
 BUILD = Path(__file__).resolve().parents[1] / "benchmarks" / "build"
 needs_build = pytest.mark.skipif(not (BUILD / "bench.wasm").exists(),
@@ -48,7 +49,7 @@ def test_linux_elf_runs_in_microvm():
 
 
 @needs_build
-@pytest.mark.skipif(bool(shutil.which("wine") or shutil.which("wine64")), reason="Wine present")
+@pytest.mark.skipif(find_wine() is not None, reason="Wine present")
 def test_windows_exe_is_reported_not_runnable_instead_of_faked():
     e = execute(str(BUILD / "bench-windows.exe"))
     assert not e.ok and "Wine is not installed" in e.extra["not_runnable"]

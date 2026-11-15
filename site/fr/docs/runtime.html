@@ -7,14 +7,15 @@
 <tr><td><code>microvm-hvf</code></td><td>ELF Linux x86_64 sur hôte x86_64</td><td>VM matérielle, sans réseau ni disque</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Autre processeur, en émulation logicielle</td><td>VM émulée</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>Modules WASM</td><td>Bac à sable WASI</td></tr>
-<tr><td><code>wine</code>, <code>windows-vm</code></td><td>Binaires Windows</td><td>Non disponibles sur cette machine</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>Un binaire Windows est identifié mais pas exécuté : ni Wine ni image Windows ne sont installés. Wine n'est pas installé automatiquement (binaire tiers non signé, accord de l'utilisateur requis).</div>
+<tr><td><code>wine</code></td><td>Binaires Windows (programme console testé)</td><td>Processus hôte (faible)</td></tr></tbody></table>
+<div class="callout warn"><b>Windows</b>Avec Wine présent, un binaire Windows console s'exécute et rend la somme de référence. Sans Wine, le moteur le dit au lieu de faire semblant. Wine n'est jamais installé automatiquement (binaire tiers, accord de l'utilisateur requis). Les applications graphiques ne sont pas testées.</div>
 <h2>Mesuré sur un même programme C</h2>
 <table><thead><tr><th>Route</th><th>Calcul</th><th>Démarrage</th></tr></thead><tbody>
 <tr><td>natif</td><td>1,00×</td><td>0,005 s</td></tr>
 <tr><td>WASM / WASI</td><td>1,48×</td><td>0,07 s</td></tr>
 <tr><td>micro-VM HVF</td><td>1,04×</td><td>0,88 s</td></tr>
-<tr><td>micro-VM TCG (émulation)</td><td>23,8×</td><td>3,4 s</td></tr></tbody></table>
+<tr><td>micro-VM TCG (émulation)</td><td>23,8×</td><td>3,4 s</td></tr>
+<tr><td>.exe Windows sous Wine</td><td>1,35 à 1,59×</td><td>environ 4,5 s</td></tr></tbody></table>
 <p>Comparaison avec Docker Desktop, UTM, Parallels ou CrossOver : non faite, aucun n'est installé ici.</p><div class="pager"><a href="memory.html">← Mémoire à étages</a><a href="spatialq.html">SPATIAL Q →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Binaire Windows</h5><pre><span class="k">$ spatial plan bench-windows.exe</span>
 <span class="d">benchmarks/build/bench-windows.exe: pe / windows / x86_64 
   [ ] native           host is not Windows

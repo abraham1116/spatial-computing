@@ -27,7 +27,8 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 - [ ] KV-cache tiering for LLM inference with a cost-per-token policy
 
 ## Runtime Engine
-- [ ] Windows route: Wine or a licensed Windows image, shown working end to end
+- [x] Windows route: console binary run under Wine with the reference checksum (v0.4)
+- [ ] Graphical Windows applications; Windows VM route
 - [x] Read-only input files in the micro-VM (v0.2)
 - [ ] OCI containers, controlled network, writable shared folders
 - [x] Remote execution of Linux binaries in a sandboxed runner (v0.3, loopback only)
@@ -46,7 +47,9 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 - [ ] Richer noise models
 
 ## Other engines
-- [ ] AI: real distributed inference, KV-cache routing, vLLM / llm-d integration (needs hardware)
+- [x] AI: toy transformer with a real KV cache, restore-versus-recompute measured through the tiered store (v0.4)
+- [ ] AI: real LLM inference, KV-cache routing, vLLM / llm-d integration (needs hardware)
+- [x] Scientific: second validated job (RK4 ODE); Simulation: N-body; Intelligence: predictor wired to the scheduler; Holographic: hologram synthesis + numerical reconstruction (v0.4)
 - [ ] Scientific: domain solvers and HPC connectors
 - [ ] Simulation / Intelligence: multiphysics, digital twins, learned models
-- [ ] Holographic: everything beyond the data model
+- [ ] Holographic: real-time rendering, display hardware

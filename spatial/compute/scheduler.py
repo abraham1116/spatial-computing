@@ -145,6 +145,12 @@ class ComputeScheduler:
             rows.append(self.ledger.record(m))
         return rows
 
+    def predict_best(self, n: int, iters: int) -> tuple[str, float] | None:
+        """Ask the Intelligence Engine which strategy should be fastest for this size, from the
+        ledger's past measurements, WITHOUT running anything. None when history is too thin."""
+        from ..intelligence import PowerLawPredictor
+        return PowerLawPredictor.from_ledger(self.ledger.rows()).best(n * n * iters)
+
     def choose(self, rows: list[Measurement], objective: str = "time") -> Measurement:
         ok = [r for r in rows if r.ok]
         if not ok:

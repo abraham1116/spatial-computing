@@ -7,14 +7,15 @@
 <tr><td><code>microvm-hvf</code></td><td>Linux x86_64 ELF on an x86_64 host</td><td>Hardware VM, no network, no disk</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Other CPU, software emulation</td><td>Emulated VM</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>WASM modules</td><td>WASI sandbox</td></tr>
-<tr><td><code>wine</code>, <code>windows-vm</code></td><td>Windows binaries</td><td>Not available on this machine</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>A Windows binary is identified but not run: neither Wine nor a Windows image is installed. Wine is not installed automatically (unsigned third-party build, user consent required).</div>
+<tr><td><code>wine</code></td><td>Windows binaries (console program tested)</td><td>Host process (weak)</td></tr></tbody></table>
+<div class="callout warn"><b>Windows</b>With Wine present, a Windows console binary runs and returns the reference checksum. Without Wine the engine says so instead of pretending. Wine is never installed automatically (third-party build, user consent required). Graphical applications are untested.</div>
 <h2>Measured on one C program</h2>
 <table><thead><tr><th>Route</th><th>Compute</th><th>Startup</th></tr></thead><tbody>
 <tr><td>native</td><td>1.00×</td><td>0.005 s</td></tr>
 <tr><td>WASM / WASI</td><td>1.48×</td><td>0.07 s</td></tr>
 <tr><td>micro-VM HVF</td><td>1.04×</td><td>0.88 s</td></tr>
-<tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr></tbody></table>
+<tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr>
+<tr><td>Windows .exe under Wine</td><td>1.35 to 1.59×</td><td>about 4.5 s</td></tr></tbody></table>
 <p>Comparison with Docker Desktop, UTM, Parallels or CrossOver: not done, none is installed here.</p><div class="pager"><a href="memory.html">← Tiered memory</a><a href="spatialq.html">SPATIAL Q →</a></div></main><aside class="rail" aria-label="Examples"><h5>Windows binary</h5><pre><span class="k">$ spatial plan bench-windows.exe</span>
 <span class="d">benchmarks/build/bench-windows.exe: pe / windows / x86_64 
   [ ] native           host is not Windows

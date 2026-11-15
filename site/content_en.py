@@ -26,7 +26,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.3.0 · open source</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.4.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. Not more RAM: better utilization.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -83,10 +83,11 @@ def landing():
 <table><thead><tr><th>Engine</th><th>Level</th><th>Not done yet</th></tr></thead><tbody>
 <tr><td>Compute Engine</td><td><span class="tag ok">operational prototype</span></td><td>Second real machine, NVIDIA GPU, energy measurement</td></tr>
 <tr><td>Tiered memory</td><td><span class="tag ok">operational prototype</span></td><td>Kernel paging, multiple writers, RDMA/CXL</td></tr>
-<tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Containers, remote GUI, GUI Windows apps</td></tr>
+<tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Containers, remote GUI, graphical Windows apps</td></tr>
 <tr><td>SPATIAL Q</td><td><span class="tag ok">operational prototype</span></td><td>Real QPU, QIR, sub-kernels</td></tr>
+<tr><td>AI</td><td><span class="tag part">first components</span></td><td>Toy model only: no real LLM, no GPU</td></tr>
 <tr><td>Scientific, Simulation, Intelligence</td><td><span class="tag part">first components</span></td><td>Domain solvers, multiphysics, learned models</td></tr>
-<tr><td>AI, Holographic</td><td><span class="tag no">interface only</span></td><td>Real inference; display and synthesis</td></tr>
+<tr><td>Holographic</td><td><span class="tag part">first components</span></td><td>Numerical optics only: no display hardware</td></tr>
 </tbody></table>
 </div></section>
 
@@ -105,7 +106,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.3.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.4.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -121,7 +122,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.3.0. Four engines are operational and tested (64 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.4.0. Four engines are operational and tested (69 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -150,7 +151,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Test binaries (optional)</h2>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">55 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">60 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
 
     doc("compute", "Compute Engine", "Detects the hardware, measures its usage, compares execution strategies and picks the best one.",
         '''<h2>Detect and monitor</h2>
@@ -209,14 +210,15 @@ print(st.stats())</code></pre>
 <tr><td><code>microvm-hvf</code></td><td>Linux x86_64 ELF on an x86_64 host</td><td>Hardware VM, no network, no disk</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Other CPU, software emulation</td><td>Emulated VM</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>WASM modules</td><td>WASI sandbox</td></tr>
-<tr><td><code>wine</code>, <code>windows-vm</code></td><td>Windows binaries</td><td>Not available on this machine</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>A Windows binary is identified but not run: neither Wine nor a Windows image is installed. Wine is not installed automatically (unsigned third-party build, user consent required).</div>
+<tr><td><code>wine</code></td><td>Windows binaries (console program tested)</td><td>Host process (weak)</td></tr></tbody></table>
+<div class="callout warn"><b>Windows</b>With Wine present, a Windows console binary runs and returns the reference checksum. Without Wine the engine says so instead of pretending. Wine is never installed automatically (third-party build, user consent required). Graphical applications are untested.</div>
 <h2>Measured on one C program</h2>
 <table><thead><tr><th>Route</th><th>Compute</th><th>Startup</th></tr></thead><tbody>
 <tr><td>native</td><td>1.00×</td><td>0.005 s</td></tr>
 <tr><td>WASM / WASI</td><td>1.48×</td><td>0.07 s</td></tr>
 <tr><td>micro-VM HVF</td><td>1.04×</td><td>0.88 s</td></tr>
-<tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr></tbody></table>
+<tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr>
+<tr><td>Windows .exe under Wine</td><td>1.35 to 1.59×</td><td>about 4.5 s</td></tr></tbody></table>
 <p>Comparison with Docker Desktop, UTM, Parallels or CrossOver: not done, none is installed here.</p>''',
         [("Windows binary", f'<span class="k">$ spatial plan bench-windows.exe</span>\n<span class="d">{out_block("plan_exe")}</span>'),
          ("Linux ELF", f'<span class="k">$ spatial plan bench-linux.elf</span>\n<span class="d">{out_block("plan_elf")}</span>\n\n<span class="k">$ spatial run bench-linux.elf 300 200</span>\n<span class="g">{out_block("run_elf")}</span>')])
@@ -312,10 +314,9 @@ main {
 <tr><td>2 cores, integrated GPU without float64</td><td>Parallelism bounded near 2×; no model inference</td></tr>
 <tr><td>No CXL, RDMA, NPU, QPU</td><td>Studied on paper only</td></tr>
 <tr><td>Energy not measurable</td><td>Energy costs are estimated</td></tr>
-<tr><td>Windows not run</td><td>Neither Wine nor a Windows image</td></tr>
+<tr><td>Windows</td><td>One console program run under Wine; graphical apps untested</td></tr>
 <tr><td>No forward secrecy, no per-user identity</td><td>Do not expose to an untrusted network</td></tr>
 <tr><td>Exact quantum simulation</td><td>About 27 qubits here, bounded by RAM</td></tr>
-<tr><td>Scientific, simulation, intelligence domains</td><td>First components only</td></tr>
-<tr><td>AI and holographic domains</td><td>Interface only in the public repository</td></tr></tbody></table>
+<tr><td>AI, scientific, simulation, intelligence, holographic domains</td><td>First components only (toy model, small solvers, numerical optics)</td></tr></tbody></table>
 <p>The detailed list is in <code>docs/10_LIMITATIONS.md</code> and the open work in <code>ROADMAP.md</code>.</p>''',
-        [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nscientific / simulation / intelligence\n  first-components\nAI / holographic\n  interface-only</span>')])
+        [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nAI / scientific / simulation /\nintelligence / holographic\n  first-components</span>')])

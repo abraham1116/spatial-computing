@@ -39,6 +39,22 @@ def european_call_mc(s0: float, k: float, r: float, sigma: float, t: float, path
     return mean, math.sqrt(max(acc2 / n - mean * mean, 0) / n)
 
 
+def harmonic_rk4(omega: float, t_end: float, steps: int) -> tuple[float, float]:
+    """x'' = -omega^2 x, x(0)=1, v(0)=0, integrated with RK4. Returns (x(t_end), error bound).
+    The bound is the RK4 global error scale (omega*dt)^4 * omega*t_end, used as the tolerance."""
+    dt = t_end / steps
+    x, v = 1.0, 0.0
+    f = lambda x, v: (v, -omega * omega * x)
+    for _ in range(steps):
+        k1 = f(x, v)
+        k2 = f(x + dt / 2 * k1[0], v + dt / 2 * k1[1])
+        k3 = f(x + dt / 2 * k2[0], v + dt / 2 * k2[1])
+        k4 = f(x + dt * k3[0], v + dt * k3[1])
+        x += dt / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0])
+        v += dt / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1])
+    return x, (omega * dt) ** 4 * omega * t_end
+
+
 @dataclass
 class JobSpec:
     name: str
