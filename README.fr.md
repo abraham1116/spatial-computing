@@ -4,7 +4,7 @@
 
 Spatial Computing choisit où et comment exécuter une charge de travail à partir de mesures, et ne revendique un gain que s'il est mesuré. Il n'ajoute ni RAM, ni cœurs, ni GPU : il compare des stratégies d'exécution sur le matériel présent, échange une ressource contre une autre de façon chiffrée, et dit clairement ce qu'il ne sait pas faire.
 
-> **Statut : v0.6.1, boîte à outils open source à un stade précoce.** Tout a été construit et mesuré sur un seul MacBook Pro 2017 (Intel i7-7660U, 2 cœurs, 16 Go). Rien n'est prouvé sur une seconde machine, un GPU de centre de données ou un vrai ordinateur quantique. Voir [Limitations](docs/10_LIMITATIONS.md).
+> **Statut : v0.7.0, boîte à outils open source à un stade précoce.** Tout a été construit et mesuré sur un seul MacBook Pro 2017 (Intel i7-7660U, 2 cœurs, 16 Go). Rien n'est prouvé sur une seconde machine, un GPU de centre de données ou un vrai ordinateur quantique. Voir [Limitations](docs/10_LIMITATIONS.md).
 
 [English](README.md)
 

@@ -105,6 +105,19 @@ def is_static(c: Circuit) -> bool:
     return all(o.name not in ("measure", "reset") and not o.cond for o in c.ops)
 
 
+def apply_readout(v: np.ndarray, n: int, p01: float, p10: float) -> np.ndarray:
+    """Readout (measurement) error on an outcome distribution `v` of length 2^n.
+    p01 = P(read 1 | qubit was 0), p10 = P(read 0 | qubit was 1), independent per qubit.
+    Superconducting devices typically have p10 > p01 (the excited state decays while being read)."""
+    if not (0 <= p01 <= 1 and 0 <= p10 <= 1):
+        raise ValueError("readout probabilities must be in [0, 1]")
+    M = np.array([[1 - p01, p10], [p01, 1 - p10]])
+    t = v.reshape((2,) * n)
+    for ax in range(n):
+        t = np.moveaxis(np.tensordot(M, t, axes=(1, ax)), 0, ax)
+    return t.reshape(-1)
+
+
 _NOISE_PAULIS = ("x", "y", "z")
 
 
@@ -174,7 +187,7 @@ def branch_distribution(c: Circuit, max_branches: int = 4096) -> np.ndarray | No
 
 
 def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "branch",
-           noise: float = 0.0) -> dict[str, int]:
+           noise: float = 0.0, readout: tuple[float, float] | None = None) -> dict[str, int]:
     """dynamic="branch": exact branch enumeration then one multinomial draw (fast);
        dynamic="shots" : one full simulation per shot (reference implementation)."""
     rng = np.random.default_rng(seed)
@@ -190,6 +203,8 @@ def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "bran
         p = branch_distribution(c)
     if p is not None:
         p = p / p.sum()
+        if readout:                                   # the readout channel acts on the outcome distribution
+            p = apply_readout(p, n, *readout)
         draws = rng.multinomial(shots, p)
         return {format(i, f"0{n}b"): int(k) for i, k in enumerate(draws) if k}
     counts: dict[str, int] = {}
@@ -198,6 +213,14 @@ def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "bran
         i = int(rng.choice(len(p), p=p / p.sum()))
         key = format(i, f"0{n}b")
         counts[key] = counts.get(key, 0) + 1
+    if readout:                                       # trajectory path: flip bits of each recorded shot
+        flipped: dict[str, int] = {}
+        for key, k in counts.items():
+            for _ in range(k):
+                bits = "".join(("1" if rng.random() < readout[0] else "0") if b == "0" else
+                               ("0" if rng.random() < readout[1] else "1") for b in key)
+                flipped[bits] = flipped.get(bits, 0) + 1
+        counts = flipped
     return counts
 
 

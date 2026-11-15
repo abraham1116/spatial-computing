@@ -25,8 +25,8 @@ class StateVectorBackend(Backend):
     """Built-in NumPy simulator."""
     name = "statevector"
 
-    def sample(self, c, shots, seed=None, noise: float = 0.0):
-        return sim.sample(c, shots, seed, noise=noise)
+    def sample(self, c, shots, seed=None, noise: float = 0.0, readout=None):
+        return sim.sample(c, shots, seed, noise=noise, readout=readout)
 
     def expectation(self, c, pauli):
         return sim.expectation(c, pauli)

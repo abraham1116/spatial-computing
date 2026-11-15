@@ -6,7 +6,8 @@
 <tr><td>System memory</td><td>macOS holds 7.3 GiB of pages in 2.1 GiB (ratio 3.4)</td></tr>
 <tr><td>Tiers + SSD</td><td>33.5 MB of local RAM for 134 MB; 80.5 µs/access against 0.76 µs</td></tr>
 <tr><td>Linux micro-VM (HVF)</td><td>0.88 s startup; compute at 1.04× native</td></tr>
-<tr><td>SPATIAL Q</td><td>Fidelity 1.000 against Qiskit up to 16 qubits; VQE reaches the exact energy</td></tr></tbody></table>
+<tr><td>SPATIAL Q</td><td>Fidelity 1.000 against Qiskit up to 16 qubits; VQE reaches the exact energy</td></tr>
+<tr><td>SPATIAL Q on real hardware</td><td>5 circuits on ibm_marrakesh; the simulator with asymmetric readout error halves the gap to the device (one shared parameter set)</td></tr></tbody></table>
 <h2>Reproduce</h2>
 <pre><code>spatial bench all</code></pre>
 <p>The full table, with the cost assumptions, is generated in <code>docs/RESULTATS.fr.md</code> (French). Costs are estimates: no cloud resource was rented and energy could not be measured.</p><div class="pager"><a href="security.html">← Security</a><a href="limits.html">Limitations →</a></div></main><aside class="rail" aria-label="Examples"><h5>Reproduce</h5><pre><span class="k">$ spatial bench cpu</span>

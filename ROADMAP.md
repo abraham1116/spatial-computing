@@ -44,7 +44,8 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 - [ ] Verified round-trips with Cirq, PennyLane, Q#, CUDA-Q
 - [x] Real QPU backend: IBM Quantum through qiskit-ibm-runtime (v0.6)
 - [x] A first circuit executed on real quantum hardware: Bell pair on ibm_marrakesh, 90 % correlated (`benchmarks/results/qpu_bell.json`)
-- [ ] Compare noisy-simulator predictions with real hardware over several circuits
+- [x] Noisy simulator compared with real hardware on 5 circuits; asymmetric readout error added (v0.7, `docs/QPU.md`)
+- [ ] Repeat on other devices and days; noise that depends on the qubit pair
 - [x] Sub-kernels with qubit parameters (v0.2)
 - [x] Compiled classical part (to Python bytecode, v0.5)
 - [ ] Native compilation of the classical part

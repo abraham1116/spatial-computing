@@ -1,0 +1,240 @@
+{
+ "context": {
+  "date": "2026-11-15 18:09:11 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t15%; charging; 3:15 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794762551.218487,
+   "cpu_percent": 20.0,
+   "load1": 5.30908203125,
+   "ram_total": 17179869184,
+   "ram_available": 7049699328,
+   "ram_used_percent": 59.0,
+   "swap_used": 4057464832,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7444750336,
+   "compressor_physical_bytes": 989315072,
+   "compressor_ratio": 7.53,
+   "compressor_saved_bytes": 6455435264,
+   "swapins": 1977660,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "backend": "ibm_marrakesh",
+ "job_id": "dbsu35fasvbs73b93hr0",
+ "shots_per_circuit": 1000,
+ "wall_s": 1.388692855834961,
+ "usage": "4",
+ "rows": [
+  {
+   "circuit": "bell",
+   "qubits": 2,
+   "gates_logical": 2,
+   "gates_transpiled": 12,
+   "two_qubit_transpiled": 1,
+   "sampling_floor_tvd": 0.012796666666666682,
+   "tvd_ideal_vs_hardware": 0.08799999999999991,
+   "depolarising_only": {
+    "p": 0.02,
+    "tvd": 0.069
+   },
+   "readout_only": {
+    "p01": 0.0,
+    "p10": 0.09,
+    "tvd": 0.041640500000000025
+   },
+   "both": {
+    "p": 0.02,
+    "p01": 0.0,
+    "p10": 0.07,
+    "tvd": 0.036650000000000044
+   },
+   "hardware_top3": [
+    [
+     "00",
+     0.498
+    ],
+    [
+     "11",
+     0.414
+    ],
+    [
+     "01",
+     0.083
+    ]
+   ]
+  },
+  {
+   "circuit": "ghz3",
+   "qubits": 3,
+   "gates_logical": 3,
+   "gates_transpiled": 20,
+   "two_qubit_transpiled": 2,
+   "sampling_floor_tvd": 0.012796666666666682,
+   "tvd_ideal_vs_hardware": 0.10699999999999989,
+   "depolarising_only": {
+    "p": 0.01,
+    "tvd": 0.10099999999999998
+   },
+   "readout_only": {
+    "p01": 0.0,
+    "p10": 0.08,
+    "tvd": 0.05936255999999998
+   },
+   "both": {
+    "p": 0.005,
+    "p01": 0.0,
+    "p10": 0.07,
+    "tvd": 0.05806999999999995
+   },
+   "hardware_top3": [
+    [
+     "000",
+     0.499
+    ],
+    [
+     "111",
+     0.394
+    ],
+    [
+     "101",
+     0.083
+    ]
+   ]
+  },
+  {
+   "circuit": "ghz5",
+   "qubits": 5,
+   "gates_logical": 5,
+   "gates_transpiled": 36,
+   "two_qubit_transpiled": 4,
+   "sampling_floor_tvd": 0.012796666666666682,
+   "tvd_ideal_vs_hardware": 0.15499999999999992,
+   "depolarising_only": {
+    "p": 0.01,
+    "tvd": 0.1406666666666667
+   },
+   "readout_only": {
+    "p01": 0.0,
+    "p10": 0.07,
+    "tvd": 0.09524925461399997
+   },
+   "both": {
+    "p": 0.0,
+    "p01": 0.0,
+    "p10": 0.07,
+    "tvd": 0.09524925461399997
+   },
+   "hardware_top3": [
+    [
+     "00000",
+     0.497
+    ],
+    [
+     "11111",
+     0.348
+    ],
+    [
+     "11101",
+     0.089
+    ]
+   ]
+  },
+  {
+   "circuit": "qft_roundtrip3",
+   "qubits": 3,
+   "gates_logical": 12,
+   "gates_transpiled": 100,
+   "two_qubit_transpiled": 18,
+   "sampling_floor_tvd": 4.440892098500626e-16,
+   "tvd_ideal_vs_hardware": 0.05799999999999958,
+   "depolarising_only": {
+    "p": 0.005,
+    "tvd": 0.021999999999999947
+   },
+   "readout_only": {
+    "p01": 0.02,
+    "p10": 0.0,
+    "tvd": 0.017208000000000015
+   },
+   "both": {
+    "p": 0.0,
+    "p01": 0.02,
+    "p10": 0.0,
+    "tvd": 0.017208000000000015
+   },
+   "hardware_top3": [
+    [
+     "000",
+     0.942
+    ],
+    [
+     "001",
+     0.023
+    ],
+    [
+     "100",
+     0.023
+    ]
+   ]
+  },
+  {
+   "circuit": "layered4x2",
+   "qubits": 4,
+   "gates_logical": 22,
+   "gates_transpiled": 63,
+   "two_qubit_transpiled": 6,
+   "sampling_floor_tvd": 0.03182156189663333,
+   "tvd_ideal_vs_hardware": 0.07300759146278628,
+   "depolarising_only": {
+    "p": 0.005,
+    "tvd": 0.05800000000000001
+   },
+   "readout_only": {
+    "p01": 0.02,
+    "p10": 0.0,
+    "tvd": 0.05359559157333333
+   },
+   "both": {
+    "p": 0.0,
+    "p01": 0.02,
+    "p10": 0.0,
+    "tvd": 0.05359559157333333
+   },
+   "hardware_top3": [
+    [
+     "0000",
+     0.486
+    ],
+    [
+     "1000",
+     0.232
+    ],
+    [
+     "0100",
+     0.076
+    ]
+   ]
+  }
+ ],
+ "shared_parameters": {
+  "p": 0.005,
+  "p01": 0.0,
+  "p10": 0.07
+ },
+ "tvd_with_shared_parameters": {
+  "bell": 0.04785999999999997,
+  "ghz3": 0.05806999999999995,
+  "ghz5": 0.09873551235980003,
+  "qft_roundtrip3": 0.019937827999999956,
+  "layered4x2": 0.061430713210000015
+ },
+ "fit_shots": 3000,
+ "note": "model = depolarising p per logical gate and qubit + independent asymmetric readout error (p01, p10); still a crude stand-in for the device"
+}
