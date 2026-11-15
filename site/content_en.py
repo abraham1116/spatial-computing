@@ -4,7 +4,7 @@ import scaffold as S
 
 NAV_GROUPS = [
     ("Get started", [("index", "Overview"), ("quickstart", "Installation")]),
-    ("Engines", [("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
+    ("Engines", [("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
     ("Reference", [("cli", "Commands"), ("security", "Security"), ("results", "Results"), ("limits", "Limitations")]),
 ]
 UI = {"nav_label": "Main", "proof": "Proof", "install": "Install", "docs_label": "Documentation", "examples_label": "Examples"}
@@ -13,6 +13,9 @@ INSTALL = """python3 -m venv .venv && source .venv/bin/activate
 pip install "spatial-computing[quantum]"
 spatial audit
 spatial status"""
+
+RUN_FLEET = 'spatial token init --master-key-file hub.key\nspatial serve hub --master-key-file hub.key --port 7700\nspatial token issue --master-key-file hub.key --name node-1 --scopes fleet:report,fleet:work > node-1.tok\nspatial token issue --master-key-file hub.key --name ops --scopes fleet:read,fleet:submit > ops.tok\n# on every machine\nspatial agent --hub HUB:7700 --token-file node-1.tok --usd-per-hour 1.5\n# the operator\nspatial fleet status --hub HUB:7700 --token-file ops.tok\nspatial fleet advise --hub HUB:7700 --token-file ops.tok\nspatial fleet submit --hub HUB:7700 --token-file ops.tok --workload mandel_numba --params \'{"n":1400,"iters":300}\''
+FLEET_STATUS = 'node     up  cores cpu% ramfree%\nagent-0  yes     4   48       43\nagent-1  yes     4   50       43\nagent-2  yes     4   52       43\nfleet: 3 nodes, 12 cores,\nCPU utilization 50.1%\n(last 6 s)'
 
 BELL = open(ROOT.parent / "examples/01_bell.sq").read().strip()
 
@@ -26,9 +29,9 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.8.0 · open source</p>
+<p class="eyebrow">Compute infrastructure optimization · v0.9.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
-<p class="sub">Seven engines on one core. Classical, AI, scientific, simulation and quantum workloads all go through the same loop: describe the work, measure the options, choose, and keep the proof.</p>
+<p class="sub">One platform for compute infrastructure: an agent on every machine, a hub that sees the fleet, and engines for compute, memory, runtime, quantum, AI, science, simulation and holography. Measure, place, prove.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
 <div class="cta"><a class="btn" href="docs/quickstart.html">Get started</a><a class="btn ghost" href="#proof">See the measurements</a></div>
 </div>
@@ -38,9 +41,9 @@ def landing():
 </div></div>
 
 <section id="engines"><div class="wrap">
-<p class="eyebrow">One core, seven engines</p>
+<p class="eyebrow">One core, a fleet layer, every engine</p>
 <h2>Every engine shares the same model.</h2>
-<p class="lead">A resource, a task, a measurement, a cost. Spatial Core gives all engines the same data model, the same encrypted protocol and the same tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
+<p class="lead">A resource, a task, a measurement, a cost. Spatial Core gives the fleet layer and all engines the same data model, the same encrypted protocol and the same tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
 <div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
 </div></section>
 
@@ -49,6 +52,7 @@ def landing():
 <h2>One proof per engine.</h2>
 <p class="lead">Each figure comes from a test or a benchmark in the repository, run on a 2017 MacBook Pro (two cores, 16 GB). Reproduce them with <code>pytest</code> and <code>spatial bench all</code>.</p>
 <div class="eng">
+<div class="card"><h3>Fleet</h3><p>Sees every machine from one place and places work on them.</p><div class="pf"><b>×1.66</b><span>12 tasks on 3 agents against 1, placed by the hub; identical results, audit chain intact (one machine, 2 cores)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
 <div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Runs software built for another system, isolated.</p><div class="pf"><b>0.88 s</b><span>to boot a Linux micro-VM; a Windows .exe runs under Wine</span></div></div>
@@ -92,6 +96,7 @@ def landing():
 <h2>What runs, what is only sketched.</h2>
 <p class="lead">Each engine's status is declared in the code, and a test forbids showing one without evidence.</p>
 <table><thead><tr><th>Engine</th><th>Level</th><th>Not done yet</th></tr></thead><tbody>
+<tr><td>Fleet (agent + hub)</td><td><span class="tag ok">operational prototype</span></td><td>Several real machines, scale, hub persistence, dashboard</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">operational prototype</span></td><td>Second real machine, NVIDIA GPU, energy measurement</td></tr>
 <tr><td>Tiered memory</td><td><span class="tag ok">operational prototype</span></td><td>Kernel paging, multiple writers, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Containers, remote GUI, graphical Windows apps</td></tr>
@@ -117,7 +122,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.8.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.9.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -133,7 +138,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.8.0. Four engines are operational and tested (94 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.9.0. Four engines are operational and tested (101 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -162,6 +167,31 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
          ("Tests", '<span class="k">$ pytest</span>\n<span class="g">68 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
+
+    doc("fleet", "Fleet", "An agent on every machine, a hub that sees the whole fleet: measure, place, recommend, audit.",
+        f'''<div class="callout warn"><b>Scope</b>Validated with up to 3 agents on <b>one</b> machine. The three report the same CPU load, so this proves the chain (identity, scopes, placement, results, audit), not scaling.</div>
+<h2>The parts</h2>
+<ul><li><b>Agent</b> (<code>spatial agent</code>): measures CPU, RAM, memory pressure and NVIDIA GPUs every few seconds, reports to the hub, asks for work and runs it. Outbound connections only. Buffers measurements while the hub is down and delivers them with their original times.</li>
+<li><b>Hub</b> (<code>spatial serve hub</code>): keeps each node's measurements, queues and places tasks, computes utilization and recommendations. It never changes a machine by itself.</li>
+<li><b>Operator CLI</b> (<code>spatial fleet</code>): status, recommendations, submit, result.</li></ul>
+<h2>Run it</h2>
+<pre><code>{E(RUN_FLEET)}</code></pre>
+<h2>Placement</h2>
+<p>Pull-based. An agent asks for work and receives the best queued task it is eligible for: priority first, then arrival order. Tasks can require a GPU, a minimum of free RAM, a label or a pinned node. A node at 90 % CPU or more receives nothing. Every placement is recorded, with its reason, in a hash-chained decision log. Agents run only allow-listed workloads by name: no code travels to an agent.</p>
+<h2>Recommendations</h2>
+<table><thead><tr><th>Kind</th><th>Triggered by</th></tr></thead><tbody>
+<tr><td><code>node_down</code></td><td>No report for 30 s</td></tr>
+<tr><td><code>memory_pressure</code></td><td>Less than 10 % RAM free</td></tr>
+<tr><td><code>gpu_underused</code></td><td>GPUs below 20 % on average</td></tr>
+<tr><td><code>rebalance</code></td><td>A node at 80 % or more next to a node at 15 % or less</td></tr>
+<tr><td><code>consolidate</code></td><td>The fleet's busy cores would fit on fewer nodes at a 60 % target, RAM checked at 85 %</td></tr></tbody></table>
+<p>Each one shows its evidence and its assumptions. A saving in dollars appears only if you gave the machine's price (<code>--usd-per-hour</code>), and it is an <b>estimate</b>: it becomes a result only when you apply the change and measure the fleet again.</p>
+<h2>Security</h2>
+<p>Encrypted, forward-secret transport. With scoped credentials, a node's identity is its credential name: an agent cannot report as another node, cannot read the fleet and cannot submit tasks; a reader cannot inject measurements. Quotas, expiry, revocation and an audit log apply. Not independently reviewed.</p>
+<h2>Limits</h2>
+<p>Single-process hub with in-memory state (no persistence, no high availability), no dashboard UI, heuristic recommendations, placement that does not move running work. Full description: <code>docs/INFRASTRUCTURE.md</code>.</p>''',
+        [("Measured: 12 tasks, 1 agent versus 3", '<span class="d">1 agent     7.2 s\n3 agents    4.3 s  (x1.66)\nresults identical to the reference: 12 / 12\nplacement: 6, 4, 2 tasks\n(one 2-core machine: speed-up is bounded)</span>'),
+         ("spatial fleet status", f'<span class="d">{E(FLEET_STATUS)}</span>')])
 
     doc("compute", "Compute Engine", "Detects the hardware, measures its usage, compares execution strategies and picks the best one.",
         '''<h2>Detect and monitor</h2>
@@ -281,6 +311,9 @@ main {
 <tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p] [--compiled]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
 <tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback; with a master key, tenants get scoped credentials</td></tr>
+<tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Run a fleet agent: measure this machine, report to a hub, run allow-listed tasks</td></tr>
+<tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>See the fleet, get recommendations with their evidence, submit and read tasks</td></tr>
+<tr><td><code>spatial serve hub --master-key-file F</code></td><td>Start the fleet hub</td></tr>
 <tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Create a master key; issue a scoped, expiring, quota-limited credential</td></tr></tbody></table>
 <p>An error prints a single <code>spatial: Type: message</code> line and exits with code 1.</p>''',
         [("Clean error", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),

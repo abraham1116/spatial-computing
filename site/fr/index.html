@@ -1,9 +1,9 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Mesurer. Décider. Prouver.</title><meta name="description" content="Choisit où et comment exécuter une charge à partir de mesures, et ne revendique un gain que s&#x27;il est mesuré."><link rel="alternate" hreflang="en" href="../index.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../index.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="docs/quickstart.html">Installer</a></nav></div></header><main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.8.0 · open source</p>
+<p class="eyebrow">Optimisation d'infrastructure de calcul · v0.9.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
-<p class="sub">Sept moteurs sur un même cœur. Calcul classique, IA, scientifique, simulation et quantique passent par la même boucle : décrire le travail, mesurer les options, choisir, et garder la preuve.</p>
+<p class="sub">Une plateforme pour l'infrastructure de calcul : un agent sur chaque machine, un hub qui voit la flotte, et des moteurs pour le calcul, la mémoire, le runtime, le quantique, l'IA, la science, la simulation et l'holographie. Mesurer, placer, prouver.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install &quot;spatial-computing[quantum]&quot;
 spatial audit
@@ -23,9 +23,9 @@ memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
 </div></div>
 
 <section id="engines"><div class="wrap">
-<p class="eyebrow">Un cœur, sept moteurs</p>
+<p class="eyebrow">Un cœur, une couche flotte, tous les moteurs</p>
 <h2>Tous les moteurs partagent le même modèle.</h2>
-<p class="lead">Une ressource, une tâche, une mesure, un coût. Spatial Core donne à tous les moteurs le même modèle de données, le même protocole chiffré et le même registre infalsifiable en silence : un noyau quantique, un pas de simulation et une page mémoire sont ordonnancés et comptabilisés de la même façon.</p>
+<p class="lead">Une ressource, une tâche, une mesure, un coût. Spatial Core donne à la couche flotte et à tous les moteurs le même modèle de données, le même protocole chiffré et le même registre infalsifiable en silence : un noyau quantique, un pas de simulation et une page mémoire sont ordonnancés et comptabilisés de la même façon.</p>
 <div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
 </div></section>
 
@@ -34,6 +34,7 @@ memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
 <h2>Une preuve par moteur.</h2>
 <p class="lead">Chaque chiffre vient d'un test ou d'un benchmark du dépôt, exécuté sur un MacBook Pro 2017 (deux cœurs, 16 Go). Pour les refaire : <code>pytest</code> et <code>spatial bench all</code>.</p>
 <div class="eng">
+<div class="card"><h3>Flotte</h3><p>Voit toutes les machines d'un seul endroit et y place le travail.</p><div class="pf"><b>×1,66</b><span>12 tâches sur 3 agents contre 1, placées par le hub ; résultats identiques, chaîne d'audit intacte (une machine, 2 cœurs)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Exécute un calcul de la façon la moins chère que la machine permet.</p><div class="pf"><b>×31,6</b><span>JIT contre Python pur, résultat identique</span></div></div>
 <div class="card"><h3>Mémoire à étages</h3><p>Traite plus de données que la RAM locale, pour un prix en latence mesuré.</p><div class="pf"><b>−75 %</b><span>de RAM locale en accès biaisé, pour 107× de latence moyenne</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Lance un logiciel conçu pour un autre système, isolé.</p><div class="pf"><b>0,88 s</b><span>pour démarrer une micro-VM Linux ; un .exe Windows tourne sous Wine</span></div></div>
@@ -89,6 +90,7 @@ main {
 <h2>Ce qui tourne, ce qui n'est qu'esquissé.</h2>
 <p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
 <table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
+<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, passage à l'échelle, persistance du hub, tableau de bord</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
 <tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
@@ -114,5 +116,5 @@ main {
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.8.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.9.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="../assets/app.js"></script></body></html>

@@ -239,3 +239,17 @@ def test_qir_lowering_is_exact_up_to_global_phase_and_parses():
     entry = next(f for f in m.functions if pyqir.is_entry_point(f))
     assert pyqir.required_num_qubits(entry) == 3 and pyqir.required_num_results(entry) == 3
     assert '"qir_profiles"="base_profile"' in ir
+
+
+def test_ledger_chain_survives_concurrent_writers(tmp_path):
+    import threading
+    led = Ledger(tmp_path / "c.jsonl")
+
+    def work(k):
+        for i in range(60):
+            led.decide("e", f"t{k}-{i}", "concurrent")
+
+    ts = [threading.Thread(target=work, args=(k,)) for k in range(8)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(led.rows()) == 480 and led.verify() == (True, None)

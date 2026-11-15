@@ -16,6 +16,11 @@ Everything that needs hardware or people is tracked, with how to run it, in [`do
 - [x] Current limitations in English (`docs/LIMITATIONS.md`, v0.5)
 - [ ] Publish to PyPI; English translation of the remaining reports in `docs/`
 
+## Fleet
+- [x] Agent and hub: measurement, placement, recommendations, audit (v0.9, validated with 3 agents on one machine)
+- [ ] Agents on several real machines; scale tests; hub persistence and high availability
+- [ ] Dashboard UI and alerting; automatic application of recommendations (opt-in, with rollback)
+
 ## Compute Engine
 - [x] Priority task queue across N workers with re-queue on worker failure (v0.2, loopback only)
 - [ ] GPU orchestration (CUDA / Metal), local and remote (needs hardware)

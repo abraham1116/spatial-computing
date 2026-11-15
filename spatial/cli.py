@@ -83,6 +83,60 @@ def cmd_bench(a):
     return rc
 
 
+def _read_token(path: str) -> bytes:
+    raw = Path(path).read_bytes()
+    return raw.strip() if raw.startswith(b"spc1.") else raw          # scoped tokens are text, shared secrets are raw bytes
+
+
+def _hub_client(a):
+    from .core.protocol import RpcClient
+    host, _, port = a.hub.rpartition(":")
+    return RpcClient(host or "127.0.0.1", int(port), _read_token(a.token_file), timeout=30)
+
+
+def cmd_agent(a):
+    from .fleet import Agent
+    host, _, port = a.hub.rpartition(":")
+    ag = Agent(host or "127.0.0.1", int(port), _read_token(a.token_file), name=a.name, interval_s=a.interval,
+               usd_per_hour=a.usd_per_hour, labels=[x for x in a.labels.split(",") if x], run_tasks=not a.no_tasks)
+    print(f"agent '{ag.name}' reporting to {a.hub} every {a.interval:g} s" + ("" if a.no_tasks else "; accepts allow-listed tasks"))
+    ag.run_forever()
+    return 0
+
+
+def cmd_fleet(a):
+    cli = _hub_client(a)
+    if a.action == "status":
+        rh, _ = cli.call({"op": "nodes", "window_s": a.window})
+        print(f"{'node':<22}{'up':<4}{'cores':>6}{'cpu%':>7}{'ram free%':>10}{'gpus':>5}{'gpu%':>6}{'$/h':>7}  samples")
+        f = lambda v, n=0: "-" if v is None else f"{v:.{n}f}"
+        for r in rh["nodes"]:
+            print(f"{r['node']:<22}{'yes' if r['alive'] else 'NO':<4}{f(r['cores']):>6}{f(r['cpu_avg']):>7}{f(r['ram_avail_pct']):>10}"
+                  f"{r['gpu_count']:>5}{f(r['gpu_util_avg']):>6}{f(r['usd_per_hour'], 2):>7}  {r['samples']}")
+        u = rh["utilization"]
+        print(f"fleet: {u['nodes']} node(s), {u['cores']} cores, CPU utilization "
+              f"{'-' if u['cpu_utilization_pct'] is None else format(u['cpu_utilization_pct'], '.1f') + '%'} (last {a.window:g} s)")
+    elif a.action == "advise":
+        rh, _ = cli.call({"op": "advise", "window_s": a.window})
+        if not rh["recommendations"]:
+            print("no recommendation: nothing in the measurements justifies a change")
+        for r in rh["recommendations"]:
+            extra = f"  [estimated saving {r['est_saving_usd_per_hour']:.2f} $/h, {r['est_saving_usd_per_month']:.0f} $/month]" if "est_saving_usd_per_hour" in r else ""
+            print(f"[{r['severity']}] {r['kind']}: {r['text']}{extra}")
+            print(f"        evidence: {r['evidence']}")
+    elif a.action == "submit":
+        import json as _json
+        rh, _ = cli.call({"op": "submit", "workload": a.workload, "params": _json.loads(a.params),
+                          "needs": _json.loads(a.needs)})
+        print(rh["task_id"])
+    else:
+        rh, _ = cli.call({"op": "task", "task_id": a.task_id})
+        t = rh["task"]
+        print({k: t.get(k) for k in ("id", "state", "node", "result", "error", "wall_s")})
+    cli.close()
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -96,7 +150,7 @@ def cmd_token(a):
 
 def cmd_worker(a):
     mod = {"compute": "spatial.compute.worker", "memory": "spatial.memory.pageserver",
-           "runtime": "spatial.runtime.runner"}[a.kind]
+           "runtime": "spatial.runtime.runner", "hub": "spatial.fleet.hub"}[a.kind]
     cmd = [sys.executable, "-m", mod, "--host", a.host, "--port", str(a.port)]
     if a.token_file:
         cmd += ["--token-file", a.token_file]
@@ -132,7 +186,7 @@ def main(argv=None):
     p.add_argument("name", choices=[*BENCHES, "all"])
     p.set_defaults(fn=cmd_bench)
     p = sub.add_parser("serve", help="start a compute worker, a page server or a sandboxed binary runner (loopback by default)")
-    p.add_argument("kind", choices=["compute", "memory", "runtime"])
+    p.add_argument("kind", choices=["compute", "memory", "runtime", "hub"])
     p.add_argument("--token-file", help="shared secret: every client may do everything")
     p.add_argument("--master-key-file", help="scoped credentials with quotas and an audit log (see `spatial token`)")
     p.add_argument("--audit-log")
@@ -140,6 +194,23 @@ def main(argv=None):
     p.add_argument("--port", type=int, default=0)
     p.add_argument("--allow-remote", action="store_true", help="explicit consent to accept LAN connections")
     p.set_defaults(fn=cmd_worker)
+    p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
+    p.add_argument("--hub", required=True, help="host:port of the hub")
+    p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")
+    p.add_argument("--name")
+    p.add_argument("--interval", type=float, default=5.0)
+    p.add_argument("--usd-per-hour", type=float, help="what this machine costs per hour (for estimates only)")
+    p.add_argument("--labels", default="")
+    p.add_argument("--no-tasks", action="store_true", help="measure only; never run tasks")
+    p.set_defaults(fn=cmd_agent)
+    p = sub.add_parser("fleet", help="see and use the fleet through a hub")
+    p.add_argument("action", choices=["status", "advise", "submit", "result"])
+    p.add_argument("--hub", required=True)
+    p.add_argument("--token-file", required=True, help="scoped token with fleet:read (status/advise) or fleet:submit")
+    p.add_argument("--window", type=float, default=60.0)
+    p.add_argument("--workload"); p.add_argument("--params", default="{}"); p.add_argument("--needs", default="{}")
+    p.add_argument("--task-id", type=int)
+    p.set_defaults(fn=cmd_fleet)
     p = sub.add_parser("token", help="scoped credentials: `init` a master key, `issue` a tenant token")
     p.add_argument("action", choices=["init", "issue"])
     p.add_argument("--master-key-file", required=True)

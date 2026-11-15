@@ -3,12 +3,15 @@
 Every row carries `prev` (hash of the previous row) and `hash` = SHA-256(prev | canonical
 JSON of the row). `verify()` detects an edited, removed or reordered row. This is tamper
 EVIDENCE, not a signature: someone who can rewrite the whole file can rebuild the chain.
+Thread-safe within one process. Two PROCESSES writing the same file would fork the chain: give each
+process its own ledger file.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -29,6 +32,7 @@ class Ledger:
         self.path = Path(path) if path else RESULTS / "ledger.jsonl"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._last = self._tail_hash()
+        self._lock = threading.Lock()          # services write from one thread per connection
 
     def _tail_hash(self) -> str:
         last = GENESIS
@@ -40,10 +44,11 @@ class Ledger:
 
     def _append(self, row: dict) -> None:
         row = json.loads(json.dumps(row, default=str))      # normalise before hashing
-        h = _digest(self._last, row)
-        with open(self.path, "a") as f:
-            f.write(json.dumps({**row, "prev": self._last, "hash": h}) + "\n")
-        self._last = h
+        with self._lock:                                      # read-last / hash / write must be one step
+            h = _digest(self._last, row)
+            with open(self.path, "a") as f:
+                f.write(json.dumps({**row, "prev": self._last, "hash": h}) + "\n")
+            self._last = h
 
     def record(self, m: Measurement) -> Measurement:
         self._append({"type": "measurement", **m.to_dict()})

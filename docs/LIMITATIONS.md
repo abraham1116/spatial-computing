@@ -27,6 +27,7 @@ The list of tests not yet done, with how to run each one, is in [TESTS_NOT_DONE.
 
 | Component | Limit |
 |---|---|
+| Fleet (agent + hub) | Single-process hub with in-memory state (no persistence, no high availability), no dashboard UI, heuristic recommendations, pull-based placement that does not move running work. Validated with 3 agents on one machine only (all three report the same CPU load). See [INFRASTRUCTURE.md](INFRASTRUCTURE.md). |
 | Protocol SWP/2 | Encrypted, authenticated and forward-secret; scoped credentials with quotas and a hash-chained audit log. Not independently reviewed; no certificates (the secret is the identity); revocation and usage counters live in server memory; one request at a time per connection. Do not expose to an untrusted network. |
 | Tiered memory | Python library used through an API, not transparent paging. Latency is dominated by the interpreter. `SharedPages` gives lost-update-free writes through one server: no consensus, no fault tolerance. |
 | Scheduler | Compares strategies by running them; one workload family (Mandelbrot); the `cost` objective uses an assumed price per core-hour. |

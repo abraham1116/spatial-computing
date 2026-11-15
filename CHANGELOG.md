@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+- New: Spatial Fleet. `spatial agent` measures a machine continuously and runs allow-listed tasks; `spatial serve hub` stores the fleet's measurements, places tasks, and produces recommendations with evidence; `spatial fleet status|advise|submit|result`.
+- Fix: the hash-chained ledger could break under concurrent writers (one thread per connection). Now locked; test added.
+- Docs: `docs/INFRASTRUCTURE.md`.
+
 ## 0.8.0
 - Core: SWP/2 with forward secrecy (ephemeral X25519 mixed with the secret); scoped credentials with expiry, quotas, revocation and a hash-chained audit log (`spatial token init|issue`, `--master-key-file` on every service).
 - SPATIAL Q: commutation-aware optimizer rules, fuzz-tested.

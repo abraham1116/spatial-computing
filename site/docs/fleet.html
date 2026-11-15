@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fleet — Spatial Computing docs</title><meta name="description" content="An agent on every machine, a hub that sees the whole fleet: measure, place, recommend, audit."><link rel="alternate" hreflang="fr" href="../fr/docs/fleet.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Main"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Proof</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../fr/docs/fleet.html" hreflang="fr" lang="fr" title="Français">FR</a><a class="btn" href="../docs/quickstart.html">Install</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Get started</h4><a href="index.html">Overview</a><a href="quickstart.html">Installation</a><h4>Engines</h4><a href="fleet.html" aria-current="page">Fleet</a><a href="compute.html">Compute Engine</a><a href="memory.html">Tiered memory</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><h4>Reference</h4><a href="cli.html">Commands</a><a href="security.html">Security</a><a href="results.html">Results</a><a href="limits.html">Limitations</a></aside><main class="main"><h1>Fleet</h1><p class="lead" style="margin-bottom:8px">An agent on every machine, a hub that sees the whole fleet: measure, place, recommend, audit.</p><div class="callout warn"><b>Scope</b>Validated with up to 3 agents on <b>one</b> machine. The three report the same CPU load, so this proves the chain (identity, scopes, placement, results, audit), not scaling.</div>
+<h2>The parts</h2>
+<ul><li><b>Agent</b> (<code>spatial agent</code>): measures CPU, RAM, memory pressure and NVIDIA GPUs every few seconds, reports to the hub, asks for work and runs it. Outbound connections only. Buffers measurements while the hub is down and delivers them with their original times.</li>
+<li><b>Hub</b> (<code>spatial serve hub</code>): keeps each node's measurements, queues and places tasks, computes utilization and recommendations. It never changes a machine by itself.</li>
+<li><b>Operator CLI</b> (<code>spatial fleet</code>): status, recommendations, submit, result.</li></ul>
+<h2>Run it</h2>
+<pre><code>spatial token init --master-key-file hub.key
+spatial serve hub --master-key-file hub.key --port 7700
+spatial token issue --master-key-file hub.key --name node-1 --scopes fleet:report,fleet:work &gt; node-1.tok
+spatial token issue --master-key-file hub.key --name ops --scopes fleet:read,fleet:submit &gt; ops.tok
+# on every machine
+spatial agent --hub HUB:7700 --token-file node-1.tok --usd-per-hour 1.5
+# the operator
+spatial fleet status --hub HUB:7700 --token-file ops.tok
+spatial fleet advise --hub HUB:7700 --token-file ops.tok
+spatial fleet submit --hub HUB:7700 --token-file ops.tok --workload mandel_numba --params &#x27;{&quot;n&quot;:1400,&quot;iters&quot;:300}&#x27;</code></pre>
+<h2>Placement</h2>
+<p>Pull-based. An agent asks for work and receives the best queued task it is eligible for: priority first, then arrival order. Tasks can require a GPU, a minimum of free RAM, a label or a pinned node. A node at 90 % CPU or more receives nothing. Every placement is recorded, with its reason, in a hash-chained decision log. Agents run only allow-listed workloads by name: no code travels to an agent.</p>
+<h2>Recommendations</h2>
+<table><thead><tr><th>Kind</th><th>Triggered by</th></tr></thead><tbody>
+<tr><td><code>node_down</code></td><td>No report for 30 s</td></tr>
+<tr><td><code>memory_pressure</code></td><td>Less than 10 % RAM free</td></tr>
+<tr><td><code>gpu_underused</code></td><td>GPUs below 20 % on average</td></tr>
+<tr><td><code>rebalance</code></td><td>A node at 80 % or more next to a node at 15 % or less</td></tr>
+<tr><td><code>consolidate</code></td><td>The fleet's busy cores would fit on fewer nodes at a 60 % target, RAM checked at 85 %</td></tr></tbody></table>
+<p>Each one shows its evidence and its assumptions. A saving in dollars appears only if you gave the machine's price (<code>--usd-per-hour</code>), and it is an <b>estimate</b>: it becomes a result only when you apply the change and measure the fleet again.</p>
+<h2>Security</h2>
+<p>Encrypted, forward-secret transport. With scoped credentials, a node's identity is its credential name: an agent cannot report as another node, cannot read the fleet and cannot submit tasks; a reader cannot inject measurements. Quotas, expiry, revocation and an audit log apply. Not independently reviewed.</p>
+<h2>Limits</h2>
+<p>Single-process hub with in-memory state (no persistence, no high availability), no dashboard UI, heuristic recommendations, placement that does not move running work. Full description: <code>docs/INFRASTRUCTURE.md</code>.</p><div class="pager"><a href="quickstart.html">← Installation</a><a href="compute.html">Compute Engine →</a></div></main><aside class="rail" aria-label="Examples"><h5>Measured: 12 tasks, 1 agent versus 3</h5><pre><span class="d">1 agent     7.2 s
+3 agents    4.3 s  (x1.66)
+results identical to the reference: 12 / 12
+placement: 6, 4, 2 tasks
+(one 2-core machine: speed-up is bounded)</span></pre><h5>spatial fleet status</h5><pre><span class="d">node     up  cores cpu% ramfree%
+agent-0  yes     4   48       43
+agent-1  yes     4   50       43
+agent-2  yes     4   52       43
+fleet: 3 nodes, 12 cores,
+CPU utilization 50.1%
+(last 6 s)</span></pre></aside></div><script src="../assets/app.js"></script></body></html>

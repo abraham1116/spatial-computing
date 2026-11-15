@@ -1,0 +1,66 @@
+{
+ "context": {
+  "date": "2026-11-15 18:44:13 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t50%; charging; 2:16 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794764653.869868,
+   "cpu_percent": 0.0,
+   "load1": 4.0810546875,
+   "ram_total": 17179869184,
+   "ram_available": 7496716288,
+   "ram_used_percent": 56.4,
+   "swap_used": 4023910400,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7294132224,
+   "compressor_physical_bytes": 973541376,
+   "compressor_ratio": 7.49,
+   "compressor_saved_bytes": 6320590848,
+   "swapins": 1985542,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "params": {
+  "n": 1400,
+  "iters": 300
+ },
+ "one_agent": {
+  "agents": 1,
+  "tasks": 12,
+  "wall_s": 7.161145596008282,
+  "tasks_per_node": {
+   "agent-0": 12
+  },
+  "all_results_equal_reference": true,
+  "status_midway": "node                  up   cores   cpu% ram free% gpus  gpu%    $/h  samples\nagent-0               yes      4     50        43    0     -   1.50  4\nfleet: 1 node(s), 4 cores, CPU utilization 49.8% (last 6 s)",
+  "advise_midway": "no recommendation: nothing in the measurements justifies a change",
+  "advise_after": "no recommendation: nothing in the measurements justifies a change",
+  "audit_chain_ok": true,
+  "decision_rows": 14
+ },
+ "three_agents": {
+  "agents": 3,
+  "tasks": 12,
+  "wall_s": 4.3052894009888405,
+  "tasks_per_node": {
+   "agent-0": 6,
+   "agent-1": 4,
+   "agent-2": 2
+  },
+  "all_results_equal_reference": true,
+  "status_midway": "node                  up   cores   cpu% ram free% gpus  gpu%    $/h  samples\nagent-0               yes      4     48        43    0     -   1.50  5\nagent-1               yes      4     50        43    0     -   1.50  4\nagent-2               yes      4     52        43    0     -   1.50  4\nfleet: 3 node(s), 12 cores, CPU utilization 50.1% (last 6 s)",
+  "advise_midway": "no recommendation: nothing in the measurements justifies a change",
+  "advise_after": "no recommendation: nothing in the measurements justifies a change",
+  "audit_chain_ok": true,
+  "decision_rows": 18
+ },
+ "speedup": 1.6633366375704053,
+ "cores_on_this_machine": 4,
+ "note": "agents and hub share one machine; speed-up is bounded by its cores"
+}

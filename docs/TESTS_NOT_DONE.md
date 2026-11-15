@@ -4,7 +4,7 @@ Everything that has **not** been tested, why, what it needs, how to run it, and 
 
 Status legend: **ready** (script written, needs only the hardware), **design** (procedure described, nothing written), **external** (needs people or services, not code).
 
-Last reviewed: v0.8.0.
+Last reviewed: v0.9.0.
 
 ## A. Hardware tests
 
@@ -68,6 +68,19 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | B4 | OpenQASM 2 and 3 round trips with Cirq, PennyLane, Q# and CUDA-Q (only Qiskit's parser has been used) | ready to write | `pip install cirq pennylane`; Q# and CUDA-Q need their toolchains |
 | B5 | Simulation above about 27 qubits, GPU state vector | design | A GPU with enough memory |
 | B6 | Any claim of quantum advantage | **not claimed, not tested** | Out of scope |
+
+## G. Fleet tests (agent + hub)
+
+| Id | Test | State |
+|---|---|---|
+| G-1 | Agents on several **real machines** reporting to one hub (today: up to 3 agents on one machine, so every agent reports the same CPU) | ready: `spatial serve hub`, `spatial agent` on each machine, see [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
+| G-2 | Scale: 100 then 1,000 simulated agents against one hub (reports per second, memory, latency of `status`/`advise`) | design |
+| G-3 | Hub failure and restart (state is in memory: what is lost, how fast agents reconnect), then persistence and high availability | design |
+| G-4 | Recommendation quality: apply each kind of recommendation on a real fleet and re-measure; count how often the predicted saving appears | design, needs a real fleet and operators |
+| G-5 | GPU nodes: agent reading real `nvidia-smi` and the GPU-aware placement (`needs: {gpu: true}`) | design, needs an NVIDIA machine |
+| G-6 | Dashboard UI and alerting | not built |
+| G-7 | Network faults: packet loss, high latency, partitions between agents and hub | design |
+| G-8 | Security: stolen agent token, replayed handshake, hostile agent flooding the hub (quotas exist, never stress-tested) | design, external review |
 
 ## C. Runtime tests
 
