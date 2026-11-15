@@ -107,8 +107,16 @@ class ComputeProvider(Provider):
                 a_ = t1 - b_ * w1
                 if b_ > 0 and a_ >= 0:                     # time = fixed cost + per-work cost: separates JIT/thread start-up from speed
                     est, basis = a_ + b_ * wf, f"probe 1/8+1/4, affine fit"
-                else:                                      # noisy probes: fall back to proportional scaling from the larger one
-                    est, basis = t2 * wf / w2, "probe 1/4, proportional"
+                else:                                      # the two probes cannot separate fixed cost from speed: probe once more, larger
+                    s3 = max(s2 * 2, s // 2)
+                    t3, _ = _best_of(lambda: workloads.run(wname, **{**params, scale: s3}))
+                    w3 = s3 ** fam["exp"]
+                    b3 = (t3 - t2) / (w3 - w2) if w3 > w2 else 0.0
+                    a3 = t2 - b3 * w2
+                    if b3 > 0 and a3 >= 0:
+                        est, basis = a3 + b3 * wf, "probe 1/4+1/2, affine fit"
+                    else:                                  # still noisy: proportional scaling from the largest probe
+                        est, basis = t3 * wf / w3, "probe 1/2, proportional"
             o = Option("compute", vname, True, est_time_s=est, rate_usd_h=planner.prices.device_usd_h.get(vname, planner.prices.local_usd_per_hour),
                        isolated=None, basis=basis,
                        run=(lambda wn=wname: workloads.run(wn, **params)), meta={"workload": wname, "params": params})

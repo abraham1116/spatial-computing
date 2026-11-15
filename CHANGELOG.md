@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.2
+- Planner: when the two reduced probes cannot separate a fixed start-up cost from the per-unit speed (a flat or negative slope), it now probes once more at half size instead of scaling proportionally from the larger probe, which could overestimate a GPU's cost by up to the scale ratio. Seen as a flaky CPU-instead-of-GPU choice on a shared CI Mac; decision quality on the reference Mac unchanged (fabric 7 of 7).
+
 ## 0.12.1
 - Protocol: handshake timeout (a silent peer used to hold a thread forever), 512-connection cap, listen backlog 1,024 (the default of 5 refused simultaneous reconnects), malformed authenticated records no longer kill the handler thread.
 - Hub: `--state-file` persistence with atomic snapshots; running tasks requeued after a restart; late results accepted.

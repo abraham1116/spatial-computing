@@ -1,27 +1,27 @@
 {
  "context": {
-  "date": "2026-11-15 19:19:31 +0100",
+  "date": "2026-11-15 20:38:51 +0100",
   "model": "MacBookPro14,1",
   "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
   "os": "macOS 13.7.8",
   "arch": "x86_64",
-  "power_source": "Now drawing from 'AC Power'",
-  "battery": "-InternalBattery-0 (id=6815843)\t83%; charging; 0:59 remaining present: true",
-  "energy_measurable": false,
+  "power_source": "Now drawing from 'Battery Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t98%; discharging; 5:23 remaining present: true",
+  "energy_measurable": true,
   "system_before": {
-   "ts": 1794766771.524527,
-   "cpu_percent": 12.6,
-   "load1": 3.1728515625,
+   "ts": 1794771531.1322691,
+   "cpu_percent": 10.0,
+   "load1": 4.53125,
    "ram_total": 17179869184,
-   "ram_available": 6957502464,
-   "ram_used_percent": 59.5,
+   "ram_available": 8082272256,
+   "ram_used_percent": 53.0,
    "swap_used": 3990355968,
    "swap_total": 5368709120,
-   "compressor_logical_bytes": 7265484800,
-   "compressor_physical_bytes": 978444288,
-   "compressor_ratio": 7.43,
-   "compressor_saved_bytes": 6287040512,
-   "swapins": 1988419,
+   "compressor_logical_bytes": 8443461632,
+   "compressor_physical_bytes": 1228517376,
+   "compressor_ratio": 6.87,
+   "compressor_saved_bytes": 7214944256,
+   "swapins": 1996500,
    "swapouts": 2968865,
    "memory_pressure": "normal"
   }
@@ -31,7 +31,7 @@
  "accuracy": 1.0,
  "mean_regret": 1.0,
  "max_regret": 1.0,
- "median_abs_estimate_error_pct": 13.114272242582194,
+ "median_abs_estimate_error_pct": 18.865175219043653,
  "rows": [
   {
    "family": "mandel_f32",
@@ -46,14 +46,14 @@
    "truly_fastest": "cpu",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": -23.46472598607638,
+   "estimate_error_pct": -24.53151030755414,
    "measured_s": {
-    "cpu": 0.00011867599096149206,
-    "gpu_metal": 0.02386172499973327
+    "cpu": 0.00012951101234648377,
+    "gpu_metal": 0.025150688001303934
    },
    "estimated_s": {
-    "cpu": 9.082899487111717e-05,
-    "gpu_metal": 0.023803513002349064
+    "cpu": 9.774000500328839e-05,
+    "gpu_metal": 0.023696860997006297
    }
   },
   {
@@ -69,14 +69,14 @@
    "truly_fastest": "cpu",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": -29.64387771445168,
+   "estimate_error_pct": -34.998110098051654,
    "measured_s": {
-    "cpu": 0.0007986339915078133,
-    "gpu_metal": 0.02365883599850349
+    "cpu": 0.0007939290080685169,
+    "gpu_metal": 0.02427492299466394
    },
    "estimated_s": {
-    "cpu": 0.0005618879076791927,
-    "gpu_metal": 0.3800001440104097
+    "cpu": 0.0005160688597243279,
+    "gpu_metal": 0.026200391992460936
    }
   },
   {
@@ -92,14 +92,14 @@
    "truly_fastest": "cpu",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": -8.735174520253915,
+   "estimate_error_pct": 3.8137912300816907,
    "measured_s": {
-    "cpu": 0.0056663430004846305,
-    "gpu_metal": 0.02495963299588766
+    "cpu": 0.005715663995943032,
+    "gpu_metal": 0.024658918991917744
    },
    "estimated_s": {
-    "cpu": 0.005171378050476106,
-    "gpu_metal": 0.057889634656551336
+    "cpu": 0.005933647488161244,
+    "gpu_metal": 0.025893374026054516
    }
   },
   {
@@ -115,12 +115,12 @@
    "truly_fastest": "cpu",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": 1.2739049091511008,
+   "estimate_error_pct": -0.5793241152855654,
    "measured_s": {
-    "cpu": 0.02322724601253867
+    "cpu": 0.022749572002794594
    },
    "estimated_s": {
-    "cpu": 0.023523139039753005
+    "cpu": 0.02261777824605815
    }
   },
   {
@@ -136,14 +136,14 @@
    "truly_fastest": "gpu_metal",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": 8.282191890861334,
+   "estimate_error_pct": -0.6754210909300671,
    "measured_s": {
-    "gpu_metal": 0.032527007002499886,
-    "cpu": 0.0899707619973924
+    "gpu_metal": 0.030659537995234132,
+    "cpu": 0.09002793800027575
    },
    "estimated_s": {
-    "gpu_metal": 0.03522095613880083,
-    "cpu": 0.08575031709915493
+    "gpu_metal": 0.030452457009232603,
+    "cpu": 0.08605103225272615
    }
   },
   {
@@ -159,14 +159,14 @@
    "truly_fastest": "gpu_metal",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": 54.13341961079424,
+   "estimate_error_pct": 18.865175219043653,
    "measured_s": {
-    "gpu_metal": 0.0574802949995501,
-    "cpu": 0.3704097270092461
+    "gpu_metal": 0.05335571100295056,
+    "cpu": 0.35964244599745143
    },
    "estimated_s": {
-    "gpu_metal": 0.08859634428517893,
-    "cpu": 0.34944980185537133
+    "gpu_metal": 0.06342135937302373,
+    "cpu": 0.34849469500477426
    }
   },
   {
@@ -182,14 +182,14 @@
    "truly_fastest": "gpu_metal",
    "correct": true,
    "regret": 1.0,
-   "estimate_error_pct": -13.114272242582194,
+   "estimate_error_pct": 53.12354844410741,
    "measured_s": {
-    "gpu_metal": 0.10009235699544661,
-    "cpu": 1.1287539610057138
+    "gpu_metal": 0.10167173399531748,
+    "cpu": 1.1077948080055648
    },
    "estimated_s": {
-    "gpu_metal": 0.08696597280504648,
-    "cpu": 1.114919829997234
+    "gpu_metal": 0.155683366858284,
+    "cpu": 1.1480221680249088
    }
   }
  ],
