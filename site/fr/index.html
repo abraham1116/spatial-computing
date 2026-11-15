@@ -1,76 +1,61 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Mesurer. Décider. Prouver.</title><meta name="description" content="Choisit où et comment exécuter une charge à partir de mesures, et ne revendique un gain que s&#x27;il est mesuré."><link rel="alternate" hreflang="en" href="../index.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../index.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="docs/quickstart.html">Installer</a></nav></div></header><main>
-<div class="hero grid-bg"><div class="wrap">
-<div>
-<p class="eyebrow">Un seul objectif · v0.14.0 · open source</p>
-<h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
-<p class="sub">Un seul objectif pour toute l'infrastructure : réaliser chaque travail correctement au moindre coût, et le prouver. Un planificateur chiffre chaque façon d'exécuter un travail à travers le calcul, la mémoire, le runtime, le quantique, l'IA, la science et une flotte de machines ; un agent par machine et un hub gardent les mesures honnêtes.</p>
-<pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Chaque travail là où il coûte le moins</title><meta name="description" content="La couche de contrôle de votre infrastructure de calcul : elle chiffre chaque façon d&#x27;exécuter un travail, exécute la moins chère qui reste correcte, et prouve le résultat."><link rel="alternate" hreflang="en" href="../index.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../index.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="docs/quickstart.html">Installer</a></nav></div></header><main><div class="lp-hero grid-bg"><div class="wrap">
+<p class="eyebrow">Infrastructure de calcul · v0.14.0 · open source</p>
+<h1>Chaque travail là où il <em>coûte le moins.</em></h1>
+<p class="sub">Spatial Computing est la couche de contrôle de votre infrastructure de calcul. Il mesure vos machines, chiffre chaque façon d'exécuter un travail — CPU, GPU, une flotte, des étages de mémoire, le quantique — exécute la moins chère qui reste correcte, et enregistre l'estimation à côté de ce qui s'est vraiment passé.</p>
+<div class="row">
+<pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install &quot;spatial-computing[quantum]&quot;
 spatial audit
 spatial status</pre>
-<div class="cta"><a class="btn" href="docs/quickstart.html">Démarrer</a><a class="btn ghost" href="#proof">Voir les mesures</a></div>
+<div class="cta" style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="docs/quickstart.html">Commencer</a><a class="btn ghost" href="docs/index.html">Lire la documentation</a></div>
 </div>
-<div class="term" aria-label="Sortie réelle de la commande spatial audit"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">$ spatial audit</span></div>
-<pre><span class="d">MacBookPro14,1 | Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz | macOS 13.7.8 | x86_64
-  cpu         Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz   2 physical cores
-  ram         physical RAM                               16.0 GiB
-  far_memory  OS swap (SSD-backed, NOT RAM)              4.0 GiB
-  gpu         Intel Iris Plus Graphics 640               1 device
-  storage     system volume                              328.2 GiB
-memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
-  idle: CPU 21% busy: 79% idle capacity</span>
-<span class="g">…</span></pre></div>
-</div></div>
+<div class="frame"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">Tableau de bord · vue en direct d'une flotte de 4 nœuds</span></div>
+<div class="shot"><img src="../assets/dashboard-hero.png" alt="Spatial Fleet dashboard: nodes, alerts, recommendations, tenants and queue" width="1280" height="860"></div></div>
+</div></div><section id="proof"><div class="wrap">
+<p class="eyebrow">Mesuré</p><h2>Des chiffres du dépôt, pas des diapositives.</h2><p class="lead">Chaque chiffre vient d'un test ou d'un benchmark que vous pouvez lancer vous-même avec <code>pytest</code> et <code>spatial bench all</code>.</p>
+<div class="strip"><div><b>12 / 12</b><span>cas inédits où le planificateur a choisi l&#x27;option vraiment la plus rapide, chacune exécutée pour de vrai</span></div><div><b>×31,6</b><span>plus rapide que Python pur sur le même travail, résultat identique</span></div><div><b>24 Gio</b><span>traités avec un budget mémoire de 512 Mio, 0 page corrompue</span></div><div><b>6,7 s</b><span>entre un hub arrêté et une tâche en file terminée sur le secours</span></div><div><b>1 000</b><span>agents qui rapportent à un hub, latence de rapport p99 15 ms</span></div></div><p class="strip-note">Mesuré sur un MacBook Pro 2017 (2 cœurs, 16 Go) les 14 et 15 novembre 2026. Méthodes et conditions : <a href="docs/results.html">Résultats</a>.</p>
+</div></section><section><div class="wrap"><p class="eyebrow">Ce que vous obtenez</p><h2>Un objectif. Tous les moteurs.</h2><div class="gains"><div><span class="n">01</span><h3>Un coût par travail plus bas</h3><p>Une seule formule pour tous les moteurs : l&#x27;option correcte la moins chère dans vos limites de délai, de mémoire et d&#x27;isolation, avec les prix que vous fixez.</p></div><div><span class="n">02</span><h3>Plus du matériel que vous avez</h3><p>JIT et multicœur, un GPU quand il rapporte, des étages de mémoire qui gardent plus de données que la RAM. Le périphérique est choisi par la mesure, pas par habitude.</p></div><div><span class="n">03</span><h3>Une infrastructure de confiance</h3><p>Chaque décision est écrite dans un registre infalsifiable, chaque lien est chiffré, et chaque estimation est comparée à la réalité puis corrigée.</p></div></div></div></section><section><div class="wrap"><p class="eyebrow">Le produit</p><h2>Tout pour exploiter du calcul à grande échelle.</h2>
+<div class="tour"><div class="item"><div class="txt"><p class="eyebrow">Planificateur</p><h3>Demandez une fois. Voyez chaque option, chiffrée.</h3><p>Décrivez un travail et vos limites. Le planificateur propose toutes les façons de l&#x27;exécuter dans tous les moteurs, les classe avec une seule formule, explique chaque refus, et enregistre son estimation à côté du résultat réel.</p><ul><li>Calcul, mémoire, runtime, quantique, IA et flotte dans un seul tableau</li><li>Calibré par l&#x27;historique : les estimations s&#x27;améliorent à chaque exécution</li></ul><a class="more" href="docs/planner.html">En savoir plus →</a></div><div class="vis"><pre><span class="d">job: compute heat {&#x27;n&#x27;: 100, &#x27;steps&#x27;: 600}
+objective: minimize cost (0.134 $/h)
+&gt;&gt; compute/numba    0.0106 s   chosen
+   compute/numpy    0.0733 s   ok
+executed: 0.0114 s (estimated 0.0106 s, +8%)</span></pre></div></div><div class="item"><div class="txt"><p class="eyebrow">Flotte</p><h3>Voyez chaque machine. Placez le travail où il convient.</h3><p>Un agent sur chaque machine, un hub qui les voit toutes. Le travail est placé selon l&#x27;éligibilité et la charge, partagé équitablement entre équipes, et les recommandations arrivent avec leurs preuves.</p><ul><li>Équité entre locataires, groupes tout-ou-rien, routage par affinité de cache</li><li>Un tableau de bord en lecture seule et des alertes quand un nœud se tait</li></ul><a class="more" href="docs/fleet.html">En savoir plus →</a></div><div class="vis"><pre><span class="d">node     up  cores cpu% ramfree%
+agent-0  yes     4   48       43
+agent-1  yes     4   50       43
+agent-2  yes     4   52       43
+fleet: 3 nodes, 12 cores,
+CPU utilization 50.1%
+(last 6 s)</span></pre></div></div><div class="item"><div class="txt"><p class="eyebrow">Accélérateurs</p><h3>Écrivez le noyau une fois. Exécutez-le sur le périphérique le moins cher.</h3><p>Une source dans un sous-ensemble typé de Python devient du code CPU, un noyau GPU Metal et des sources CUDA et HIP. Le planificateur sonde chaque périphérique et choisit le moins cher pour votre taille.</p><ul><li>Noyaux entiers identiques au bit sur CPU et GPU</li><li>Réductions en mémoire partagée sur le GPU</li></ul><a class="more" href="docs/accelerators.html">En savoir plus →</a></div><div class="vis"><pre><span class="d">@kernel
+def collatz(i: int, j: int, n: int, limit: int):
+    x = i * n + j + 1
+    k = 0
+    while x != 1 and k &lt; limit:
+        if x % 2 == 0:
+            x = x // 2
+        else:
+            x = 3 * x + 1
+        k += 1
+    return k
 
-<section id="engines"><div class="wrap">
-<p class="eyebrow">Un objectif, un cœur, tous les moteurs</p>
-<h2>Tous les moteurs répondent à la même question.</h2>
-<p class="lead">Quelle façon de faire ce travail est la moins chère, correcte, et dans mes contraintes ? Chaque moteur chiffre ses propres options ; le planificateur les classe avec une seule formule et consigne l'estimation à côté de ce qui s'est réellement passé. Ils partagent un modèle de données, un protocole chiffré et un registre infalsifiable en silence : un noyau quantique, un pas de simulation et une page mémoire sont ordonnancés et comptabilisés de la même façon.</p>
-<div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
-</div></section>
+collatz.run(&quot;metal&quot;, 1536, limit=2000)   # 94 ms
+collatz.run(&quot;cpu&quot;,   1536, limit=2000)   # 597 ms
+print(collatz.to_cuda_c())               # and CUDA C / HIP source</span></pre></div></div><div class="item"><div class="txt"><p class="eyebrow">Interconnexion</p><h3>Collectives entre processus, algorithme choisi pour vous.</h3><p>All-reduce et diffusion sur des liens chiffrés. Un modèle de coût mesuré choisit anneau, halving-doubling ou arbre pour chaque taille de message et nombre de processus.</p><ul><li>Sommes exactes, vérifiées pour chaque algorithme</li><li>Calibré par algorithme à partir de vos propres mesures</li></ul><a class="more" href="docs/interconnect.html">En savoir plus →</a></div><div class="vis"><pre><span class="d">from spatial.interconnect import launch, allreduce
 
-<section id="proof"><div class="wrap">
-<p class="eyebrow">Mesuré, pas promis</p>
-<h2>Une preuve par moteur.</h2>
-<p class="lead">Chaque chiffre vient d'un test ou d'un benchmark du dépôt, exécuté sur un MacBook Pro 2017 (deux cœurs, 16 Go). Pour les refaire : <code>pytest</code> et <code>spatial bench all</code>.</p>
-<div class="eng">
-<div class="card"><h3>Planificateur</h3><p>Chiffre chaque façon d'exécuter un travail à travers tous les moteurs et choisit la moins chère.</p><div class="pf"><b>12 / 12</b><span>cas jamais vus où il a choisi l'option réellement la plus rapide, chacune exécutée pour de vrai ; erreur médiane d'estimation 5 %</span></div></div>
-<div class="card"><h3>Flotte</h3><p>Voit toutes les machines d'un seul endroit et y place le travail.</p><div class="pf"><b>×1,66</b><span>12 tâches sur 3 agents contre 1, placées par le hub ; résultats identiques, chaîne d'audit intacte (une machine, 2 cœurs)</span></div></div>
-<div class="card"><h3>Accélérateurs</h3><p>Une source de noyau pour CPU, Metal, NVIDIA et AMD ; le périphérique le moins cher est choisi.</p><div class="pf"><b>identique au bit</b><span>noyau entier sur CPU et Metal ; les sources CUDA et HIP sont générées, jamais exécutées</span></div></div>
-<div class="card"><h3>Interconnexion</h3><p>All-reduce chiffré entre processus, algorithme choisi par un modèle de coût.</p><div class="pf"><b>~3 000× plus lent</b><span>que NVLink 5 en bande passante : une couche logicielle, pas un remplaçant</span></div></div>
-<div class="card"><h3>Exploitation</h3><p>Bascule du hub, tableau de bord en lecture seule, alertes.</p><div class="pf"><b>6,7 s</b><span>entre kill -9 du hub actif et la fin d'une tâche sur le survivant (une machine)</span></div></div>
-<div class="card"><h3>Compute</h3><p>Exécute un calcul de la façon la moins chère que la machine permet.</p><div class="pf"><b>×31,6</b><span>JIT contre Python pur, résultat identique</span></div></div>
-<div class="card"><h3>Mémoire à étages</h3><p>Traite plus de données que la RAM locale, pour un prix en latence mesuré.</p><div class="pf"><b>−75 %</b><span>de RAM locale en accès biaisé, pour 107× de latence moyenne</span></div></div>
-<div class="card"><h3>Runtime</h3><p>Lance un logiciel conçu pour un autre système, isolé.</p><div class="pf"><b>0,88 s</b><span>pour démarrer une micro-VM Linux ; un .exe Windows tourne sous Wine</span></div></div>
-<div class="card"><h3>SPATIAL Q</h3><p>Un langage pour les étapes classiques, distribuées et quantiques.</p><div class="pf"><b>1,000</b><span>de fidélité face à Qiskit jusqu'à 16 qubits ; une paire de Bell a tourné sur un vrai QPU IBM (90 % corrélée)</span></div></div>
-<div class="card"><h3>IA</h3><p>Réutilise le contexte d'inférence au lieu de le recalculer.</p><div class="pf"><b>exact</b><span>le cache KV restauré donne la même sortie que le recalcul (modèle jouet, CPU)</span></div></div>
-<div class="card"><h3>Scientifique</h3><p>Exécute un calcul numérique et vérifie sa réponse.</p><div class="pf"><b>2 / 2</b><span>calculs validés contre leur solution exacte</span></div></div>
-<div class="card"><h3>Simulation</h3><p>Fait avancer des systèmes physiques.</p><div class="pf"><b>&lt; 0,1 %</b><span>de dérive d'énergie sur 400 pas à N corps</span></div></div>
-<div class="card"><h3>Intelligence</h3><p>Prédit la meilleure stratégie avant de l'exécuter.</p><div class="pf"><b>confirmé</b><span>la prédiction issue des mesures passées désigne le gagnant mesuré</span></div></div>
-<div class="card"><h3>Holographique</h3><p>Calcule des hologrammes pour de futurs écrans.</p><div class="pf"><b>au point</b><span>la reconstruction numérique tombe sur les points émis (aucun écran)</span></div></div>
-</div>
-<p class="note">Périmètre honnête : une seule machine. Rien n'est encore prouvé sur une seconde machine ou un GPU de centre de données, et le matériel quantique n'a exécuté qu'un circuit à deux qubits ; les moteurs IA, scientifique, simulation, intelligence et holographique sont de premiers composants, pas des produits.</p>
-</div></section>
+def work(comm):
+    grad = local_gradient(comm.rank)
+    # ring, halving-doubling or tree:
+    # picked by a measured cost model
+    return allreduce(comm, grad, algo=&quot;auto&quot;)
 
-<section><div class="wrap">
-<p class="eyebrow">Comment ça marche</p>
-<h2>Une boucle, trois verbes.</h2>
-<p class="lead">Chaque exécution produit une mesure. Chaque choix est consigné avec sa raison. Un résultat qui diffère de la référence est rejeté.</p>
-<div class="cols3">
-<div><h3>Mesurer</h3><p>Détecte le matériel réel, surveille CPU, RAM, compresseur et swap, et dit ce qu'il ne peut pas faire.</p><pre class="mini">$ spatial audit</pre></div>
-<div><h3>Décider</h3><p>Compare les stratégies d'exécution et les routes (natif, micro-VM, WASM) et explique chaque refus.</p><pre class="mini">$ spatial plan app.exe
-[ ] wine  Wine is not installed</pre></div>
-<div><h3>Prouver</h3><p>Rejoue les benchmarks, régénère le tableau de résultats et conserve les échecs.</p><pre class="mini">$ spatial bench all</pre></div>
-</div>
-</div></section>
+launch(8, work)    # 8 workers, encrypted links</span></pre></div></div><div class="item"><div class="txt"><p class="eyebrow">Exploitation</p><h3>Prêt pour la production dès le premier hub.</h3><p>L&#x27;état survit aux redémarrages, un hub de secours prend la relève seul, trois hubs ou plus élisent un chef à la majorité, et les agents suivent le hub actif sans configuration.</p><ul><li>File et historique des locataires persistants</li><li>Tableau de bord local derrière une clé aléatoire, alertes avec webhook optionnel</li></ul><a class="more" href="docs/operations.html">En savoir plus →</a></div><div class="vis"><pre><span class="d">$ spatial serve hub --name a --peer B:7700 --state-file a.json
+$ spatial serve hub --name b --peer A:7700 --state-file b.json
+$ spatial agent --hub A:7700,B:7700 --token-file node.tok
 
-<section><div class="wrap split">
-<div>
-<p class="eyebrow">SPATIAL Q</p>
-<h2>Un langage pour les flux hybrides.</h2>
-<p class="lead">Classique, distribué et quantique dans un même programme. L'orchestrateur choisit le backend d'après une estimation de ressources, et refuse quand un circuit ne tient pas ou qu'aucun QPU n'est branché. Aucune accélération quantique n'est revendiquée : tout est simulé.</p>
-<a class="btn ghost" href="docs/spatialq.html">Spécification</a>
-</div>
+kill -9 on the active hub
+-&gt; a new active hub in 5.6 s
+-&gt; the queued task finishes on the survivor 6.7 s later</span></pre></div></div></div>
+<h3 style="font-size:32px;margin:44px 0 16px">Et le reste de la plateforme</h3><div class="minis"><div><h4><a href="docs/memory.html" style="text-decoration:none">Mémoire hiérarchisée</a></h4><p>Travaillez sur des données plus grandes que la RAM avec un compromis de latence mesuré et chiffré.</p></div><div><h4><a href="docs/runtime.html" style="text-decoration:none">Runtime</a></h4><p>Exécutez un logiciel conçu pour un autre système — micro-VM Linux, WebAssembly, Wine — isolé, avec la route expliquée.</p></div><div><h4><a href="docs/spatialq.html" style="text-decoration:none">SPATIAL Q</a></h4><p>Un langage pour les étapes classiques, distribuées et quantiques ; simulateurs, Qiskit Aer et matériel IBM.</p></div><div><h4><a href="docs/index.html" style="text-decoration:none">IA</a></h4><p>Réutilisez le contexte d&#x27;inférence au lieu de le recalculer, restauré octet pour octet.</p></div><div><h4><a href="docs/index.html" style="text-decoration:none">Scientifique et simulation</a></h4><p>Des travaux numériques vérifiés contre des solutions exactes ; dérive d&#x27;énergie N-corps sous 0,1 %.</p></div><div><h4><a href="docs/index.html" style="text-decoration:none">Holographique</a></h4><p>Synthèse et reconstruction d&#x27;hologrammes, nettes sur les points émis.</p></div></div></div></section><section><div class="wrap"><p class="eyebrow">Conçu pour la production</p><h2>Sûr, observable, récupérable.</h2><div class="minis"><div><h4>Chiffré et authentifié</h4><p>AES-256-GCM, échange de clés à confidentialité persistante, identifiants à portée limitée avec expiration, quotas et révocation.</p></div><div><h4>Audit infalsifiable</h4><p>Chaque décision et chaque requête entre dans un registre chaîné par hachage que vous pouvez vérifier.</p></div><div><h4>Haute disponibilité</h4><p>Bascule vers le secours en quelques secondes ; élection à la majorité à partir de trois hubs.</p></div><div><h4>Passage à l&#x27;échelle</h4><p>1 000 agents sur un hub, état en 36 ms, mémoire du hub 109 Mio.</p></div><div><h4>Neutre vis-à-vis du matériel</h4><p>CPU, Metal, génération CUDA et HIP, nœuds distants : une description de travail, plusieurs périphériques.</p></div><div><h4>Reproductible</h4><p>Chaque affirmation a un test ou un benchmark. Un workflow hebdomadaire les revérifie.</p></div></div></div></section><section><div class="wrap split">
+<div><p class="eyebrow">SPATIAL Q</p><h2>Un langage pour les workflows hybrides.</h2><p class="lead">Étapes classiques, distribuées et quantiques dans un seul programme. L'orchestrateur choisit un moteur d'après une estimation de ressources.</p><a class="btn ghost" href="docs/spatialq.html">En savoir plus</a></div>
 <div class="term"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">examples/01_bell.sq</span></div><pre>// Quantum only: Bell pair. Expect ~50% &quot;00&quot; and ~50% &quot;11&quot;.
 quantum bell() {
     qubit q[2];
@@ -87,41 +72,12 @@ main {
 <span class="d">$ spatial q run examples/01_bell.sq</span>
 <span class="g">bell counts: {&#x27;00&#x27;: 989, &#x27;11&#x27;: 1011}
 &lt;ZZ&gt; = 0.9999999999999998</span></pre></div>
-</div></section>
-
-<section><div class="wrap">
-<p class="eyebrow">État réel</p>
-<h2>Ce qui tourne, ce qui n'est qu'esquissé.</h2>
-<p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
-<table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
-<tr><td>Planificateur (l'objectif unique)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs machines, GPU, vraies factures, modèle appris</td></tr>
-<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, vrai réseau, journal répliqué, tableau de bord multi-utilisateur</td></tr>
-<tr><td>Accélérateurs et noyaux</td><td><span class="tag">premiers composants</span></td><td>Exécution du C CUDA et du HIP générés, tuilage, cœurs tenseurs</td></tr>
-<tr><td>Interconnexion virtuelle</td><td><span class="tag">premiers composants</span></td><td>Vrai réseau, RDMA, mémoire GPU, tolérance aux pannes</td></tr>
-<tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
-<tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
-<tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
-<tr><td>SPATIAL Q</td><td><span class="tag ok">prototype opérationnel</span></td><td>QPU réel, QIR, sous-noyaux</td></tr>
-<tr><td>AI</td><td><span class="tag part">premiers composants</span></td><td>Modèle jouet seulement : ni vrai LLM ni GPU</td></tr>
-<tr><td>Scientifique, Simulation, Intelligence</td><td><span class="tag part">premiers composants</span></td><td>Solveurs métier, multiphysique, modèles appris</td></tr>
-<tr><td>Holographique</td><td><span class="tag part">premiers composants</span></td><td>Optique numérique seulement : aucun écran</td></tr>
-</tbody></table>
-</div></section>
-
-<section><div class="wrap split">
-<div class="never"><h3 style="font-size:32px;margin-bottom:12px">Ce que Spatial ne fait pas</h3><ul>
-<li>Il n'ajoute pas de RAM. La mémoire compressée, sur disque ou distante est typée <code>far_memory</code>, jamais <code>ram</code>.</li>
-<li>Il ne confond pas virtualisation et ressource supplémentaire.</li>
-<li>Il ne dit pas qu'un QPU accélère tout : le backend <code>qpu</code> refuse de s'exécuter tant qu'aucun fournisseur n'est configuré.</li>
-<li>Il n'expose jamais la machine : les serveurs écoutent sur 127.0.0.1 et refusent toute autre adresse sans consentement explicite.</li>
-</ul></div>
-<div>
-<p class="eyebrow">Open-core</p>
-<h2>Le cœur est ouvert.</h2>
-<p class="lead">CLI, audit, SPATIAL Q, runtime et bibliothèque mémoire sont publiés sous licence Apache-2.0. Les politiques avancées de placement et de coût sont développées dans un paquet privé, hors de ce dépôt.</p>
-<a class="btn" href="docs/index.html">Lire la documentation</a> <a class="btn ghost" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a>
-</div>
-</div></section>
-</main>
-<footer><div class="wrap"><span>Spatial Computing · v0.14.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+</div></section><div class="band"><div class="wrap"><div><h2>Démarrez en trois minutes.</h2><p>Installez, lancez l'audit, interrogez le planificateur. Open source sous Apache-2.0.</p>
+<a class="btn" href="docs/quickstart.html">Commencer</a> <a class="btn ghost" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a></div>
+<pre class="install" tabindex="0" style="margin:0">python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install &quot;spatial-computing[quantum]&quot;
+spatial audit
+spatial status</pre></div></div><section><div class="wrap split"><div><p class="eyebrow">Open core</p><h2>Le cœur est ouvert.</h2><p class="lead">La CLI, le planificateur, la flotte, SPATIAL Q, le runtime et la bibliothèque de mémoire hiérarchisée sont publiés sous Apache-2.0. Les politiques avancées de placement et de coût sont développées dans un paquet privé.</p>
+<a class="btn" href="docs/index.html">Lire la documentation</a> <a class="btn ghost" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a></div><div></div></div></section></main>
+<footer><div class="wrap"><span>Spatial Computing · v0.14.0 · Apache-2.0 · <a href="docs/limits.html">Limitations</a></span><span>Mesuré les 14 et 15 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="../assets/app.js"></script></body></html>
