@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1
+- Fix: the `qpu` backend now raises a clear BackendUnavailable when `qiskit-ibm-runtime` is not installed.
+
 ## 0.6.0
 - SPATIAL Q: real QPU backend for IBM Quantum (`qpu` extra); refuses with the real reason when the token or instance is missing.
 - Landing page reorganised around the seven engines and the shared core, with one measured proof per engine.

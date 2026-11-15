@@ -147,9 +147,9 @@ class QpuBackend(Backend):
             raise BackendUnavailable(f"IBM Quantum refused the account: {type(e).__name__}: {str(e)[:200]}")
 
     def sample(self, c, shots, seed=None):
+        svc = self._service()                      # raises BackendUnavailable first if the package/token is missing
         from qiskit import transpile
         from qiskit_ibm_runtime import SamplerV2
-        svc = self._service()
         try:
             backend = svc.least_busy(operational=True, simulator=False, min_num_qubits=c.n_qubits)
         except Exception as e:
