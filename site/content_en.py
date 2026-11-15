@@ -26,7 +26,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.4.0 · open source</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.5.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. Not more RAM: better utilization.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -106,7 +106,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.4.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.5.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -122,7 +122,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.4.0. Four engines are operational and tested (69 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.5.0. Four engines are operational and tested (77 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -151,7 +151,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Test binaries (optional)</h2>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">60 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">68 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
 
     doc("compute", "Compute Engine", "Detects the hardware, measures its usage, compares execution strategies and picks the best one.",
         '''<h2>Detect and monitor</h2>
@@ -268,7 +268,7 @@ main {
 <tr><td><code>spatial status</code></td><td>Real status of every engine and what is not done</td></tr>
 <tr><td><code>spatial plan &lt;file&gt;</code></td><td>Detected format and execution routes, with reasons</td></tr>
 <tr><td><code>spatial run &lt;file&gt; [args] [--route R] [--timeout S]</code></td><td>Runs via the first feasible route; exit code 1 if impossible</td></tr>
-<tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
+<tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p] [--compiled]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
 <tr><td><code>spatial serve compute|memory|runtime --token-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback</td></tr></tbody></table>
 <p>An error prints a single <code>spatial: Type: message</code> line and exits with code 1.</p>''',
@@ -318,5 +318,5 @@ main {
 <tr><td>No forward secrecy, no per-user identity</td><td>Do not expose to an untrusted network</td></tr>
 <tr><td>Exact quantum simulation</td><td>About 27 qubits here, bounded by RAM</td></tr>
 <tr><td>AI, scientific, simulation, intelligence, holographic domains</td><td>First components only (toy model, small solvers, numerical optics)</td></tr></tbody></table>
-<p>The detailed list is in <code>docs/10_LIMITATIONS.md</code> and the open work in <code>ROADMAP.md</code>.</p>''',
+<p>The detailed, current list is in <code>docs/LIMITATIONS.md</code> and the open work in <code>ROADMAP.md</code>.</p>''',
         [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nAI / scientific / simulation /\nintelligence / holographic\n  first-components</span>')])

@@ -10,7 +10,8 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 - [x] Channel encryption (SWP/1: AES-256-GCM, v0.2) and far-page encryption
 - [x] Tamper-evident (hash-chained) ledger
 - [ ] Forward secrecy / TLS, per-tenant permissions, signed audit log
-- [ ] Publish to PyPI; English translation of the reports in `docs/`
+- [x] Current limitations in English (`docs/LIMITATIONS.md`, v0.5)
+- [ ] Publish to PyPI; English translation of the remaining reports in `docs/`
 
 ## Compute Engine
 - [x] Priority task queue across N workers with re-queue on worker failure (v0.2, loopback only)
@@ -22,7 +23,8 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 ## Tiered memory
 - [ ] Rewrite hot paths in Rust or C++; keep Python as the decision layer
 - [x] Encryption and replication of far pages (v0.2)
-- [ ] Multiple writers
+- [x] Several writers on shared pages (versioned compare-and-swap, single server, v0.5)
+- [ ] Multi-server shared memory with fault tolerance
 - [ ] Transparent paging on Linux (`userfaultfd`, zswap); RDMA, NVMe-oF, CXL back ends (needs hardware)
 - [ ] KV-cache tiering for LLM inference with a cost-per-token policy
 
@@ -38,10 +40,12 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 ## SPATIAL Q
 - [x] QIR export, base profile, validated with pyqir (v0.2)
 - [x] OpenQASM 2 export for Cirq / PennyLane importers (v0.3; checked with Qiskit's parser only)
-- [ ] QIR adaptive profile; verified round-trips with Cirq, PennyLane, Q#, CUDA-Q
+- [x] QIR adaptive profile for dynamic circuits, verified with pyqir (v0.5)
+- [ ] Verified round-trips with Cirq, PennyLane, Q#, CUDA-Q
 - [ ] Real QPU backend (needs a provider account)
 - [x] Sub-kernels with qubit parameters (v0.2)
-- [ ] A compiled (not interpreted) classical part
+- [x] Compiled classical part (to Python bytecode, v0.5)
+- [ ] Native compilation of the classical part
 - [x] Depolarising noise in the built-in simulator (v0.2)
 - [x] Cost estimation per shot from caller-supplied prices (v0.3)
 - [ ] Richer noise models

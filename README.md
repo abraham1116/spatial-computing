@@ -4,7 +4,7 @@
 
 Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
 
-> **Status: v0.4.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/10_LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
+> **Status: v0.5.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
 
 [Français](README.fr.md)
 
@@ -75,7 +75,7 @@ The core in this repository is licensed under [Apache-2.0](LICENSE). Advanced pl
 
 ## Documentation
 
-The site has the full reference: <https://spatial-computing-ecru.vercel.app> (English and French). The in-repo technical reports in [`docs/`](docs/) are currently written in French; English translations are welcome (see [CONTRIBUTING](CONTRIBUTING.md)).
+The site has the full reference: <https://spatial-computing-ecru.vercel.app> (English and French). [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) is current and in English; the other in-repo reports are historical v0.1 notes in French, and English translations are welcome (see [CONTRIBUTING](CONTRIBUTING.md)).
 
 ## Contributing
 

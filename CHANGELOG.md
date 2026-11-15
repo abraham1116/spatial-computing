@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+- Memory: several writers on shared pages (versioned compare-and-swap on the page server).
+- SPATIAL Q: QIR adaptive profile for dynamic circuits; classical part compiled to Python bytecode (`--compiled`).
+- Docs: `docs/LIMITATIONS.md`, current and in English.
+
 ## 0.4.0
 - A real, tested component in every engine: AI (toy transformer with KV cache, restore vs recompute through the tiered store), Scientific (RK4 job), Simulation (N-body), Intelligence (predictor drives the scheduler), Holographic (hologram synthesis and numerical reconstruction).
 - Runtime: Windows console binary verified under Wine.
