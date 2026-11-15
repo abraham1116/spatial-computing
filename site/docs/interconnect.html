@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Interconnect — Spatial Computing docs</title><meta name="description" content="Collective operations between workers over the encrypted channel, with the algorithm chosen by a measured cost model."><link rel="alternate" hreflang="fr" href="../fr/docs/interconnect.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Main"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Proof</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../fr/docs/interconnect.html" hreflang="fr" lang="fr" title="Français">FR</a><a class="btn" href="../docs/quickstart.html">Install</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Get started</h4><a href="index.html">Overview</a><a href="quickstart.html">Installation</a><h4>Engines</h4><a href="planner.html">Planner</a><a href="fleet.html">Fleet</a><a href="compute.html">Compute Engine</a><a href="memory.html">Tiered memory</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><a href="accelerators.html">Accelerators</a><a href="interconnect.html" aria-current="page">Interconnect</a><h4>Operate</h4><a href="operations.html">Operations</a><h4>Reference</h4><a href="cli.html">Commands</a><a href="security.html">Security</a><a href="results.html">Results</a><a href="limits.html">Limitations</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a></aside><main class="main"><h1>Interconnect</h1><p class="lead" style="margin-bottom:8px">Collective operations between workers over the encrypted channel, with the algorithm chosen by a measured cost model.</p><div class="callout warn"><b>Not an NVLink</b>NVLink is silicon and copper. This is a software layer over whatever link exists. On the reference machine its best bus bandwidth is about 0.2 to 0.3 GB/s; NVLink 5 is quoted at 900 GB/s per direction (vendor figure), about <b>3,000 to 4,000 times faster</b>.</div>
+<h2>What it does</h2>
+<p><code>spatial.interconnect</code> runs N processes that exchange data through SWP/2 (AES-256-GCM, forward-secret). It provides ring, halving-doubling and tree all-reduce, and broadcast. A cost model <code>t = α + M/β</code> predicts the time of each algorithm; <code>allreduce(..., algo="auto")</code> takes the cheapest.</p>
+<table><thead><tr><th>Algorithm</th><th>Predicted time (M bytes, N ranks)</th><th>Good for</th></tr></thead><tbody>
+<tr><td>ring</td><td>2(N−1)α + 2(N−1)/N · M/β</td><td>large messages</td></tr>
+<tr><td>halving-doubling</td><td>2·log₂N·α + 2(N−1)/N · M/β (N a power of two)</td><td>medium messages</td></tr>
+<tr><td>tree</td><td>2·log₂N·(α + M/β)</td><td>small messages</td></tr></tbody></table>
+<h2>Measured</h2>
+<ul><li>All algorithms return the exact sum (tests).</li>
+<li>Fitted link on loopback: α ≈ 150 to 200 µs per message, β ≈ 650 to 740 MB/s.</li>
+<li>The single shared link model chose the fastest algorithm in <b>1 of 6</b> sizes at N = 4, 8 and 16 (4 of 6 at N = 6). It always preferred halving-doubling; in practice tree won for small messages and ring for large ones.</li>
+<li>Calibrating each algorithm separately fixes most of it: judged on a rank count it had not seen, 3 to 5 of 6 right, mean regret 1.07× to 1.27×. Results move from one run to the next, so read the trend, not one count.</li></ul>
+<table><thead><tr><th>N = 8</th><th>ring</th><th>halving-doubling</th><th>tree</th></tr></thead><tbody>
+<tr><td>1 KiB</td><td>10.4 ms</td><td>4.2 ms</td><td><b>2.0 ms</b></td></tr>
+<tr><td>1 MiB</td><td>22.9 ms</td><td><b>13.8 ms</b></td><td>15.5 ms</td></tr>
+<tr><td>16 MiB</td><td><b>228 ms</b></td><td>289 ms</td><td>369 ms</td></tr></tbody></table>
+<h2>Limits</h2>
+<p>One machine, loopback, N = 4, 6, 8, 16 as processes on two cores (this measures CPU contention as much as a link). No RDMA, no GPU memory, no fault tolerance. NCCL, MPI, UCC and MSCCL++ are mature: the value here is a cost-model-driven, encrypted, hardware-neutral layer that feeds the same planner. Details: <code>docs/INTERCONNECT.md</code>.</p><div class="pager"><a href="accelerators.html">← Accelerators</a><a href="operations.html">Operations →</a></div></main><aside class="rail" aria-label="Examples"><h5>Use it</h5><pre><span class="d">from spatial.interconnect import launch, allreduce
+
+def work(comm):
+    x = local_vector(comm.rank)
+    return allreduce(comm, x, algo="auto")
+
+launch(8, work)</span></pre><h5>Peak bus bandwidth</h5><pre><span class="d">this layer   ~0.28 GB/s
+NVLink 5    900 GB/s (vendor)
+ratio       ~3,200×</span></pre></aside></div><script src="../assets/app.js"></script></body></html>

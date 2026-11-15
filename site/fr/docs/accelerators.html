@@ -1,0 +1,47 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Accélérateurs et noyaux — Spatial Computing docs</title><meta name="description" content="Un travail, décrit une fois, placé sur le périphérique le moins cher : CPU, GPU Metal, GPU NVIDIA ou nœud distant. Les noyaux s&#x27;écrivent une fois et sont générés pour chaque périphérique."><link rel="alternate" hreflang="en" href="../../docs/accelerators.html"><link rel="icon" href="../../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../../docs/accelerators.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="../docs/quickstart.html">Installer</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Démarrer</h4><a href="index.html">Vue d'ensemble</a><a href="quickstart.html">Installation</a><h4>Moteurs</h4><a href="planner.html">Planificateur</a><a href="fleet.html">Flotte</a><a href="compute.html">Compute Engine</a><a href="memory.html">Mémoire à étages</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><a href="accelerators.html" aria-current="page">Accélérateurs</a><a href="interconnect.html">Interconnexion</a><h4>Exploitation</h4><a href="operations.html">Exploitation</a><h4>Référence</h4><a href="cli.html">Commandes</a><a href="security.html">Sécurité</a><a href="results.html">Résultats</a><a href="limits.html">Limitations</a><a href="roadmap.html">Feuille de route</a><a href="changelog.html">Versions</a></aside><main class="main"><h1>Accélérateurs et noyaux</h1><p class="lead" style="margin-bottom:8px">Un travail, décrit une fois, placé sur le périphérique le moins cher : CPU, GPU Metal, GPU NVIDIA ou nœud distant. Les noyaux s'écrivent une fois et sont générés pour chaque périphérique.</p><div class="callout warn"><b>Périmètre</b>Le CPU et le GPU Metal sont testés sur un Mac. Les sources NVIDIA (C CUDA) et AMD (HIP) sont <b>générées, jamais compilées, jamais exécutées</b> : cette machine n'a aucun de ces GPU.</div>
+<h2>Ce que ce n'est pas</h2>
+<ul><li><b>Pas de l'émulation CUDA.</b> La licence de NVIDIA interdit les couches de traduction qui exécutent du code CUDA sur un autre matériel. Nous ne traduisons ni ne réimplémentons CUDA. ZLUDA (Apache-2.0/MIT) a été étudié et non utilisé : il demande un GPU AMD, que cette machine n'a pas, et il résout un autre problème (exécuter ailleurs des binaires CUDA existants).</li>
+<li><b>Pas un remplaçant de l'orchestration NVIDIA</b> (KAI/Run:ai, Dynamo) : elle est open source ; nous nous y branchons au lieu de la concurrencer.</li></ul>
+<h2>Le fabric</h2>
+<p>Chaque périphérique exécute sa propre implémentation native du même travail. Le planificateur sonde chacune sur des tailles réduites, vérifie qu'elles s'accordent, et choisit la moins chère pour la taille réelle.</p>
+<table><thead><tr><th>Périphérique</th><th>Moteur</th><th>État</th></tr></thead><tbody>
+<tr><td>CPU</td><td>Numba, tous les cœurs</td><td>testé</td></tr>
+<tr><td>GPU Metal</td><td>Metal Shading Language généré, compilé à l'exécution</td><td>testé (Intel Iris Plus 640)</td></tr>
+<tr><td>GPU NVIDIA</td><td>C CUDA généré / <code>numba.cuda</code></td><td><b>jamais exécuté</b></td></tr>
+<tr><td>GPU AMD</td><td>source HIP générée</td><td><b>jamais exécuté</b></td></tr>
+<tr><td>Nœud distant</td><td>Hub de la flotte</td><td>testé en boucle locale</td></tr></tbody></table>
+<h2>Noyaux portables</h2>
+<p>Un noyau est un sous-ensemble typé de Python (<code>int</code>, <code>float32</code>, boucles, branches, <code>sin</code>, <code>sqrt</code>…). La même source donne du code CPU, du code Metal et une source CUDA/HIP. Le code non pris en charge est refusé avec un numéro de ligne.</p>
+<pre><code>from spatial.kernel import kernel
+
+@kernel
+def collatz(i: int, j: int, n: int, limit: int):
+    x = i * n + j + 1
+    k = 0
+    while x != 1 and k &lt; limit:
+        if x % 2 == 0:
+            x = x // 2
+        else:
+            x = 3 * x + 1
+        k += 1
+    return k
+
+collatz.run("metal", 512, limit=1000)        # table n x n
+collatz.reduce("metal", 512, limit=1000)     # somme sur la grille, en mémoire partagée
+print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
+<h2>Mesuré (MacBook Pro 2017, Intel Iris Plus 640)</h2>
+<table><thead><tr><th>Vérification</th><th>Résultat</th></tr></thead><tbody>
+<tr><td>Même travail, CPU ou Metal, périphérique choisi par le planificateur</td><td>7 tailles sur 7 correctes ; le croisement se situe entre n = 600 et n = 1 024</td></tr>
+<tr><td>Noyau entier, CPU contre Metal</td><td>identique au bit près, y compris le dépassement 32 bits</td></tr>
+<tr><td>Noyaux flottants</td><td>d'accord à l'arrondi float32 près (moins de 1 % de pixels de bordure différents)</td></tr>
+<tr><td>Réduction en mémoire partagée, noyau entier</td><td>exacte face au CPU pour n = 16, 37, 100, 256</td></tr>
+<tr><td>Choix du planificateur pour les noyaux portables</td><td>4 sur 6 corrects, regret moyen 1,09× ; les deux erreurs au point de croisement</td></tr></tbody></table>
+<h2>Limites</h2>
+<p>Deux formes de noyau (table 2-D, somme de toute la grille). Pas de tuilage, de cœurs tenseurs ni d'autres réductions. Le travail est modélisé en n² : les noyaux dépendants des données ne sont que grossièrement proportionnels. Détails : <code>docs/KERNELS.md</code>, <code>docs/FABRIC.md</code>.</p><div class="pager"><a href="spatialq.html">← SPATIAL Q</a><a href="interconnect.html">Interconnexion →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Lancer</h5><pre><span class="k">$ spatial devices</span>
+<span class="k">$ spatial optimize compute \
+    --family pk_collatz \
+    --params '{"n":1536,"limit":2000}' \
+    --execute</span></pre><h5>Collatz, 1536 × 1536</h5><pre><span class="d">cpu         597 ms
+gpu_metal    94 ms
+le planificateur a choisi gpu_metal
+(regret 1,00×)</span></pre></aside></div><script src="../../assets/app.js"></script></body></html>

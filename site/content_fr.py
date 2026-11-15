@@ -2,11 +2,13 @@
 from scaffold import *  # noqa: F401,F403
 from scaffold import CFG, E, OUT, REPO, ROOT, alt_url, doc, head, nav, out_block
 import scaffold as S
+import pages_new
 
 NAV_GROUPS = [
     ("Démarrer", [("index", "Vue d'ensemble"), ("quickstart", "Installation")]),
-    ("Moteurs", [("planner", "Planificateur"), ("fleet", "Flotte"), ("compute", "Compute Engine"), ("memory", "Mémoire à étages"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
-    ("Référence", [("cli", "Commandes"), ("security", "Sécurité"), ("results", "Résultats"), ("limits", "Limitations")]),
+    ("Moteurs", [("planner", "Planificateur"), ("fleet", "Flotte"), ("compute", "Compute Engine"), ("memory", "Mémoire à étages"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q"), ("accelerators", "Accélérateurs"), ("interconnect", "Interconnexion")]),
+    ("Exploitation", [("operations", "Exploitation")]),
+    ("Référence", [("cli", "Commandes"), ("security", "Sécurité"), ("results", "Résultats"), ("limits", "Limitations"), ("roadmap", "Feuille de route"), ("changelog", "Versions")]),
 ]
 UI = {"nav_label": "Principal", "proof": "Preuves", "install": "Installer", "docs_label": "Documentation", "examples_label": "Exemples"}
 
@@ -35,7 +37,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Un seul objectif · v0.13.0 · open source</p>
+<p class="eyebrow">Un seul objectif · v0.14.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Un seul objectif pour toute l'infrastructure : réaliser chaque travail correctement au moindre coût, et le prouver. Un planificateur chiffre chaque façon d'exécuter un travail à travers le calcul, la mémoire, le runtime, le quantique, l'IA, la science et une flotte de machines ; un agent par machine et un hub gardent les mesures honnêtes.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -60,6 +62,9 @@ def landing():
 <div class="eng">
 <div class="card"><h3>Planificateur</h3><p>Chiffre chaque façon d'exécuter un travail à travers tous les moteurs et choisit la moins chère.</p><div class="pf"><b>12 / 12</b><span>cas jamais vus où il a choisi l'option réellement la plus rapide, chacune exécutée pour de vrai ; erreur médiane d'estimation 5 %</span></div></div>
 <div class="card"><h3>Flotte</h3><p>Voit toutes les machines d'un seul endroit et y place le travail.</p><div class="pf"><b>×1,66</b><span>12 tâches sur 3 agents contre 1, placées par le hub ; résultats identiques, chaîne d'audit intacte (une machine, 2 cœurs)</span></div></div>
+<div class="card"><h3>Accélérateurs</h3><p>Une source de noyau pour CPU, Metal, NVIDIA et AMD ; le périphérique le moins cher est choisi.</p><div class="pf"><b>identique au bit</b><span>noyau entier sur CPU et Metal ; les sources CUDA et HIP sont générées, jamais exécutées</span></div></div>
+<div class="card"><h3>Interconnexion</h3><p>All-reduce chiffré entre processus, algorithme choisi par un modèle de coût.</p><div class="pf"><b>~3 000× plus lent</b><span>que NVLink 5 en bande passante : une couche logicielle, pas un remplaçant</span></div></div>
+<div class="card"><h3>Exploitation</h3><p>Bascule du hub, tableau de bord en lecture seule, alertes.</p><div class="pf"><b>6,7 s</b><span>entre kill -9 du hub actif et la fin d'une tâche sur le survivant (une machine)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Exécute un calcul de la façon la moins chère que la machine permet.</p><div class="pf"><b>×31,6</b><span>JIT contre Python pur, résultat identique</span></div></div>
 <div class="card"><h3>Mémoire à étages</h3><p>Traite plus de données que la RAM locale, pour un prix en latence mesuré.</p><div class="pf"><b>−75 %</b><span>de RAM locale en accès biaisé, pour 107× de latence moyenne</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Lance un logiciel conçu pour un autre système, isolé.</p><div class="pf"><b>0,88 s</b><span>pour démarrer une micro-VM Linux ; un .exe Windows tourne sous Wine</span></div></div>
@@ -104,7 +109,9 @@ def landing():
 <p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
 <table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
 <tr><td>Planificateur (l'objectif unique)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs machines, GPU, vraies factures, modèle appris</td></tr>
-<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, passage à l'échelle, persistance du hub, tableau de bord</td></tr>
+<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, vrai réseau, journal répliqué, tableau de bord multi-utilisateur</td></tr>
+<tr><td>Accélérateurs et noyaux</td><td><span class="tag">premiers composants</span></td><td>Exécution du C CUDA et du HIP générés, tuilage, cœurs tenseurs</td></tr>
+<tr><td>Interconnexion virtuelle</td><td><span class="tag">premiers composants</span></td><td>Vrai réseau, RDMA, mémoire GPU, tolérance aux pannes</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
 <tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
@@ -130,7 +137,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.13.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.14.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -145,9 +152,13 @@ def docs():
 <a href="memory.html"><b>Mémoire à étages</b><span>Chaud, compressé, lointain : un échange chiffré, pas de la RAM.</span></a>
 <a href="runtime.html"><b>Runtime Engine</b><span>Inspecter un binaire, choisir une route, l'exécuter isolé.</span></a>
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
+<a href="accelerators.html"><b>Accélérateurs et noyaux</b><span>Un travail sur CPU, Metal, NVIDIA ou AMD ; noyaux écrits une fois.</span></a>
+<a href="interconnect.html"><b>Interconnexion</b><span>Collectives chiffrées avec un modèle de coût mesuré.</span></a>
+<a href="operations.html"><b>Exploitation</b><span>Bascule, tableau de bord, alertes, échelle.</span></a>
+<a href="roadmap.html"><b>Feuille de route</b><span>Ce qui est construit, ce qui demande matériel ou personnes.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.13.0. Quatre moteurs sont opérationnels et testés (160 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.14.0. Quatre moteurs sont opérationnels et testés (178 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -228,7 +239,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>Sécurité</h2>
 <p>Transport chiffré à confidentialité persistante. Avec des identifiants à portée limitée, l'identité d'un nœud est le nom de son identifiant : un agent ne peut pas se faire passer pour un autre, lire la flotte ni soumettre de tâches ; un lecteur ne peut pas injecter de mesures. Quotas, expiration, révocation et journal d'audit s'appliquent. Pas de revue indépendante.</p>
 <h2>Limites</h2>
-<p>Hub à processus unique et état en mémoire (ni persistance ni haute disponibilité), pas d'interface graphique, recommandations heuristiques, placement qui ne déplace pas le travail en cours. Description complète : <code>docs/INFRASTRUCTURE.md</code>.</p>''',
+<p>Recommandations heuristiques ; placement qui ne déplace pas le travail en cours ; bascule sans journal répliqué (voir <a href="operations.html">Exploitation</a>) ; tout validé sur une seule machine. Description complète : <code>docs/INFRASTRUCTURE.md</code>.</p>''',
         [("Mesuré : 12 tâches, 1 agent contre 3", '<span class="d">1 agent     7,2 s\n3 agents    4,3 s  (x1,66)\nrésultats identiques à la référence : 12 / 12\nplacement : 6, 4, 2 tâches\n(une machine à 2 cœurs : gain borné)</span>'),
          ("spatial fleet status", f'<span class="d">{E(FLEET_STATUS)}</span>')])
 
@@ -409,6 +420,8 @@ main {
 <tr><td>Domaines AI, scientifique, simulation, intelligence, holographie</td><td>Premiers composants seulement (modèle jouet, petits solveurs, optique numérique)</td></tr></tbody></table>
 <p>La liste détaillée et à jour est dans <code>docs/LIMITATIONS.md</code> (en anglais) ; chaque test non fait, avec la façon de le lancer, est dans <code>docs/TESTS_NOT_DONE.md</code>.</p>''',
         [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nAI / scientifique / simulation /\nintelligence / holographique\n  first-components</span>')])
+
+    pages_new.fr()
 
 
 if __name__ == "__main__":

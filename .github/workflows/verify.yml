@@ -1,0 +1,23 @@
+name: verify
+# Weekly re-check of the properties behind the published benchmark results (benchmarks/verify.py).
+# Shared runners are noisy: a failure means "look at it", not "the claim is false".
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[quantum,dev]"
+      - run: python benchmarks/verify.py

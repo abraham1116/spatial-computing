@@ -16,7 +16,18 @@ How it works (`spatial/fleet/ha.py`):
 
 Measured (`benchmarks/bench_ha.py`, two hub processes and one agent on one Mac, `kill -9` on the active hub, 3 trials): a new active hub in 5.4 to 5.7 s, a task submitted before the kill finished on the survivor 6.7 s after the kill in all 3 trials. Startup until exactly one hub is active: about 6.9 s.
 
-### This is not consensus
+## Three or more hubs: majority election (v0.14.0)
+With two or more `--peer` entries the hub uses `QuorumController` instead (`spatial/fleet/ha.py`):
+```bash
+spatial serve hub --token-file t --port 7700 --name a --peer B:7700 --peer C:7700 --state-file a.json
+```
+- Raft-style terms and votes: a hub that hears no leader for a timeout (6 s plus a per-name jitter) becomes a candidate, increments the term and asks the others for votes. A majority wins. At most one leader per term; a hub votes once per term (term and vote are saved in `<state-file>.term`).
+- A leader serves requests only while it has heard from a majority within the last half of `--fail-after` (a lease), so a hub cut off from the others refuses requests (`no quorum`) before a new leader can be elected, provided clocks tick at about the same rate. It steps down after `--fail-after` without a majority.
+- A candidate whose newest task id is older than the voter's cannot win.
+- State still moves by snapshot polling from the leader: up to one poll (1 s) of recent changes can be lost at a failover. This is **election safety, not a replicated log**, and not a Raft implementation (no log, no membership changes).
+- Tested (`tests/test_quorum.py`): one leader and followers copying its state; leader killed, new leader with the state, old leader rejoining as follower; a leader cut off from the majority stops serving, then steps down; no leader without a majority; a lagging candidate refused; term and vote surviving a restart; and a randomized run of 220 rounds with random crashes and restarts of 5 hubs (28 events, 5 terms with a leader, no term ever had two leaders). All on one machine with a simulated clock and real loopback connections: no real partitions, no clock skew, no network delay.
+
+### The two-hub mode is not consensus
 - No quorum, no lease. Under a network partition both hubs can be active; when they see each other again the lower epoch steps down and **its state is discarded**. Results recorded only on the losing side are lost; tasks that ran there may run again (workloads are pure functions, so that is safe).
 - Up to one poll (1 s) of state is lost at a failover; tasks running at that time are requeued (at-least-once).
 - Two hubs only were tested, on one machine, with a clean kill. No test with real network partitions, clock skew or more than two hubs.

@@ -40,9 +40,16 @@ Library: `mandelbrot`, `collatz` (integer), `waves` (sin/cos). Planner families:
 - Planner device choice from reduced probes: **4 of 6 right**, mean regret 1.09x. Both misses sit at the CPU/GPU crossover (Mandelbrot n=512: 36 vs 33 ms; collatz n=512: 54 vs 38 ms).
 - The first version picked the CPU for large collatz jobs because the planner rejected the GPU: "result differs from the other variants". The cause was a real semantic difference (CPU 64-bit integers against GPU 32-bit); making the CPU wrap at 32 bits fixed it, and a test now covers it.
 
+## Reductions and shared memory (v0.14.0)
+`kernel.reduce("cpu" | "metal", n, **params)` returns the sum of the kernel's output over the whole grid (uint64 accumulation).
+- CPU: a Numba parallel reduction.
+- Metal: 16 x 16 threads per threadgroup add their values pairwise in a 256-entry `threadgroup` array with barriers; one partial sum per group, added on the host. Tested exact against the CPU for integer kernels at n = 16, 37, 100 and 256 (sizes that are not multiples of 16 included) and within 1 % for a float kernel.
+- `to_cuda_c(reduce=True)` and `to_hip(reduce=True)` generate the same algorithm with `__shared__` and `__syncthreads()`. **HIP (AMD) and CUDA sources are generated only: never compiled, never run** (no AMD or NVIDIA GPU here).
+- Names that would clash with the generated code (`out`, `partial`, `total`, `_sp_*`...) are refused.
+
 ## Limits
-- **CUDA C is generated and never compiled or run** (no NVIDIA hardware, no NVRTC here). The `cuda` device refuses to run and says so.
-- One kernel shape: a 2-D grid, per-element, no shared memory, no reductions, no inter-thread communication, output a `uint32` array. Real GPU programming (tiling, shared memory, tensor cores) is not expressible.
+- **CUDA C and HIP are generated and never compiled or run** (no NVIDIA hardware, no NVRTC here). The `cuda` device refuses to run and says so.
+- Two kernel shapes: a 2-D per-element map and a whole-grid sum. Shared memory is used only inside the built-in reduction; you cannot write your own tiled kernel, use tensor cores, or other reductions (min, max, histogram).
 - Work scales as n² in the planner's model; data-dependent kernels (collatz) are only roughly proportional, which is why misses happen near the crossover.
 - Integer `%` and `//` follow C (truncation), not Python (floor), for negative values.
 - No host-device transfer model beyond what the probes include.

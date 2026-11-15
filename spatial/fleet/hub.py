@@ -31,7 +31,8 @@ HISTORY = 2000          # samples kept per node
 
 class Hub:
     def __init__(self, ledger: Ledger | None = None, stale_after_s: float = 30.0, clock=time.time,
-                 busy_cpu_pct: float = 90.0, gang_hold_s: float = 30.0, affinity_wait_s: float = 5.0):
+                 busy_cpu_pct: float = 90.0, gang_hold_s: float = 30.0, affinity_wait_s: float = 5.0,
+                 max_finished: int = 5000, max_affinity: int = 10000):
         self.nodes: dict[str, dict] = {}
         self.series: dict[str, deque] = {}
         self.tasks: dict[int, dict] = {}
@@ -51,6 +52,9 @@ class Hub:
         self.role = "active"                        # "standby": answers only ping and role (see fleet/ha.py)
         self.epoch = 1                              # raised at every promotion; the higher epoch wins a split brain
         self.name = "hub"
+        self.ha = None                              # a fleet.ha controller, if any
+        self.max_finished, self.max_affinity = max_finished, max_affinity   # bounded memory: the soak test showed the hub grew without limit
+        self._finished: deque = deque()             # ids of done/failed tasks, oldest first
 
     # ------------------------------------------------------------------ identity
     @staticmethod
@@ -180,7 +184,7 @@ class Hub:
                 g["reserved"] = {nd: exp for nd, exp in g["reserved"].items() if exp > now}
             for g in self.gangs.values():                    # a node held for a gang serves only that gang
                 if node in g["reserved"]:
-                    mine = [self.tasks[t] for t in g["tasks"] if self.tasks[t]["state"] == "queued" and self._eligible(node, self.tasks[t]["needs"])]
+                    mine = [self.tasks[t] for t in g["tasks"] if t in self.tasks and self.tasks[t]["state"] == "queued" and self._eligible(node, self.tasks[t]["needs"])]
                     if not mine:
                         return None
                     return self._assign(min(mine, key=lambda t: t["id"]), node, now, g, "held for its gang")
@@ -199,7 +203,7 @@ class Hub:
                     continue                                  # the node holding its cache is free: wait for it
                 g = self.gangs.get(t["gang"]) if t["gang"] else None
                 if g is not None:
-                    missing = sum(1 for x in g["tasks"] if self.tasks[x]["state"] == "queued")
+                    missing = sum(1 for x in g["tasks"] if x in self.tasks and self.tasks[x]["state"] == "queued")
                     if len(self._gang_nodes(g, t["needs"], now, node)) + 1 < missing:
                         continue                              # not enough idle nodes for the whole gang yet
                 tn = t["tenant"]
@@ -237,13 +241,21 @@ class Hub:
             t.update(state="done" if ok else "failed", finished=self.clock(), result=value, error=error, wall_s=wall_s)
             self.usage[t["tenant"]] = self.usage.get(t["tenant"], 0.0) + (wall_s if wall_s is not None else self.clock() - t.get("started", self.clock()))
             if ok and t["needs"].get("affinity"):
+                self.affinity.pop(t["needs"]["affinity"], None)
                 self.affinity[t["needs"]["affinity"]] = node
+                while len(self.affinity) > self.max_affinity:
+                    self.affinity.pop(next(iter(self.affinity)))
+            self._finished.append(task_id)
+            while len(self._finished) > self.max_finished:     # forget the oldest finished tasks (and gangs with no task left)
+                self.tasks.pop(self._finished.popleft(), None)
+            if len(self.gangs) > 64:
+                self.gangs = {k: g for k, g in self.gangs.items() if any(x in self.tasks for x in g["tasks"])}
 
     def task(self, task_id: int) -> dict:
         with self._lock:
             t = self.tasks.get(task_id)
             if t is None:
-                raise KeyError(f"unknown task {task_id}")
+                raise KeyError(f"unknown task {task_id} (never existed, or finished long ago and was forgotten: the hub keeps the last {self.max_finished} finished tasks)")
             return {k: v for k, v in t.items()}
 
 
@@ -255,6 +267,10 @@ class Hub:
             return {"version": 1, "epoch": self.epoch, "next_id": next(self._ids), "tasks": list(self.tasks.values()), "queue": list(self.queue),
                     "usage": self.usage, "weights": self.weights, "affinity": self.affinity,
                     "gangs": [{**g, "reserved": {}} for g in self.gangs.values()]}
+
+    def last_id(self) -> int:
+        with self._lock:
+            return max(self.tasks, default=0)
 
     def requeue_running(self) -> int:
         """Put running tasks back in the queue (at-least-once: the allow-listed workloads are pure
@@ -275,6 +291,7 @@ class Hub:
             self.tasks = {int(t["id"]): t for t in snap["tasks"]}
             self.queue = deque(int(i) for i in snap["queue"])
             self.epoch = max(self.epoch, int(snap.get("epoch", 1)))
+            self._finished = deque(t["id"] for t in sorted(self.tasks.values(), key=lambda t: t["id"]) if t["state"] in ("done", "failed"))
             requeued = self.requeue_running() if requeue else 0
             self.usage, self.weights, self.affinity = dict(snap["usage"]), dict(snap["weights"]), dict(snap["affinity"])
             self.gangs = {int(g["id"]): {**g, "started": [], "reserved": {}} for g in snap["gangs"]}
@@ -415,9 +432,16 @@ def make_handler(hub: Hub):
         if op == "ping":
             return {"pong": True}, b""
         if op == "role":
-            return {"role": hub.role, "epoch": hub.epoch, "name": hub.name}, b""
+            return {"role": hub.role, "epoch": hub.epoch, "name": hub.name, "lease": hub.ha.lease_ok() if hub.ha else True}, b""
+        if op in ("vote", "beat"):
+            require("fleet:replicate")
+            if not hasattr(hub.ha, "on_" + op):
+                raise RuntimeError("this hub is not part of a quorum")
+            return getattr(hub.ha, "on_" + op)(h), b""
         if hub.role != "active":
             raise RuntimeError(f"standby: {hub.name} is not the active hub")
+        if hub.ha is not None and not hub.ha.lease_ok():
+            raise RuntimeError("no quorum: this hub lost contact with a majority and refuses requests")
         if op == "snapshot":
             require("fleet:replicate")
             return {"epoch": hub.epoch}, json.dumps(hub.snapshot()).encode()
@@ -475,6 +499,7 @@ def main():
     ap.add_argument("--state-file", help="save tasks, queue, tenant usage here every 5 s and reload it at start")
     ap.add_argument("--peer", action="append", default=[], help="host:port of another hub (repeatable): active/standby with automatic promotion")
     ap.add_argument("--peer-token-file", help="token this hub presents to its peers (scope fleet:replicate); default: --token-file")
+    ap.add_argument("--max-finished", type=int, default=5000, help="finished tasks kept in memory (older ones are forgotten)")
     ap.add_argument("--name", default="hub", help="this hub's name (HA tie-break: the smaller name stays active)")
     ap.add_argument("--fail-after", type=float, default=6.0, help="seconds without an active peer before a standby promotes itself")
     a = ap.parse_args()
@@ -483,6 +508,7 @@ def main():
     srv, hub = serve_hub(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
                          authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None,
                          ledger=Ledger(a.decision_log))
+    hub.max_finished = a.max_finished
     if a.state_file:
         print("restored", hub.load(a.state_file), flush=True)
     if a.peer:
@@ -490,7 +516,10 @@ def main():
         ptf = a.peer_token_file or a.token_file
         if ptf is None:
             raise SystemExit("--peer needs --peer-token-file (a scoped token with fleet:replicate) or --token-file")
-        HAController(hub, Path(ptf).read_bytes(), a.peer, a.name, fail_after_s=a.fail_after).start()
+        from .ha import QuorumController
+        cls = QuorumController if len(a.peer) >= 2 else HAController            # 3 or more hubs: majority election
+        kw = {"meta_path": a.state_file + ".term"} if (cls is QuorumController and a.state_file) else {}
+        cls(hub, Path(ptf).read_bytes(), a.peer, a.name, fail_after_s=a.fail_after, **kw).start()
     if a.state_file:
         hub.autosave(a.state_file)
     print(f"PORT {srv.port}", flush=True)

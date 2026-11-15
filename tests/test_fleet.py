@@ -271,3 +271,20 @@ def test_hub_restart_on_the_same_port_agents_reconnect_and_queued_work_survives(
             srv2.stop()
     finally:
         agent.stop()
+
+
+def test_finished_tasks_are_forgotten_beyond_the_cap_so_memory_stays_bounded():
+    clk = Clock(); hub = Hub(clock=clk, max_finished=50, max_affinity=10)
+    feed(hub, "n1", 10, clk=clk)
+    ids = []
+    for i in range(200):
+        tid = hub.submit("montecarlo_pi", {"samples": 1}, needs={"affinity": f"k{i}"})
+        t = hub.poll("n1"); hub.result("n1", t["id"], True, 0, wall_s=0.1); ids.append(tid)
+    assert len(hub.tasks) == 50 and len(hub.affinity) == 10 and len(hub._finished) == 50
+    assert hub.task(ids[-1])["state"] == "done"
+    with pytest.raises(KeyError, match="forgotten"):
+        hub.task(ids[0])
+    pending = hub.submit("montecarlo_pi", {"samples": 1})                    # unfinished tasks are never dropped
+    for _ in range(100):
+        t = hub.poll("n1"); hub.result("n1", t["id"], True, 0, wall_s=0.1); hub.submit("montecarlo_pi", {"samples": 1})
+    assert pending not in hub.queue and hub.snapshot()["tasks"].__len__() <= 52

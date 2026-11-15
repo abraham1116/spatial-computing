@@ -94,3 +94,44 @@ def test_int32_overflow_matches_between_cpu_and_metal():
     # the 3x+1 map overflows 32 bits for large starts: CPU must wrap like the GPU does
     a, b = collatz.run("cpu", 512, limit=1000), collatz.run("metal", 512, limit=1000)
     assert np.array_equal(a, b)
+
+
+@pytest.mark.parametrize("n", [16, 37, 100])
+def test_cpu_reduction_equals_the_sum_of_the_map(n):
+    assert collatz.reduce("cpu", n, limit=300) == int(collatz.run("cpu", n, limit=300).astype("uint64").sum())
+
+
+@needs_metal
+@pytest.mark.parametrize("n", [16, 37, 100, 256])
+def test_metal_reduction_in_shared_memory_is_exact_for_integer_kernels(n):
+    assert collatz.reduce("metal", n, limit=300) == collatz.reduce("cpu", n, limit=300)     # sizes that are not multiples of 16 included
+
+
+@needs_metal
+def test_metal_reduction_of_a_float_kernel_is_close():
+    a, b = mandelbrot.reduce("cpu", 128, iters=100), mandelbrot.reduce("metal", 128, iters=100)
+    assert abs(a - b) / a < 0.01
+
+
+def test_reduction_sources_use_shared_memory_and_barriers_and_hip_has_its_header():
+    assert "threadgroup ulong _sp_sh[256]" in collatz.to_metal(reduce=True) and "threadgroup_barrier" in collatz.to_metal(reduce=True)
+    cu = collatz.to_cuda_c(reduce=True)
+    assert "__shared__ unsigned long long _sp_sh[256]" in cu and "__syncthreads" in cu and "collatz_sum" in cu
+    hip = collatz.to_hip(reduce=True)
+    assert hip.startswith("#include <hip/hip_runtime.h>") and "__global__" in hip
+    assert "hip" not in collatz.to_cuda_c()
+    for dev in ("cuda", "hip"):
+        with pytest.raises(KernelError):
+            collatz.reduce(dev, 8, limit=10)
+
+
+def test_names_that_would_clash_with_generated_code_are_refused():
+    with pytest.raises(KernelError, match="reserved"):
+        @kernel
+        def bad(i: int, j: int, n: int):
+            out = 1
+            return out
+    with pytest.raises(KernelError, match="reserved"):
+        @kernel
+        def bad2(i: int, j: int, n: int, total: int):
+            return 1

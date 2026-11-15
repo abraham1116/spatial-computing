@@ -1,11 +1,13 @@
 """English content for the site (served at the root). Scaffolding lives in scaffold.py."""
 from scaffold import CFG, E, OUT, REPO, ROOT, alt_url, doc, head, nav, out_block
 import scaffold as S
+import pages_new
 
 NAV_GROUPS = [
     ("Get started", [("index", "Overview"), ("quickstart", "Installation")]),
-    ("Engines", [("planner", "Planner"), ("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
-    ("Reference", [("cli", "Commands"), ("security", "Security"), ("results", "Results"), ("limits", "Limitations")]),
+    ("Engines", [("planner", "Planner"), ("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q"), ("accelerators", "Accelerators"), ("interconnect", "Interconnect")]),
+    ("Operate", [("operations", "Operations")]),
+    ("Reference", [("cli", "Commands"), ("security", "Security"), ("results", "Results"), ("limits", "Limitations"), ("roadmap", "Roadmap"), ("changelog", "Changelog")]),
 ]
 UI = {"nav_label": "Main", "proof": "Proof", "install": "Install", "docs_label": "Documentation", "examples_label": "Examples"}
 
@@ -33,7 +35,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">One objective · v0.13.0 · open source</p>
+<p class="eyebrow">One objective · v0.14.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. A planner prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines; an agent on each machine and a hub keep the measurements honest.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -58,6 +60,9 @@ def landing():
 <div class="eng">
 <div class="card"><h3>Planner</h3><p>Prices every way to run a job across all engines and picks the cheapest.</p><div class="pf"><b>12 / 12</b><span>unseen cases where it picked the truly fastest option, each one run for real; median estimate error 5 %</span></div></div>
 <div class="card"><h3>Fleet</h3><p>Sees every machine from one place and places work on them.</p><div class="pf"><b>×1.66</b><span>12 tasks on 3 agents against 1, placed by the hub; identical results, audit chain intact (one machine, 2 cores)</span></div></div>
+<div class="card"><h3>Accelerators</h3><p>One kernel source for the CPU, Metal, NVIDIA and AMD; the cheapest device is chosen.</p><div class="pf"><b>bit-identical</b><span>integer kernel on CPU and Metal; CUDA and HIP sources are generated, never run</span></div></div>
+<div class="card"><h3>Interconnect</h3><p>Encrypted all-reduce between workers, algorithm chosen by a cost model.</p><div class="pf"><b>~3,000× slower</b><span>than NVLink 5 on bandwidth: a software layer, not a replacement</span></div></div>
+<div class="card"><h3>Operations</h3><p>Hub failover, a read-only dashboard, alerts.</p><div class="pf"><b>6.7 s</b><span>from kill -9 on the active hub to a task finishing on the survivor (one machine)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
 <div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Runs software built for another system, isolated.</p><div class="pf"><b>0.88 s</b><span>to boot a Linux micro-VM; a Windows .exe runs under Wine</span></div></div>
@@ -102,7 +107,9 @@ def landing():
 <p class="lead">Each engine's status is declared in the code, and a test forbids showing one without evidence.</p>
 <table><thead><tr><th>Engine</th><th>Level</th><th>Not done yet</th></tr></thead><tbody>
 <tr><td>Planner (the one objective)</td><td><span class="tag ok">operational prototype</span></td><td>Several machines, GPUs, real invoices, a learned model</td></tr>
-<tr><td>Fleet (agent + hub)</td><td><span class="tag ok">operational prototype</span></td><td>Several real machines, scale, hub persistence, dashboard</td></tr>
+<tr><td>Fleet (agent + hub)</td><td><span class="tag ok">operational prototype</span></td><td>Several real machines, a real network, a replicated log, multi-user dashboard</td></tr>
+<tr><td>Accelerators and kernels</td><td><span class="tag">first components</span></td><td>Running the generated CUDA C and HIP, tiling, tensor cores</td></tr>
+<tr><td>Virtual interconnect</td><td><span class="tag">first components</span></td><td>A real network, RDMA, GPU memory, fault tolerance</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">operational prototype</span></td><td>Second real machine, NVIDIA GPU, energy measurement</td></tr>
 <tr><td>Tiered memory</td><td><span class="tag ok">operational prototype</span></td><td>Kernel paging, multiple writers, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Containers, remote GUI, graphical Windows apps</td></tr>
@@ -128,7 +135,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.13.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.14.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -142,9 +149,13 @@ def docs():
 <a href="memory.html"><b>Tiered memory</b><span>Hot, compressed, far: a priced trade-off, not RAM.</span></a>
 <a href="runtime.html"><b>Runtime Engine</b><span>Inspect a binary, pick a route, run it isolated.</span></a>
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
+<a href="accelerators.html"><b>Accelerators and kernels</b><span>One job on CPU, Metal, NVIDIA or AMD; kernels written once.</span></a>
+<a href="interconnect.html"><b>Interconnect</b><span>Encrypted collectives with a measured cost model.</span></a>
+<a href="operations.html"><b>Operations</b><span>Failover, dashboard, alerts, scale.</span></a>
+<a href="roadmap.html"><b>Roadmap</b><span>What is built, what needs hardware or people.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.13.0. Four engines are operational and tested (160 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.14.0. Four engines are operational and tested (178 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -225,7 +236,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>Security</h2>
 <p>Encrypted, forward-secret transport. With scoped credentials, a node's identity is its credential name: an agent cannot report as another node, cannot read the fleet and cannot submit tasks; a reader cannot inject measurements. Quotas, expiry, revocation and an audit log apply. Not independently reviewed.</p>
 <h2>Limits</h2>
-<p>Single-process hub with in-memory state (no persistence, no high availability), no dashboard UI, heuristic recommendations, placement that does not move running work. Full description: <code>docs/INFRASTRUCTURE.md</code>.</p>''',
+<p>Heuristic recommendations; placement that does not move running work; failover without a replicated log (see <a href="operations.html">Operations</a>); everything validated on one machine. Full description: <code>docs/INFRASTRUCTURE.md</code>.</p>''',
         [("Measured: 12 tasks, 1 agent versus 3", '<span class="d">1 agent     7.2 s\n3 agents    4.3 s  (x1.66)\nresults identical to the reference: 12 / 12\nplacement: 6, 4, 2 tasks\n(one 2-core machine: speed-up is bounded)</span>'),
          ("spatial fleet status", f'<span class="d">{E(FLEET_STATUS)}</span>')])
 
@@ -407,3 +418,5 @@ main {
 <tr><td>AI, scientific, simulation, intelligence, holographic domains</td><td>First components only (toy model, small solvers, numerical optics)</td></tr></tbody></table>
 <p>The detailed, current list is in <code>docs/LIMITATIONS.md</code>; every test not yet done, with how to run it, is in <code>docs/TESTS_NOT_DONE.md</code>; open work is in <code>ROADMAP.md</code>.</p>''',
         [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nAI / scientific / simulation /\nintelligence / holographic\n  first-components</span>')])
+
+    pages_new.en()

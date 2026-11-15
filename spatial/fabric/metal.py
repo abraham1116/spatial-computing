@@ -62,16 +62,16 @@ def _ensure_run_binary() -> Path:
     return RUN_BIN
 
 
-def run_kernel(k, n: int, params: dict, reps: int = 1, timing: dict | None = None):
-    """Run a portable Kernel (spatial.kernel) on the Metal GPU; returns the (n, n) uint32 output.
+def run_kernel(k, n: int, params: dict, reps: int = 1, timing: dict | None = None, reduce: bool = False):
+    """Run a portable Kernel (spatial.kernel) on the Metal GPU; returns the (n, n) uint32 output, or with reduce=True the sum of all outputs (computed in threadgroup shared memory, partial sums added on the host).
     `timing`, if given, receives the GPU-side median seconds."""
     import numpy as np
     import tempfile
     binary = _ensure_run_binary()
     with tempfile.TemporaryDirectory() as d:
         msl, out = Path(d) / "k.metal", Path(d) / "out.bin"
-        msl.write_text(k.to_metal())
-        args = [str(binary), str(msl), k.name, str(n), str(reps), str(out)]
+        msl.write_text(k.to_metal(reduce=reduce))
+        args = [str(binary), str(msl), k.name + ("_sum" if reduce else ""), str(n), str(reps), str(out), "sum" if reduce else "map"]
         args += [f"{t}:{float(params[p]) if t == 'float' else int(params[p])}" for p, t in k.params]
         r = subprocess.run(args, capture_output=True, text=True, timeout=600)
         try:
@@ -82,4 +82,6 @@ def run_kernel(k, n: int, params: dict, reps: int = 1, timing: dict | None = Non
             raise RuntimeError(info.get("error", "Metal error"))
         if timing is not None:
             timing.update(info)
+        if reduce:
+            return int(np.fromfile(out, dtype=np.uint64).sum())
         return np.fromfile(out, dtype=np.uint32).reshape(n, n)

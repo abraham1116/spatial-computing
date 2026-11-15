@@ -1,7 +1,7 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Mesurer. Décider. Prouver.</title><meta name="description" content="Choisit où et comment exécuter une charge à partir de mesures, et ne revendique un gain que s&#x27;il est mesuré."><link rel="alternate" hreflang="en" href="../index.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../index.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="docs/quickstart.html">Installer</a></nav></div></header><main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Un seul objectif · v0.13.0 · open source</p>
+<p class="eyebrow">Un seul objectif · v0.14.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Un seul objectif pour toute l'infrastructure : réaliser chaque travail correctement au moindre coût, et le prouver. Un planificateur chiffre chaque façon d'exécuter un travail à travers le calcul, la mémoire, le runtime, le quantique, l'IA, la science et une flotte de machines ; un agent par machine et un hub gardent les mesures honnêtes.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
@@ -36,6 +36,9 @@ memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
 <div class="eng">
 <div class="card"><h3>Planificateur</h3><p>Chiffre chaque façon d'exécuter un travail à travers tous les moteurs et choisit la moins chère.</p><div class="pf"><b>12 / 12</b><span>cas jamais vus où il a choisi l'option réellement la plus rapide, chacune exécutée pour de vrai ; erreur médiane d'estimation 5 %</span></div></div>
 <div class="card"><h3>Flotte</h3><p>Voit toutes les machines d'un seul endroit et y place le travail.</p><div class="pf"><b>×1,66</b><span>12 tâches sur 3 agents contre 1, placées par le hub ; résultats identiques, chaîne d'audit intacte (une machine, 2 cœurs)</span></div></div>
+<div class="card"><h3>Accélérateurs</h3><p>Une source de noyau pour CPU, Metal, NVIDIA et AMD ; le périphérique le moins cher est choisi.</p><div class="pf"><b>identique au bit</b><span>noyau entier sur CPU et Metal ; les sources CUDA et HIP sont générées, jamais exécutées</span></div></div>
+<div class="card"><h3>Interconnexion</h3><p>All-reduce chiffré entre processus, algorithme choisi par un modèle de coût.</p><div class="pf"><b>~3 000× plus lent</b><span>que NVLink 5 en bande passante : une couche logicielle, pas un remplaçant</span></div></div>
+<div class="card"><h3>Exploitation</h3><p>Bascule du hub, tableau de bord en lecture seule, alertes.</p><div class="pf"><b>6,7 s</b><span>entre kill -9 du hub actif et la fin d'une tâche sur le survivant (une machine)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Exécute un calcul de la façon la moins chère que la machine permet.</p><div class="pf"><b>×31,6</b><span>JIT contre Python pur, résultat identique</span></div></div>
 <div class="card"><h3>Mémoire à étages</h3><p>Traite plus de données que la RAM locale, pour un prix en latence mesuré.</p><div class="pf"><b>−75 %</b><span>de RAM locale en accès biaisé, pour 107× de latence moyenne</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Lance un logiciel conçu pour un autre système, isolé.</p><div class="pf"><b>0,88 s</b><span>pour démarrer une micro-VM Linux ; un .exe Windows tourne sous Wine</span></div></div>
@@ -92,7 +95,9 @@ main {
 <p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
 <table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
 <tr><td>Planificateur (l'objectif unique)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs machines, GPU, vraies factures, modèle appris</td></tr>
-<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, passage à l'échelle, persistance du hub, tableau de bord</td></tr>
+<tr><td>Flotte (agent + hub)</td><td><span class="tag ok">prototype opérationnel</span></td><td>Plusieurs vraies machines, vrai réseau, journal répliqué, tableau de bord multi-utilisateur</td></tr>
+<tr><td>Accélérateurs et noyaux</td><td><span class="tag">premiers composants</span></td><td>Exécution du C CUDA et du HIP générés, tuilage, cœurs tenseurs</td></tr>
+<tr><td>Interconnexion virtuelle</td><td><span class="tag">premiers composants</span></td><td>Vrai réseau, RDMA, mémoire GPU, tolérance aux pannes</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
 <tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
@@ -118,5 +123,5 @@ main {
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.13.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.14.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="../assets/app.js"></script></body></html>

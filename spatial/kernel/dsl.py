@@ -99,7 +99,15 @@ class Kernel:
             self._err(e, f"unknown function '{f}'")
         self._err(e, f"unsupported expression ({type(e).__name__})")
 
+    RESERVED = {"out", "partial", "gid", "lid", "tgid", "ngroups", "blockIdx", "blockDim", "threadIdx", "gridDim", "total"}
+
+    def _check_names(self, names) -> None:
+        for nm in names:
+            if nm in self.RESERVED or nm.startswith("_sp_") or nm.startswith("__"):
+                raise KernelError(f"{self.name}: '{nm}' is reserved by the generated code; rename it")
+
     def analyse(self) -> None:
+        self._check_names([p for p, _ in self.params])
         env = {"i": "int", "j": "int", "n": "int", **dict(self.params)}
         for _ in range(2):                                    # second pass: a variable later assigned a float becomes float
             self._walk(self.body, env)
@@ -112,6 +120,7 @@ class Kernel:
                 if len(s.targets) != 1 or not isinstance(s.targets[0], ast.Name):
                     self._err(s, "assign to a single name")
                 name, t = s.targets[0].id, self.type_of(s.value, env)
+                self._check_names([name])
                 if name in ("i", "j", "n") or name in dict(self.params):
                     self._err(s, f"'{name}' is an input and cannot be assigned")
                 env[name] = "float" if "float" in (env.get(name), t) else t
@@ -224,30 +233,51 @@ class Kernel:
     def _env(self):
         return {"i": "int", "j": "int", "n": "int", **dict(self.params), **self.types}
 
-    def to_c(self, cuda: bool) -> str:
+    def to_c(self, cuda: bool, reduce: bool = False, hip: bool = False) -> str:
         env = self._env()
         decls = [f"    {t} {v};" for v, t in self.types.items()]
-        body = "\n".join(self._stmts_c(self.body, env, cuda, "    "))
+        body = "\n".join(self._stmts_c(self.body, env, cuda, "        " if reduce else "    "))
         ret = f"(unsigned int)({self._expr_c(self.ret, env, cuda)})"
         if cuda:
-            sig = ", ".join(["unsigned int *out", "int n"] + [f"{t} {p}" for p, t in self.params])
-            head = f'extern "C" __global__ void {self.name}({sig}) {{\n    int j = blockIdx.x * blockDim.x + threadIdx.x;\n    int i = blockIdx.y * blockDim.y + threadIdx.y;'
-            pre = ""
+            name = self.name + ("_sum" if reduce else "")
+            first = "unsigned long long *partial" if reduce else "unsigned int *out"
+            sig = ", ".join([first, "int n"] + [f"{t} {p}" for p, t in self.params])
+            head = f'extern "C" __global__ void {name}({sig}) {{\n    int j = blockIdx.x * blockDim.x + threadIdx.x;\n    int i = blockIdx.y * blockDim.y + threadIdx.y;'
+            pre = "#include <hip/hip_runtime.h>\n" if hip else ""
         else:
-            args = ["device uint *out [[buffer(0)]]", "constant int &n [[buffer(1)]]"]
+            name = self.name + ("_sum" if reduce else "")
+            args = ["device ulong *partial [[buffer(0)]]" if reduce else "device uint *out [[buffer(0)]]", "constant int &n [[buffer(1)]]"]
             args += [f"constant {t} &{p} [[buffer({k + 2})]]" for k, (p, t) in enumerate(self.params)]
             args.append("uint2 gid [[thread_position_in_grid]]")
-            head = f"kernel void {self.name}({', '.join(args)}) {{\n    int j = (int)gid.x;\n    int i = (int)gid.y;"
+            if reduce:
+                args += ["uint lid [[thread_index_in_threadgroup]]", "uint2 tgid [[threadgroup_position_in_grid]]", "uint2 ngroups [[threadgroups_per_grid]]"]
+            head = f"kernel void {name}({', '.join(args)}) {{\n    int j = (int)gid.x;\n    int i = (int)gid.y;"
             pre = "#include <metal_stdlib>\nusing namespace metal;\n"
-        return (f"{pre}{head}\n    if (i >= n || j >= n) return;\n" + "\n".join(decls) + ("\n" if decls else "")
-                + (body + "\n" if body else "") + f"    out[i * n + j] = {ret};\n}}\n")
+        d = "\n".join(decls) + ("\n" if decls else "")
+        if not reduce:
+            return (f"{pre}{head}\n    if (i >= n || j >= n) return;\n" + d + (body + "\n" if body else "") + f"    out[i * n + j] = {ret};\n}}\n")
+        # Reduction: 16 x 16 threads per block share a 256-entry array and add pairwise; every thread must reach the
+        # barriers, so there is no early return. One partial sum per block; the host adds the partials.
+        ull = "unsigned long long" if cuda else "ulong"
+        shared = f"    __shared__ {ull} _sp_sh[256];" if cuda else f"    threadgroup {ull} _sp_sh[256];"
+        t = "int _sp_t = threadIdx.y * blockDim.x + threadIdx.x;" if cuda else "int _sp_t = (int)lid;"
+        bar = "__syncthreads();" if cuda else "threadgroup_barrier(mem_flags::mem_threadgroup);"
+        gid = "blockIdx.y * gridDim.x + blockIdx.x" if cuda else "tgid.y * ngroups.x + tgid.x"
+        return (f"{pre}{head}\n{shared}\n    {t}\n" + d + f"    {ull} _sp_v = 0;\n    if (i < n && j < n) {{\n" + (body + "\n" if body else "")
+                + f"        _sp_v = ({ull}){ret};\n    }}\n    _sp_sh[_sp_t] = _sp_v;\n    {bar}\n    for (int _sp_s = 128; _sp_s > 0; _sp_s >>= 1) {{\n"
+                f"        if (_sp_t < _sp_s) _sp_sh[_sp_t] += _sp_sh[_sp_t + _sp_s];\n        {bar}\n    }}\n    if (_sp_t == 0) partial[{gid}] = _sp_sh[0];\n}}\n")
 
-    def to_metal(self) -> str:
-        return self.to_c(cuda=False)
+    def to_metal(self, reduce: bool = False) -> str:
+        return self.to_c(cuda=False, reduce=reduce)
 
-    def to_cuda_c(self) -> str:
+    def to_cuda_c(self, reduce: bool = False) -> str:
         """CUDA C source for NVRTC/nvcc. Generated, never compiled or run: no NVIDIA toolchain here."""
-        return self.to_c(cuda=True)
+        return self.to_c(cuda=True, reduce=reduce)
+
+    def to_hip(self, reduce: bool = False) -> str:
+        """HIP source for AMD GPUs (hipcc). Same syntax tree, the CUDA-style kernel dialect that HIP accepts.
+        Generated only: no AMD GPU, no ROCm here, so it has never been compiled or run."""
+        return self.to_c(cuda=True, reduce=reduce, hip=True)
 
     def _expr_py(self, e, env) -> str:
         t = lambda x: self.type_of(x, env)
@@ -314,18 +344,36 @@ class Kernel:
                 out += self._stmts_py(s.body, env, ind + "    ") or [ind + "    pass"]
         return out
 
-    def to_python(self) -> str:
+    def to_python(self, reduce: bool = False) -> str:
         """Numba-compilable source with explicit float32 arithmetic (matches the GPU back ends)."""
         env = self._env()
         inits = [f"        {v} = np.float32(0.0)" if t == "float" else f"        {v} = 0" for v, t in self.types.items()]
-        sig = ", ".join(["out", "n"] + [p for p, _ in self.params])
+        sig = ", ".join(([] if reduce else ["out"]) + ["n"] + [p for p, _ in self.params])
         body = "\n".join(self._stmts_py(self.body, env, "        "))
         ret = self._expr_py(self.ret, env)
         ret = f"_w32({ret}) & 0xFFFFFFFF" if self.type_of(self.ret, env) == "int" else ret
+        if reduce:
+            return ("def _kernel(" + sig + "):\n    total = np.uint64(0)\n    for i in prange(n):\n      for j in range(n):\n" + "\n".join(inits)
+                    + ("\n" if inits else "") + (body + "\n" if body else "") + f"        total += np.uint64({ret})\n    return total\n")
         return ("def _kernel(" + sig + "):\n    for i in prange(n):\n      for j in range(n):\n" + "\n".join(inits)
                 + ("\n" if inits else "") + (body + "\n" if body else "") + f"        out[i, j] = {ret}\n")
 
     # ------------------------------------------------------------------ execution
+    def reduce(self, device: str, n: int, **params) -> int:
+        """Sum of the kernel's output over the whole n x n grid, as an int (uint64 accumulation). On Metal this
+        uses threadgroup shared memory and barriers; on the CPU a Numba parallel reduction."""
+        for p, t in self.params:
+            if p not in params:
+                raise KernelError(f"{self.name}: missing parameter '{p}'")
+        if device == "cpu":
+            return self._run_cpu(n, params, reduce=True)
+        if device == "metal":
+            from ..fabric import metal
+            return metal.run_kernel(self, n, params, reduce=True)
+        if device in ("cuda", "hip"):
+            raise KernelError(f"the {device} back end only generates source; it has never been run on that hardware")
+        raise KernelError(f"unknown device '{device}'")
+
     def run(self, device: str, n: int, **params):
         """Run on `device` ("cpu" or "metal"); returns an (n, n) uint32 array."""
         import numpy as np
@@ -341,13 +389,16 @@ class Kernel:
             raise KernelError("the CUDA back end only generates source (to_cuda_c); it has never been run on NVIDIA hardware")
         raise KernelError(f"unknown device '{device}'")
 
-    def _run_cpu(self, n, params):
+    def _run_cpu(self, n, params, reduce: bool = False):
         import numpy as np
         from numba import njit, prange
-        if not hasattr(self, "_cpu"):
+        attr = "_cpu_sum" if reduce else "_cpu"
+        if not hasattr(self, attr):
             ns = {"np": np, "prange": prange, "_cint": njit(_cint), "_cmod": njit(_cmod), "_w32": njit(_w32)}
-            exec(compile(self.to_python(), f"<kernel {self.name}>", "exec"), ns)      # generated from OUR restricted AST only
-            self._cpu = njit(parallel=True)(ns["_kernel"])
+            exec(compile(self.to_python(reduce=reduce), f"<kernel {self.name}>", "exec"), ns)      # generated from OUR restricted AST only
+            setattr(self, attr, njit(parallel=True)(ns["_kernel"]))
+        if reduce:
+            return int(getattr(self, attr)(n, *[np.float32(params[p]) if t == "float" else int(params[p]) for p, t in self.params]))
         out = np.zeros((n, n), dtype=np.uint32)
         args = [np.float32(params[p]) if t == "float" else int(params[p]) for p, t in self.params]
         self._cpu(out, n, *args)

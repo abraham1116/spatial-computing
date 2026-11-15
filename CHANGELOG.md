@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+- Hub: majority election for three or more hubs (`QuorumController`: terms, votes, lease, term file; election safety, not a replicated log).
+- Hub: finished tasks and cache-affinity keys are capped (`--max-finished`, default 5,000). The soak test showed unbounded growth (+12.5 MiB/h) before.
+- Kernels: whole-grid reductions with threadgroup shared memory on Metal (exact for integers), CPU reduction, HIP source generation, reserved-name checks.
+- `benchmarks/soak.py` and `benchmarks/verify.py` with a weekly `verify.yml` workflow.
+- Site: new pages Accelerators, Interconnect, Operations, Roadmap, Changelog in English and French; dashboard screenshot.
+
 ## 0.13.0
 - Hub high availability: `--peer` / `--name` start an active/standby pair; the standby copies the state, promotes itself after 6 s of silence (epoch + 1), and agents and CLI accept `h1:p,h2:p`. A returning old active hub steps down. Measured about 6.7 s from `kill -9` to a task finishing on the survivor. No consensus: see `docs/HA.md`.
 - Dashboard: `spatial dashboard` (read-only, 127.0.0.1 only, random key, Host check) and alerts: `spatial watch`, edge-triggered, optional webhook.
