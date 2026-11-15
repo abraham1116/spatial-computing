@@ -73,27 +73,62 @@ def eval_const(e, env: dict):
     raise SQCompileError(f"expression kind '{k}' is not allowed here")
 
 
+MAX_CALL_DEPTH = 32
+
+
 class KernelCompiler:
-    def __init__(self, kernel: Kernel, args: list):
+    def __init__(self, kernel: Kernel, args: list, kernels: dict | None = None):
+        if any(t == "qubit" for t in kernel.ptypes):
+            raise SQCompileError(f"kernel {kernel.name} takes qubit parameters: it can only be called from another kernel")
         if len(args) != len(kernel.params):
             raise SQCompileError(f"kernel {kernel.name} expects {len(kernel.params)} argument(s), got {len(args)}")
         self.k = kernel
+        self.kernels = kernels or {}
         self.env = dict(zip(kernel.params, args))
-        self.regs: dict[str, tuple[int, int]] = {}    # name -> (offset, size)
+        self.regs: dict[str, list[int]] = {}          # register name -> qubit indices
         self.c = Circuit(kernel.name)
         self.cond: tuple[tuple[int, int], ...] = ()
+        self.depth = 0
+
+    def _qubits_from_expr(self, e, line) -> list[int]:
+        if e[0] == "var":
+            return self.qubits((e[1], None), line)
+        if e[0] == "index" and e[1][0] == "var":
+            return self.qubits((e[1][1], e[2]), line)
+        raise SQCompileError(f"line {line}: a qubit argument must be a register or a register element")
+
+    def _call(self, name: str, args: list, line: int):
+        """Inline a sub-kernel: its gates are appended to this circuit on the qubits passed in."""
+        callee = self.kernels.get(name)
+        if callee is None:
+            raise SQCompileError(f"line {line}: unknown kernel '{name}'")
+        if len(args) != len(callee.params):
+            raise SQCompileError(f"line {line}: kernel {name} expects {len(callee.params)} argument(s), got {len(args)}")
+        if self.depth >= MAX_CALL_DEPTH:
+            raise SQCompileError(f"line {line}: kernel calls nested deeper than {MAX_CALL_DEPTH} (recursion?)")
+        child = object.__new__(KernelCompiler)
+        child.k, child.kernels, child.c, child.cond, child.depth = callee, self.kernels, self.c, self.cond, self.depth + 1
+        child.env, child.regs = {}, {}
+        ptypes = callee.ptypes or [None] * len(callee.params)
+        for pname, ptype, a in zip(callee.params, ptypes, args):
+            if ptype == "qubit":
+                child.regs[pname] = self._qubits_from_expr(a, line)
+            else:
+                child.env[pname] = eval_const(a, self.env)
+        child.body(callee.body)
 
     def qubits(self, qa, line) -> list[int]:
         name, idx = qa
         if name not in self.regs:
             raise SQCompileError(f"line {line}: unknown qubit register '{name}'")
-        off, size = self.regs[name]
+        qs = self.regs[name]
+        size = len(qs)
         if idx is None:
-            return list(range(off, off + size))
+            return list(qs)
         i = eval_const(idx, self.env)
         if not isinstance(i, int) or not 0 <= i < size:
             raise SQCompileError(f"line {line}: index {i!r} out of range for {name}[{size}]")
-        return [off + i]
+        return [qs[i]]
 
     def one(self, qa, line) -> int:
         qs = self.qubits(qa, line)
@@ -108,8 +143,10 @@ class KernelCompiler:
                 size = eval_const(s[2], self.env)
                 if not isinstance(size, int) or size < 1:
                     raise SQCompileError(f"line {s[3]}: register size must be a positive integer")
-                self.regs[s[1]] = (self.c.n_qubits, size)
+                self.regs[s[1]] = list(range(self.c.n_qubits, self.c.n_qubits + size))
                 self.c.n_qubits += size
+            elif kind == "kcall":
+                self._call(s[1], s[2], s[3])
             elif kind == "gate":
                 _, name, params, qargs, line = s
                 ps = tuple(float(eval_const(p, self.env)) for p in params)
@@ -231,8 +268,9 @@ def optimize(c: Circuit) -> tuple[Circuit, dict]:
     return oc, {"ops_before": before, "ops_after": len(ops), "passes": passes}
 
 
-def compile_kernel(kernel: Kernel, args: list, opt: bool = True) -> tuple[Circuit, dict]:
-    c = KernelCompiler(kernel, args).compile()
+def compile_kernel(kernel: Kernel, args: list, opt: bool = True, kernels: dict | None = None) -> tuple[Circuit, dict]:
+    """`kernels` is the program's kernel table, needed when the kernel calls sub-kernels."""
+    c = KernelCompiler(kernel, args, kernels).compile()
     if opt:
         return optimize(c)
     return c, {"ops_before": len(c.ops), "ops_after": len(c.ops), "passes": 0}

@@ -3,12 +3,15 @@
 <li><b>Authentication.</b> A random 32-byte token (file mode 600) and an HMAC-SHA256 challenge-response; a wrong token is dropped without a reply.</li>
 <li><b>No code transmitted.</b> The worker only runs named workloads from an allow-list.</li>
 <li><b>Closed micro-VM.</b> No network device, no disk, no host folder; RAM capped.</li>
-<li><b>Quota</b> on the page server's memory.</li></ul>
+<li><b>Quota</b> on the page server's memory.</li>
+<li><b>Encrypted channel.</b> Every record is sealed with AES-256-GCM keyed from the token; a modified or replayed record is rejected.</li>
+<li><b>Encrypted and replicated far pages</b> with <code>EncryptedBackend</code> and <code>ReplicatedBackend</code>.</li>
+<li><b>Tamper-evident ledger.</b> Measurements are hash-chained; <code>Ledger.verify()</code> finds an edited row.</li></ul>
 <h2>Not in place yet</h2>
-<ul><li>Channel and page encryption before sending: route it through TLS or WireGuard before any use beyond loopback.</li>
+<ul><li>Forward secrecy and peer identity: put TLS or WireGuard on top before any use beyond loopback.</li>
 <li>Per-user or per-tenant permissions, CPU quotas, a signed log.</li>
 <li>A sandbox for arbitrary third-party workloads.</li></ul>
-<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the channel is not encrypted.</div>
+<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the channel has no forward secrecy and no per-user identity.</div>
 <p>To report a vulnerability, use GitHub's private vulnerability reporting on the repository.</p><div class="pager"><a href="cli.html">← Commands</a><a href="results.html">Results →</a></div></main><aside class="rail" aria-label="Examples"><h5>Refusal of a public address</h5><pre><span class="d">RpcServer(handler, token, host="0.0.0.0")
 → PermissionError: refusing to bind a
   non-loopback address without

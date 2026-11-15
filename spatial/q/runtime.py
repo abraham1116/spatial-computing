@@ -30,7 +30,9 @@ class _Return(Exception):
 
 class Runtime:
     def __init__(self, program: Program, worker_client=None, seed: int | None = None,
-                 ram_fraction: float = 0.5, out=print, default_backend: str = "statevector"):
+                 ram_fraction: float = 0.5, out=print, default_backend: str = "statevector",
+                 noise: float = 0.0):
+        self.noise = noise
         self.p = program
         self.worker = worker_client
         self.seed = seed
@@ -48,7 +50,7 @@ class Runtime:
         key = (name, repr(args))
         if key not in self._cache:
             t0 = time.perf_counter()
-            c, info = compile_kernel(self.p.kernels[name], args)
+            c, info = compile_kernel(self.p.kernels[name], args, kernels=self.p.kernels)
             info["compile_s"] = time.perf_counter() - t0
             self._cache[key] = (c, info)
         return self._cache[key]
@@ -75,10 +77,12 @@ class Runtime:
         est = c.estimate()
         b = self._backend(backend, est)
         t0 = time.perf_counter()
-        counts = b.sample(c, shots, self.seed)
+        if self.noise and b.name != "statevector":
+            raise SQRuntimeError(f"the noise option is only implemented for the built-in statevector backend, not '{b.name}'")
+        counts = b.sample(c, shots, self.seed, noise=self.noise) if self.noise else b.sample(c, shots, self.seed)
         self.trace.append({"op": "sample", "kernel": name, "backend": b.name, "why": self._last_reason,
                            "shots": shots, "wall_s": time.perf_counter() - t0, "resources": est.to_dict(),
-                           "optimizer": info})
+                           "optimizer": info, **({"noise": self.noise} if self.noise else {})})
         return counts
 
     def _expect(self, pauli, name, args, backend):
@@ -226,24 +230,29 @@ def main():
     import argparse
     import json
     ap = argparse.ArgumentParser(prog="spatialq", description="SPATIAL Q compiler/runtime")
-    ap.add_argument("cmd", choices=["run", "check", "qasm", "ir"])
+    ap.add_argument("cmd", choices=["run", "check", "qasm", "ir", "qir"])
     ap.add_argument("file")
     ap.add_argument("--kernel", help="kernel name for qasm/ir")
     ap.add_argument("--args", default="[]", help="JSON list of kernel arguments")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--trace", action="store_true")
+    ap.add_argument("--noise", type=float, default=0.0, help="depolarising error probability per gate and qubit")
     a = ap.parse_args()
     src = open(a.file).read()
     prog = parse(src)
     if a.cmd == "check":
         print(f"ok: {len(prog.kernels)} kernel(s), {len(prog.tasks)} task(s)")
         return
-    if a.cmd in ("qasm", "ir"):
-        name = a.kernel or next(iter(prog.kernels))
-        c, info = compile_kernel(prog.kernels[name], json.loads(a.args))
-        print(c.to_qasm3() if a.cmd == "qasm" else c.to_json())
+    if a.cmd in ("qasm", "ir", "qir"):
+        name = a.kernel or next(k for k, v in prog.kernels.items() if "qubit" not in v.ptypes)
+        c, info = compile_kernel(prog.kernels[name], json.loads(a.args), kernels=prog.kernels)
+        if a.cmd == "qir":
+            from .qir import to_qir
+            print(to_qir(c))
+        else:
+            print(c.to_qasm3() if a.cmd == "qasm" else c.to_json())
         return
-    rt = Runtime(prog, seed=a.seed)
+    rt = Runtime(prog, seed=a.seed, noise=a.noise)
     rt.run()
     if a.trace:
         for t in rt.trace:

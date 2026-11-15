@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spatial-computing"
-version = "0.1.0"
+version = "0.2.0"
 description = "SPATIAL COMPUTING research prototype: measure, decide, prove (compute, memory tiering, runtime routing, hybrid quantum language)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,10 +12,10 @@ license-files = ["LICENSE"]
 authors = [{ name = "Spatial Computing contributors" }]
 classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Science/Research", "Programming Language :: Python :: 3"]
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.26,<2.2", "psutil>=5.9", "numba>=0.59,<0.62", "lz4>=4.3"]
+dependencies = ["numpy>=1.26,<2.2", "psutil>=5.9", "numba>=0.59,<0.62", "lz4>=4.3", "cryptography>=42"]
 
 [project.optional-dependencies]
-quantum = ["qiskit>=2.0", "qiskit-aer>=0.17", "qiskit-qasm3-import>=0.5"]
+quantum = ["qiskit>=2.0", "qiskit-aer>=0.17", "qiskit-qasm3-import>=0.5", "pyqir>=0.10"]
 build = ["ziglang>=0.13"]
 dev = ["pytest>=8"]
 

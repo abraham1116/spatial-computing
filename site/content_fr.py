@@ -28,7 +28,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Prototype de recherche · v0.1.0</p>
+<p class="eyebrow">Prototype de recherche · v0.2.0</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Spatial choisit où et comment exécuter une charge de travail à partir de mesures, et ne revendique un gain que s'il est mesuré. Pas de RAM en plus : de l'utilisation en mieux.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -84,7 +84,7 @@ def landing():
 <p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
 <table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
 <tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
-<tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, chiffrement, RDMA/CXL</td></tr>
+<tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
 <tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Exécution Windows, conteneurs, GUI distante</td></tr>
 <tr><td>SPATIAL Q</td><td><span class="tag ok">prototype opérationnel</span></td><td>QPU réel, QIR, sous-noyaux</td></tr>
 <tr><td>Scientifique, Simulation, Intelligence</td><td><span class="tag part">premiers composants</span></td><td>Solveurs métier, multiphysique, modèles appris</td></tr>
@@ -107,7 +107,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · prototype de recherche · v0.1.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · prototype de recherche · v0.2.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -124,7 +124,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Prototype de recherche v0.1.0. Quatre moteurs sont opérationnels et testés (48 tests) sur un seul Mac. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Prototype de recherche v0.2.0. Quatre moteurs sont opérationnels et testés (58 tests) sur un seul Mac. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -153,7 +153,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Binaires de test (facultatif)</h2>
 <p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p>''',
         [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">41 passed, 7 skipped</span>\n<span class="d"># les 7 ignorés demandent benchmarks/build</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">51 passed, 7 skipped</span>\n<span class="d"># les 7 ignorés demandent benchmarks/build</span>')])
 
     doc("compute", "Compute Engine", "Détecte le matériel, mesure son usage, compare des stratégies d'exécution et choisit la meilleure.",
         '''<h2>Détecter et surveiller</h2>
@@ -243,6 +243,7 @@ main {
 }</code></pre>
 <h2>Noyaux, tâches, main</h2>
 <ul><li><code>quantum</code> : circuit spécialisé pour ses arguments au moment de l'appel. Boucles et <code>if</code> classiques évalués à la compilation ; <code>measure</code> et rétroaction (<code>if m { x q[2]; }</code>) pour les circuits dynamiques.</li>
+<li>Un noyau peut appeler des sous-noyaux à paramètres qubits : <code>quantum entangle(a: qubit, b: qubit) { h a; cx a, b; }</code>.</li>
 <li><code>task … on cpu|worker|any</code> : travail classique, local ou déporté.</li>
 <li><code>main</code> : orchestration ; <code>parallel { … }</code> lance des branches simultanées.</li></ul>
 <h2>Portes</h2>
@@ -253,6 +254,7 @@ main {
 <tr><td><code>statevector</code></td><td>Simulateur exact NumPy intégré</td></tr>
 <tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
 <tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
+<tr><td><code>qir</code></td><td>Export QIR (profil de base) des circuits statiques, validé avec pyqir</td></tr>
 <tr><td><code>qpu</code></td><td>Non connecté : refuse de s'exécuter, sans repli silencieux</td></tr></tbody></table>
 <h2>Refus de l'orchestrateur</h2>
 <p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>
@@ -267,7 +269,7 @@ main {
 <tr><td><code>spatial status</code></td><td>Statut réel de chaque moteur et ce qui n'est pas fait</td></tr>
 <tr><td><code>spatial plan &lt;fichier&gt;</code></td><td>Format détecté et routes d'exécution, avec raisons</td></tr>
 <tr><td><code>spatial run &lt;fichier&gt; [args] [--route R] [--timeout S]</code></td><td>Exécute via la première route réalisable ; code de sortie 1 si impossible</td></tr>
-<tr><td><code>spatial q run|check|qasm|ir &lt;fichier.sq&gt;</code></td><td>Exécute, vérifie, exporte en OpenQASM 3 ou en SQIR</td></tr>
+<tr><td><code>spatial q run|check|qasm|qir|ir &lt;fichier.sq&gt; [--noise p]</code></td><td>Exécute (avec bruit dépolarisant en option), vérifie, exporte en OpenQASM 3, QIR ou SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Refait les mesures et régénère <code>docs/RESULTATS.md</code></td></tr>
 <tr><td><code>spatial serve compute|memory --token-file F</code></td><td>Lance un worker ou un serveur de pages, en boucle locale</td></tr></tbody></table>
 <p>Une erreur affiche une seule ligne <code>spatial: Type: message</code> et renvoie le code 1.</p>''',
@@ -280,12 +282,15 @@ main {
 <li><b>Authentification.</b> Jeton aléatoire de 32 octets (fichier en mode 600), défi-réponse HMAC-SHA256 ; un mauvais jeton est rejeté sans réponse.</li>
 <li><b>Aucun code transmis.</b> Le worker n'exécute que des charges nommées dans une liste blanche.</li>
 <li><b>Micro-VM fermée.</b> Aucun périphérique réseau, aucun disque, aucun dossier hôte ; RAM plafonnée.</li>
-<li><b>Quota</b> de mémoire sur le serveur de pages.</li></ul>
+<li><b>Quota</b> de mémoire sur le serveur de pages.</li>
+<li><b>Canal chiffré.</b> Chaque enregistrement est scellé en AES-256-GCM avec une clé dérivée du jeton ; un enregistrement modifié ou rejoué est rejeté.</li>
+<li><b>Pages lointaines chiffrées et répliquées</b> avec <code>EncryptedBackend</code> et <code>ReplicatedBackend</code>.</li>
+<li><b>Registre infalsifiable en silence.</b> Les mesures sont chaînées par hachage ; <code>Ledger.verify()</code> repère une ligne modifiée.</li></ul>
 <h2>Pas encore en place</h2>
-<ul><li>Chiffrement du canal et des pages avant envoi : à faire passer dans TLS ou WireGuard avant tout usage hors boucle locale.</li>
+<ul><li>Confidentialité persistante et identité des pairs : ajouter TLS ou WireGuard avant tout usage hors boucle locale.</li>
 <li>Permissions par utilisateur ou par locataire, quotas CPU, journal signé.</li>
 <li>Bac à sable pour des charges arbitraires de tiers.</li></ul>
-<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le canal n'est pas chiffré.</div>''',
+<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le canal n'a ni confidentialité persistante ni identité par utilisateur.</div>''',
         [("Refus d'une adresse publique", '<span class="d">RpcServer(handler, token, host="0.0.0.0")\n→ PermissionError: refusing to bind a\n  non-loopback address without\n  allow_remote=True (explicit user\n  consent required to expose this machine)</span>')])
 
     doc("results", "Résultats", "Chiffres mesurés le 14 novembre 2026 sur un MacBook Pro 2017 (Intel i7-7660U, 2 cœurs, 16 Go, macOS 13.7.8), sur secteur.",
@@ -310,7 +315,7 @@ main {
 <tr><td>Pas de CXL, RDMA, NPU, QPU</td><td>Étudiés sur documents seulement</td></tr>
 <tr><td>Énergie non mesurable</td><td>Coûts énergétiques estimés</td></tr>
 <tr><td>Windows non exécuté</td><td>Ni Wine ni image Windows</td></tr>
-<tr><td>Canal non chiffré</td><td>Ne pas exposer au réseau</td></tr>
+<tr><td>Ni confidentialité persistante ni identité par utilisateur</td><td>Ne pas exposer à un réseau non maîtrisé</td></tr>
 <tr><td>Simulation quantique exacte</td><td>~27 qubits ici, bornés par la RAM</td></tr>
 <tr><td>Domaines scientifique, simulation, intelligence</td><td>Premiers composants seulement</td></tr>
 <tr><td>Domaines AI et holographie</td><td>Interface seule dans le dépôt public</td></tr></tbody></table>

@@ -105,7 +105,12 @@ def is_static(c: Circuit) -> bool:
     return all(o.name not in ("measure", "reset") and not o.cond for o in c.ops)
 
 
-def run_shot(c: Circuit, rng) -> State:
+_NOISE_PAULIS = ("x", "y", "z")
+
+
+def run_shot(c: Circuit, rng, noise: float = 0.0) -> State:
+    """One trajectory. noise = probability, after each gate and for each qubit it touches,
+    of a uniformly random Pauli error (single-qubit depolarising channel, Monte-Carlo)."""
     s = State(c.n_qubits)
     bits = [0] * c.n_cbits
     for o in c.ops:
@@ -117,6 +122,10 @@ def run_shot(c: Circuit, rng) -> State:
             s.reset(o.qubits[0], rng)
         else:
             s.apply(matrix(o.name, o.params), o.qubits)
+            if noise:
+                for q in o.qubits:
+                    if rng.random() < noise:
+                        s.apply(FIXED[_NOISE_PAULIS[rng.integers(3)]], (q,))
     return s
 
 
@@ -164,13 +173,18 @@ def branch_distribution(c: Circuit, max_branches: int = 4096) -> np.ndarray | No
     return total
 
 
-def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "branch") -> dict[str, int]:
+def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "branch",
+           noise: float = 0.0) -> dict[str, int]:
     """dynamic="branch": exact branch enumeration then one multinomial draw (fast);
        dynamic="shots" : one full simulation per shot (reference implementation)."""
     rng = np.random.default_rng(seed)
     n = c.n_qubits
     p = None
-    if is_static(c):
+    if noise:
+        if not 0 <= noise <= 1:
+            raise ValueError("noise must be a probability")
+        dynamic = "shots"                  # noisy runs are simulated trajectory by trajectory
+    elif is_static(c):
         p = run_static(c).probs()
     elif dynamic == "branch":
         p = branch_distribution(c)
@@ -180,7 +194,7 @@ def sample(c: Circuit, shots: int, seed: int | None = None, dynamic: str = "bran
         return {format(i, f"0{n}b"): int(k) for i, k in enumerate(draws) if k}
     counts: dict[str, int] = {}
     for _ in range(shots):
-        p = run_shot(c, rng).probs()
+        p = run_shot(c, rng, noise).probs()
         i = int(rng.choice(len(p), p=p / p.sum()))
         key = format(i, f"0{n}b")
         counts[key] = counts.get(key, 0) + 1

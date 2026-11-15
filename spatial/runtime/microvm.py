@@ -33,14 +33,15 @@ def _cpio_entry(name: str, mode: int, data: bytes = b"", rdev: tuple[int, int] =
     return out
 
 
-def build_initramfs(app: bytes, args: list[str], out_path: str) -> int:
+def build_initramfs(app: bytes, args: list[str], out_path: str, files: dict | None = None,
+                    app_name: str = "app") -> int:
     """newc cpio archive written directly (no root needed for the device node)."""
     init = "\n".join([
         "#!/bin/sh",
         "/bin/busybox mount -t devtmpfs dev /dev 2>/dev/null",
         "/bin/busybox mount -t proc proc /proc 2>/dev/null",
         "echo SPATIAL_BEGIN",
-        "/app " + " ".join(args),
+        f"/{app_name} " + " ".join(args),
         "echo SPATIAL_EXIT $?",
         "/bin/busybox poweroff -f",
         ""]).encode()
@@ -51,9 +52,14 @@ def build_initramfs(app: bytes, args: list[str], out_path: str) -> int:
         _cpio_entry("bin/busybox", S_REG, BUSYBOX.read_bytes(), ino=5),
         _cpio_entry("bin/sh", S_LNK, b"busybox", ino=6),
         _cpio_entry("init", S_REG, init, ino=7),
-        _cpio_entry("app", S_REG, app, ino=8),
-        _cpio_entry("TRAILER!!!", 0),
+        _cpio_entry(app_name, S_REG, app, ino=8),
+        _cpio_entry("data", S_DIR, ino=9),
     ]
+    for i, (fname, content) in enumerate((files or {}).items()):
+        if "/" in fname or fname in ("", ".", ".."):
+            raise ValueError(f"input file name must be a plain name, got {fname!r}")
+        parts.append(_cpio_entry(f"data/{fname}", 0o100444, content, ino=10 + i))
+    parts.append(_cpio_entry("TRAILER!!!", 0))
     blob = gzip.compress(b"".join(parts), compresslevel=1)
     Path(out_path).write_bytes(blob)
     return len(blob)
@@ -75,13 +81,16 @@ def available() -> dict:
 
 
 def run_elf(elf_path: str, args: list[str] | None = None, accel: str = "hvf", mem_mb: int = 256,
-            cpus: int = 1, timeout_s: float = 180.0) -> VmResult:
+            cpus: int = 1, timeout_s: float = 180.0, files: dict | None = None,
+            app_name: str = "app") -> VmResult:
+    """`files` ({name: bytes}) are copied read-only into the guest under /data. They are the
+    only host data the guest can see; nothing is written back to the host."""
     qemu = shutil.which("qemu-system-x86_64")
     if not (qemu and KERNEL.exists() and BUSYBOX.exists()):
         raise RuntimeError(f"micro-VM prerequisites missing: {available()}")
     with tempfile.TemporaryDirectory(prefix="spatial-vm-") as td:
         initrd = os.path.join(td, "initramfs.cpio.gz")
-        build_initramfs(Path(elf_path).read_bytes(), args or [], initrd)
+        build_initramfs(Path(elf_path).read_bytes(), args or [], initrd, files, app_name)
         cmd = [qemu, "-accel", accel, "-cpu", "host" if accel == "hvf" else "max",
                "-m", str(mem_mb), "-smp", str(cpus), "-kernel", str(KERNEL), "-initrd", initrd,
                "-append", "console=ttyS0 quiet panic=-1 rdinit=/init",

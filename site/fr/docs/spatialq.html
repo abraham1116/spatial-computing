@@ -16,6 +16,7 @@ main {
 }</code></pre>
 <h2>Noyaux, tâches, main</h2>
 <ul><li><code>quantum</code> : circuit spécialisé pour ses arguments au moment de l'appel. Boucles et <code>if</code> classiques évalués à la compilation ; <code>measure</code> et rétroaction (<code>if m { x q[2]; }</code>) pour les circuits dynamiques.</li>
+<li>Un noyau peut appeler des sous-noyaux à paramètres qubits : <code>quantum entangle(a: qubit, b: qubit) { h a; cx a, b; }</code>.</li>
 <li><code>task … on cpu|worker|any</code> : travail classique, local ou déporté.</li>
 <li><code>main</code> : orchestration ; <code>parallel { … }</code> lance des branches simultanées.</li></ul>
 <h2>Portes</h2>
@@ -26,6 +27,7 @@ main {
 <tr><td><code>statevector</code></td><td>Simulateur exact NumPy intégré</td></tr>
 <tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
 <tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
+<tr><td><code>qir</code></td><td>Export QIR (profil de base) des circuits statiques, validé avec pyqir</td></tr>
 <tr><td><code>qpu</code></td><td>Non connecté : refuse de s'exécuter, sans repli silencieux</td></tr></tbody></table>
 <h2>Refus de l'orchestrateur</h2>
 <p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>

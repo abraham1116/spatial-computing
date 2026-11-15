@@ -23,6 +23,7 @@ class Kernel:
     params: list[str]
     body: list
     line: int
+    ptypes: list = field(default_factory=list)     # per-parameter annotation; "qubit" marks a qubit argument
 
 
 @dataclass
@@ -77,7 +78,8 @@ class Parser:
                 line = self.eat("kw").line
                 name = self.eat("id").val
                 params = self.params()
-                p.kernels[name] = Kernel(name, params, self.block(True), line)
+                ptypes = self._ptypes
+                p.kernels[name] = Kernel(name, params, self.block(True), line, ptypes)
             elif self.at("kw", "task"):
                 line = self.eat("kw").line
                 name = self.eat("id").val
@@ -99,14 +101,19 @@ class Parser:
 
     def params(self) -> list[str]:
         self.eat("op", "(")
-        out = []
+        out, types = [], []
         while not self.at("op", ")"):
             out.append(self.eat("id").val)
-            if self.opt("op", ":"):
-                self.eat("id")           # type annotation: parsed, informative in v0
+            types.append(None)
+            if self.opt("op", ":"):      # annotation; `qubit` makes the parameter a qubit argument
+                if self.cur.kind not in ("id", "kw"):
+                    self.err("expected a type name")
+                types[-1] = self.cur.val
+                self.i += 1
             if not self.opt("op", ","):
                 break
         self.eat("op", ")")
+        self._ptypes = types
         return out
 
     def block(self, q: bool) -> list:
@@ -197,6 +204,11 @@ class Parser:
             if len(qargs) != nq:
                 raise SQSyntaxError(f"line {c.line}: gate {c.val} acts on {nq} qubit(s), got {len(qargs)}")
             return ("gate", c.val, params, qargs, c.line)
+        if q and c.kind == "id" and self.t[self.i + 1].kind == "op" and self.t[self.i + 1].val == "(":
+            self.eat("id")               # sub-kernel call: name(args...);
+            args = self.call_args()
+            self.eat("op", ";")
+            return ("kcall", c.val, args, c.line)
         if c.kind == "id" and self.t[self.i + 1].kind == "op" and self.t[self.i + 1].val == "=":
             name = self.eat("id").val
             self.eat("op", "=")

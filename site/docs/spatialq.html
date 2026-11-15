@@ -16,6 +16,7 @@ main {
 }</code></pre>
 <h2>Kernels, tasks, main</h2>
 <ul><li><code>quantum</code>: a circuit specialized for its arguments at call time. Classical loops and <code>if</code> are evaluated at compile time; <code>measure</code> and feed-forward (<code>if m { x q[2]; }</code>) give dynamic circuits.</li>
+<li>Kernels can call sub-kernels that take qubit parameters: <code>quantum entangle(a: qubit, b: qubit) { h a; cx a, b; }</code>.</li>
 <li><code>task … on cpu|worker|any</code>: classical work, local or offloaded.</li>
 <li><code>main</code>: orchestration; <code>parallel { … }</code> runs branches simultaneously.</li></ul>
 <h2>Gates</h2>
@@ -26,6 +27,7 @@ main {
 <tr><td><code>statevector</code></td><td>Built-in exact NumPy simulator</td></tr>
 <tr><td><code>aer</code></td><td>Qiskit Aer (<code>quantum</code> extra)</td></tr>
 <tr><td><code>qasm3</code></td><td>OpenQASM 3 export, reloaded successfully by Qiskit in a test</td></tr>
+<tr><td><code>qir</code></td><td>QIR base-profile export for static circuits, validated with pyqir</td></tr>
 <tr><td><code>qpu</code></td><td>Not connected: refuses to run, no silent fallback</td></tr></tbody></table>
 <h2>Orchestrator refusals</h2>
 <p>A circuit whose state vector (16 × 2<sup>n</sup> bytes) exceeds half of the available RAM is refused with an explicit message. On the reference Mac: about 27 qubits.</p>
