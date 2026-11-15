@@ -8,7 +8,7 @@ This file is kept up to date. The French reports in this folder (`01_`, `05_`, `
 |---|---|
 | A second machine | Offload, task queue, remote runner, shared pages and remote memory are validated over loopback or an emulated link only. No capacity gain has been demonstrated. |
 | A data-center GPU | `nvidia-smi` detection is parser-tested only. No LLM inference, no GPU scheduling, no cost-per-token measurement. |
-| A quantum computer | The IBM Quantum backend exists but has not executed a circuit (the account has no instance yet). SPATIAL Q runs on classical simulators. OpenQASM 2/3 and QIR exports are checked by parsers (Qiskit, pyqir), never executed on a QPU. |
+| A quantum computer | One circuit (a Bell pair, 100 shots) has run on real IBM hardware. Nothing else has, and no quantum advantage of any kind is shown. Other SPATIAL Q results come from classical simulators. OpenQASM 2/3 and QIR exports are checked by parsers (Qiskit, pyqir), never executed on a QPU. |
 | CXL, RDMA, NVMe-oF | Studied on paper only. |
 | A power meter | Energy per run is not measured; energy costs are estimates. |
 

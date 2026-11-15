@@ -52,14 +52,14 @@ def landing():
 <div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
 <div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Runs software built for another system, isolated.</p><div class="pf"><b>0.88 s</b><span>to boot a Linux micro-VM; a Windows .exe runs under Wine</span></div></div>
-<div class="card"><h3>SPATIAL Q</h3><p>One language for classical, distributed and quantum steps.</p><div class="pf"><b>1.000</b><span>fidelity against Qiskit up to 16 qubits; QIR and OpenQASM export</span></div></div>
+<div class="card"><h3>SPATIAL Q</h3><p>One language for classical, distributed and quantum steps.</p><div class="pf"><b>1.000</b><span>fidelity against Qiskit up to 16 qubits; a Bell pair has run on a real IBM QPU (90 % correlated)</span></div></div>
 <div class="card"><h3>AI</h3><p>Reuses inference context instead of recomputing it.</p><div class="pf"><b>exact</b><span>restored KV cache gives the same output as recompute (toy model, CPU)</span></div></div>
 <div class="card"><h3>Scientific</h3><p>Runs a numerical job and checks its answer.</p><div class="pf"><b>2 / 2</b><span>jobs validated against their exact solutions</span></div></div>
 <div class="card"><h3>Simulation</h3><p>Steps physical systems forward.</p><div class="pf"><b>&lt; 0.1 %</b><span>energy drift over 400 N-body steps</span></div></div>
 <div class="card"><h3>Intelligence</h3><p>Predicts the best strategy before running it.</p><div class="pf"><b>confirmed</b><span>prediction from past runs matched the measured winner</span></div></div>
 <div class="card"><h3>Holographic</h3><p>Computes holograms for future displays.</p><div class="pf"><b>in focus</b><span>numerical reconstruction lands on the emitted points (no display hardware)</span></div></div>
 </div>
-<p class="note">Honest scope: one machine. Nothing is proven yet on a second machine, a data-center GPU or a real quantum computer; the AI, scientific, simulation, intelligence and holographic engines are first components, not products.</p>
+<p class="note">Honest scope: one machine. Nothing is proven yet on a second machine or a data-center GPU, and quantum hardware has run one two-qubit circuit only; the AI, scientific, simulation, intelligence and holographic engines are first components, not products.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -264,7 +264,7 @@ main {
 <tr><td><code>aer</code></td><td>Qiskit Aer (<code>quantum</code> extra)</td></tr>
 <tr><td><code>qasm3</code></td><td>OpenQASM 3 export, reloaded successfully by Qiskit in a test</td></tr>
 <tr><td><code>qir</code></td><td>QIR base-profile export for static circuits, validated with pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>IBM Quantum through <code>qiskit-ibm-runtime</code> (<code>qpu</code> extra). Needs a token and an instance; otherwise refuses with the reason, no silent fallback. Not yet run on hardware.</td></tr></tbody></table>
+<tr><td><code>qpu</code></td><td>IBM Quantum through <code>qiskit-ibm-runtime</code> (<code>qpu</code> extra). Needs a token and an instance; otherwise refuses with the reason, no silent fallback. A Bell pair has run on ibm_marrakesh: 90 % correlated outcomes, the rest hardware noise.</td></tr></tbody></table>
 <h2>Orchestrator refusals</h2>
 <p>A circuit whose state vector (16 × 2<sup>n</sup> bytes) exceeds half of the available RAM is refused with an explicit message. On the reference Mac: about 27 qubits.</p>
 <p>The full grammar is in <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p>''',

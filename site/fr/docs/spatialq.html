@@ -28,7 +28,7 @@ main {
 <tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
 <tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
 <tr><td><code>qir</code></td><td>Export QIR (profil de base) des circuits statiques, validé avec pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>IBM Quantum via <code>qiskit-ibm-runtime</code> (extra <code>qpu</code>). Demande un jeton et une instance ; sinon refuse en donnant la raison, sans repli silencieux. Pas encore exécuté sur matériel.</td></tr></tbody></table>
+<tr><td><code>qpu</code></td><td>IBM Quantum via <code>qiskit-ibm-runtime</code> (extra <code>qpu</code>). Demande un jeton et une instance ; sinon refuse en donnant la raison, sans repli silencieux. Une paire de Bell a tourné sur ibm_marrakesh : 90 % de résultats corrélés, le reste est du bruit matériel.</td></tr></tbody></table>
 <h2>Refus de l'orchestrateur</h2>
 <p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>
 <p>La grammaire complète est dans <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p><div class="pager"><a href="runtime.html">← Runtime Engine</a><a href="cli.html">Commandes →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Exécuter</h5><pre><span class="k">$ spatial q run examples/01_bell.sq --seed 1</span>

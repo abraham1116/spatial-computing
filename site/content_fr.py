@@ -54,14 +54,14 @@ def landing():
 <div class="card"><h3>Compute</h3><p>Exécute un calcul de la façon la moins chère que la machine permet.</p><div class="pf"><b>×31,6</b><span>JIT contre Python pur, résultat identique</span></div></div>
 <div class="card"><h3>Mémoire à étages</h3><p>Traite plus de données que la RAM locale, pour un prix en latence mesuré.</p><div class="pf"><b>−75 %</b><span>de RAM locale en accès biaisé, pour 107× de latence moyenne</span></div></div>
 <div class="card"><h3>Runtime</h3><p>Lance un logiciel conçu pour un autre système, isolé.</p><div class="pf"><b>0,88 s</b><span>pour démarrer une micro-VM Linux ; un .exe Windows tourne sous Wine</span></div></div>
-<div class="card"><h3>SPATIAL Q</h3><p>Un langage pour les étapes classiques, distribuées et quantiques.</p><div class="pf"><b>1,000</b><span>de fidélité face à Qiskit jusqu'à 16 qubits ; export QIR et OpenQASM</span></div></div>
+<div class="card"><h3>SPATIAL Q</h3><p>Un langage pour les étapes classiques, distribuées et quantiques.</p><div class="pf"><b>1,000</b><span>de fidélité face à Qiskit jusqu'à 16 qubits ; une paire de Bell a tourné sur un vrai QPU IBM (90 % corrélée)</span></div></div>
 <div class="card"><h3>IA</h3><p>Réutilise le contexte d'inférence au lieu de le recalculer.</p><div class="pf"><b>exact</b><span>le cache KV restauré donne la même sortie que le recalcul (modèle jouet, CPU)</span></div></div>
 <div class="card"><h3>Scientifique</h3><p>Exécute un calcul numérique et vérifie sa réponse.</p><div class="pf"><b>2 / 2</b><span>calculs validés contre leur solution exacte</span></div></div>
 <div class="card"><h3>Simulation</h3><p>Fait avancer des systèmes physiques.</p><div class="pf"><b>&lt; 0,1 %</b><span>de dérive d'énergie sur 400 pas à N corps</span></div></div>
 <div class="card"><h3>Intelligence</h3><p>Prédit la meilleure stratégie avant de l'exécuter.</p><div class="pf"><b>confirmé</b><span>la prédiction issue des mesures passées désigne le gagnant mesuré</span></div></div>
 <div class="card"><h3>Holographique</h3><p>Calcule des hologrammes pour de futurs écrans.</p><div class="pf"><b>au point</b><span>la reconstruction numérique tombe sur les points émis (aucun écran)</span></div></div>
 </div>
-<p class="note">Périmètre honnête : une seule machine. Rien n'est encore prouvé sur une seconde machine, un GPU de centre de données ou un vrai ordinateur quantique ; les moteurs IA, scientifique, simulation, intelligence et holographique sont de premiers composants, pas des produits.</p>
+<p class="note">Périmètre honnête : une seule machine. Rien n'est encore prouvé sur une seconde machine ou un GPU de centre de données, et le matériel quantique n'a exécuté qu'un circuit à deux qubits ; les moteurs IA, scientifique, simulation, intelligence et holographique sont de premiers composants, pas des produits.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -267,7 +267,7 @@ main {
 <tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
 <tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
 <tr><td><code>qir</code></td><td>Export QIR (profil de base) des circuits statiques, validé avec pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>IBM Quantum via <code>qiskit-ibm-runtime</code> (extra <code>qpu</code>). Demande un jeton et une instance ; sinon refuse en donnant la raison, sans repli silencieux. Pas encore exécuté sur matériel.</td></tr></tbody></table>
+<tr><td><code>qpu</code></td><td>IBM Quantum via <code>qiskit-ibm-runtime</code> (extra <code>qpu</code>). Demande un jeton et une instance ; sinon refuse en donnant la raison, sans repli silencieux. Une paire de Bell a tourné sur ibm_marrakesh : 90 % de résultats corrélés, le reste est du bruit matériel.</td></tr></tbody></table>
 <h2>Refus de l'orchestrateur</h2>
 <p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>
 <p>La grammaire complète est dans <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p>''',

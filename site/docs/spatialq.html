@@ -28,7 +28,7 @@ main {
 <tr><td><code>aer</code></td><td>Qiskit Aer (<code>quantum</code> extra)</td></tr>
 <tr><td><code>qasm3</code></td><td>OpenQASM 3 export, reloaded successfully by Qiskit in a test</td></tr>
 <tr><td><code>qir</code></td><td>QIR base-profile export for static circuits, validated with pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>IBM Quantum through <code>qiskit-ibm-runtime</code> (<code>qpu</code> extra). Needs a token and an instance; otherwise refuses with the reason, no silent fallback. Not yet run on hardware.</td></tr></tbody></table>
+<tr><td><code>qpu</code></td><td>IBM Quantum through <code>qiskit-ibm-runtime</code> (<code>qpu</code> extra). Needs a token and an instance; otherwise refuses with the reason, no silent fallback. A Bell pair has run on ibm_marrakesh: 90 % correlated outcomes, the rest hardware noise.</td></tr></tbody></table>
 <h2>Orchestrator refusals</h2>
 <p>A circuit whose state vector (16 × 2<sup>n</sup> bytes) exceeds half of the available RAM is refused with an explicit message. On the reference Mac: about 27 qubits.</p>
 <p>The full grammar is in <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p><div class="pager"><a href="runtime.html">← Runtime Engine</a><a href="cli.html">Commands →</a></div></main><aside class="rail" aria-label="Examples"><h5>Run</h5><pre><span class="k">$ spatial q run examples/01_bell.sq --seed 1</span>

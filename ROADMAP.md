@@ -42,8 +42,9 @@ What exists is a prototype. This is what is missing, by area. Items marked **nee
 - [x] OpenQASM 2 export for Cirq / PennyLane importers (v0.3; checked with Qiskit's parser only)
 - [x] QIR adaptive profile for dynamic circuits, verified with pyqir (v0.5)
 - [ ] Verified round-trips with Cirq, PennyLane, Q#, CUDA-Q
-- [x] Real QPU backend: IBM Quantum through qiskit-ibm-runtime (v0.6; needs an IBM Quantum instance on the account, not yet run on hardware)
-- [ ] A first circuit executed on real quantum hardware
+- [x] Real QPU backend: IBM Quantum through qiskit-ibm-runtime (v0.6)
+- [x] A first circuit executed on real quantum hardware: Bell pair on ibm_marrakesh, 90 % correlated (`benchmarks/results/qpu_bell.json`)
+- [ ] Compare noisy-simulator predictions with real hardware over several circuits
 - [x] Sub-kernels with qubit parameters (v0.2)
 - [x] Compiled classical part (to Python bytecode, v0.5)
 - [ ] Native compilation of the classical part
