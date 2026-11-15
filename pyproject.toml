@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spatial-computing"
-version = "0.2.0"
-description = "SPATIAL COMPUTING research prototype: measure, decide, prove (compute, memory tiering, runtime routing, hybrid quantum language)"
+version = "0.3.0"
+description = "Spatial Computing: open-source infrastructure efficiency toolkit. Measure, decide, prove (compute, tiered memory, runtime routing, hybrid quantum language)"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

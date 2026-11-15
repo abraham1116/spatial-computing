@@ -39,6 +39,34 @@ def _gpus() -> list[dict]:
         return []
 
 
+def parse_nvidia_smi(csv: str) -> list[dict]:
+    """Parse `nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu --format=csv,noheader,nounits`."""
+    out = []
+    for line in csv.strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 4:
+            continue
+        name, total, used, util = parts
+        try:
+            out.append({"name": name, "vram_bytes": int(float(total)) * 2**20,
+                        "vram_used_bytes": int(float(used)) * 2**20, "utilization_percent": float(util)})
+        except ValueError:
+            continue
+    return out
+
+
+def _nvidia_gpus() -> list[dict]:
+    exe = shutil.which("nvidia-smi")
+    if not exe:
+        return []
+    try:
+        r = subprocess.run([exe, "--query-gpu=name,memory.total,memory.used,utilization.gpu",
+                            "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20)
+        return parse_nvidia_smi(r.stdout) if r.returncode == 0 else []
+    except Exception:
+        return []
+
+
 def virtualization() -> dict:
     """What can actually run guests here."""
     info = {"hvf": _sysctl("kern.hv_support") == "1"}
@@ -77,6 +105,12 @@ def detect_node() -> Node:
             attrs={"vram": g.get("spdisplays_vram_shared") or g.get("spdisplays_vram") or g.get("_spdisplays_vram"),
                    "metal": g.get("spdisplays_mtlgpufamilysupport"),
                    "vendor": g.get("spdisplays_vendor"), "integrated": "builtin" in str(g.get("sppci_bus", "")).lower().replace("-", "")}))
+    for g in _nvidia_gpus():
+        node.resources.append(Resource(
+            ResourceKind.GPU, g["name"], capacity=g["vram_bytes"], unit="bytes",
+            available=g["vram_bytes"] - g["vram_used_bytes"],
+            attrs={"vendor": "NVIDIA", "cuda": True, "integrated": False,
+                   "utilization_percent": g["utilization_percent"]}))
     du = psutil.disk_usage("/System/Volumes/Data" if platform.system() == "Darwin" else "/")
     node.resources.append(Resource(ResourceKind.STORAGE, "system volume", capacity=du.total,
                                    unit="bytes", available=du.free))

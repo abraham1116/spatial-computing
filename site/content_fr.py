@@ -28,7 +28,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Prototype de recherche · v0.2.0</p>
+<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.3.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Spatial choisit où et comment exécuter une charge de travail à partir de mesures, et ne revendique un gain que s'il est mesuré. Pas de RAM en plus : de l'utilisation en mieux.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -85,7 +85,7 @@ def landing():
 <table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
 <tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
 <tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, plusieurs écrivains, RDMA/CXL</td></tr>
-<tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Exécution Windows, conteneurs, GUI distante</td></tr>
+<tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Conteneurs, GUI distante, applications Windows graphiques</td></tr>
 <tr><td>SPATIAL Q</td><td><span class="tag ok">prototype opérationnel</span></td><td>QPU réel, QIR, sous-noyaux</td></tr>
 <tr><td>Scientifique, Simulation, Intelligence</td><td><span class="tag part">premiers composants</span></td><td>Solveurs métier, multiphysique, modèles appris</td></tr>
 <tr><td>AI, Holographique</td><td><span class="tag no">interface seule</span></td><td>Inférence réelle ; affichage et synthèse</td></tr>
@@ -107,7 +107,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · prototype de recherche · v0.2.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.3.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -124,7 +124,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Prototype de recherche v0.2.0. Quatre moteurs sont opérationnels et testés (58 tests) sur un seul Mac. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.3.0. Quatre moteurs sont opérationnels et testés (64 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -153,7 +153,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Binaires de test (facultatif)</h2>
 <p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p>''',
         [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">51 passed, 7 skipped</span>\n<span class="d"># les 7 ignorés demandent benchmarks/build</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">55 passed, 9 skipped</span>\n<span class="d"># les ignorés demandent benchmarks/build, QEMU ou Wine</span>')])
 
     doc("compute", "Compute Engine", "Détecte le matériel, mesure son usage, compare des stratégies d'exécution et choisit la meilleure.",
         '''<h2>Détecter et surveiller</h2>
@@ -269,9 +269,9 @@ main {
 <tr><td><code>spatial status</code></td><td>Statut réel de chaque moteur et ce qui n'est pas fait</td></tr>
 <tr><td><code>spatial plan &lt;fichier&gt;</code></td><td>Format détecté et routes d'exécution, avec raisons</td></tr>
 <tr><td><code>spatial run &lt;fichier&gt; [args] [--route R] [--timeout S]</code></td><td>Exécute via la première route réalisable ; code de sortie 1 si impossible</td></tr>
-<tr><td><code>spatial q run|check|qasm|qir|ir &lt;fichier.sq&gt; [--noise p]</code></td><td>Exécute (avec bruit dépolarisant en option), vérifie, exporte en OpenQASM 3, QIR ou SQIR</td></tr>
+<tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;fichier.sq&gt; [--noise p]</code></td><td>Exécute (avec bruit dépolarisant en option), vérifie, exporte en OpenQASM 3, OpenQASM 2, QIR ou SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Refait les mesures et régénère <code>docs/RESULTATS.md</code></td></tr>
-<tr><td><code>spatial serve compute|memory --token-file F</code></td><td>Lance un worker ou un serveur de pages, en boucle locale</td></tr></tbody></table>
+<tr><td><code>spatial serve compute|memory|runtime --token-file F</code></td><td>Lance un worker, un serveur de pages ou un exécuteur de binaires en bac à sable, en boucle locale</td></tr></tbody></table>
 <p>Une erreur affiche une seule ligne <code>spatial: Type: message</code> et renvoie le code 1.</p>''',
         [("Erreur propre", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),
          ("Vérifier un programme", f'<span class="k">$ spatial q check examples/05_ghz_qft.sq</span>\n<span class="g">{out_block("q_qpu")}</span>')])

@@ -35,11 +35,23 @@ class Execution:
     extra: dict = field(default_factory=dict)
 
 
+def find_wine() -> str | None:
+    """Wine on PATH, or a user-level unpacked build under ~/.local/share/spatial (no system install)."""
+    w = shutil.which("wine64") or shutil.which("wine")
+    if w:
+        return w
+    base = Path.home() / ".local" / "share" / "spatial"
+    for cand in sorted(base.glob("**/bin/wine")) if base.exists() else []:
+        if os.access(cand, os.X_OK):
+            return str(cand)
+    return None
+
+
 def host_caps(node=None) -> dict:
     import platform
     caps = {"os": {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(platform.system(), "?"),
             "arch": {"AMD64": "x86_64", "arm64": "aarch64"}.get(platform.machine(), platform.machine()),
-            "node": shutil.which("node"), "wine": shutil.which("wine64") or shutil.which("wine"),
+            "node": shutil.which("node"), "wine": find_wine(),
             "docker": shutil.which("docker") or shutil.which("podman"),
             "qemu_x86": shutil.which("qemu-system-x86_64"),
             "microvm": all(microvm.available().values())}
@@ -136,7 +148,8 @@ def execute(path: str, args: list[str] | None = None, route: str | None = None, 
         return Execution(chosen.name, r.returncode == 0, r.stdout.strip(), time.perf_counter() - t0,
                          {"stderr": r.stderr[-300:]})
     if chosen.name == "wine":
-        r = subprocess.run([shutil.which("wine64") or "wine", path, *args], capture_output=True, text=True,
-                           timeout=timeout_s)
-        return Execution(chosen.name, r.returncode == 0, r.stdout.strip(), time.perf_counter() - t0)
+        env = {**os.environ, "WINEDEBUG": "-all", "WINEPREFIX": str(Path.home() / ".local/share/spatial/wineprefix")}
+        r = subprocess.run([find_wine(), path, *args], capture_output=True, text=True, timeout=timeout_s, env=env)
+        return Execution(chosen.name, r.returncode == 0, r.stdout.strip(), time.perf_counter() - t0,
+                         {"stderr": r.stderr[-300:]})
     return Execution(chosen.name, False, "", 0.0, {"not_runnable": "route has no executor yet"})

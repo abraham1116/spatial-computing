@@ -74,6 +74,30 @@ class Circuit:
                             tuple(tuple(x) for x in o.get("if", ()))))
         return c
 
+    def to_qasm2(self) -> str:
+        """OpenQASM 2.0 text for STATIC circuits (the dialect Cirq, PennyLane and older tools import).
+        Gates missing from qelib1.inc are rewritten: p -> u1, cp -> cu1."""
+        if any(o.name in ("measure", "reset") or o.cond for o in self.ops):
+            raise ValueError("OpenQASM 2 export supports static circuits only; use to_qasm3()")
+        ren = {"p": "u1", "cp": "cu1"}
+        L = ["OPENQASM 2.0;", 'include "qelib1.inc";', f"qreg q[{self.n_qubits}];", f"creg c[{self.n_qubits}];"]
+        for o in self.ops:
+            p = "(" + ",".join(repr(float(x)) for x in o.params) + ")" if o.params else ""
+            L.append(f"{ren.get(o.name, o.name)}{p} " + ",".join(f"q[{q}]" for q in o.qubits) + ";")
+        L.append("measure q -> c;")
+        return "\n".join(L) + "\n"
+
+    def shot_cost(self, shots: int, usd_per_shot: float = 0.0, usd_per_task: float = 0.0,
+                  usd_per_second: float = 0.0, seconds_per_shot: float = 0.0) -> dict:
+        """Cost of running this circuit on a provider, from PRICES THE CALLER SUPPLIES.
+        No provider price is built in: tariffs differ and change; an invented default would be a lie."""
+        if not (usd_per_shot or usd_per_task or usd_per_second):
+            raise ValueError("no price given: pass the provider's usd_per_shot, usd_per_task or usd_per_second")
+        usd = usd_per_task + shots * usd_per_shot + shots * seconds_per_shot * usd_per_second
+        return {"shots": shots, "usd": usd, "usd_per_shot_effective": usd / shots,
+                "inputs": {"usd_per_shot": usd_per_shot, "usd_per_task": usd_per_task,
+                           "usd_per_second": usd_per_second, "seconds_per_shot": seconds_per_shot}}
+
     def to_qasm3(self) -> str:
         """OpenQASM 3 text. A final `c = measure q;` reads out every qubit."""
         L = ["OPENQASM 3.0;", 'include "stdgates.inc";', f"qubit[{self.n_qubits}] q;"]

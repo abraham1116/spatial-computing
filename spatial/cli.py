@@ -23,6 +23,8 @@ def cmd_audit(a):
     print(f"{node.attrs.get('model')} | {node.attrs.get('cpu_brand')} | {node.os} | {node.arch}")
     for r in node.resources:
         cap = f"{r.capacity / 2**30:.1f} GiB" if r.unit == "bytes" else f"{r.capacity:g} {r.unit}"
+        if "utilization_percent" in r.attrs:
+            cap += f"  ({r.attrs['utilization_percent']:.0f}% busy)"
         print(f"  {r.kind.value:<11} {r.name:<42} {cap}")
     print(f"memory pressure: {snap.get('memory_pressure')} | compressor ratio: {snap.get('compressor_ratio')} "
           f"| swap used: {snap['swap_used'] / 2**30:.2f} GiB")
@@ -82,7 +84,8 @@ def cmd_bench(a):
 
 
 def cmd_worker(a):
-    mod = "spatial.compute.worker" if a.kind == "compute" else "spatial.memory.pageserver"
+    mod = {"compute": "spatial.compute.worker", "memory": "spatial.memory.pageserver",
+           "runtime": "spatial.runtime.runner"}[a.kind]
     cmd = [sys.executable, "-m", mod, "--token-file", a.token_file, "--host", a.host, "--port", str(a.port)]
     if a.allow_remote:
         cmd.append("--allow-remote")
@@ -111,8 +114,8 @@ def main(argv=None):
     p = sub.add_parser("bench", help="run benchmarks and regenerate docs/RESULTATS.md")
     p.add_argument("name", choices=[*BENCHES, "all"])
     p.set_defaults(fn=cmd_bench)
-    p = sub.add_parser("serve", help="start a compute worker or a page server (loopback by default)")
-    p.add_argument("kind", choices=["compute", "memory"])
+    p = sub.add_parser("serve", help="start a compute worker, a page server or a sandboxed binary runner (loopback by default)")
+    p.add_argument("kind", choices=["compute", "memory", "runtime"])
     p.add_argument("--token-file", required=True)
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=0)

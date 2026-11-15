@@ -149,7 +149,11 @@ class ComputeScheduler:
         ok = [r for r in rows if r.ok]
         if not ok:
             raise RuntimeError("no strategy succeeded")
-        key = {"time": lambda r: r.wall_s, "cpu": lambda r: r.cpu_s,
+        if objective == "cost":            # $ = CPU-seconds actually burnt, priced per core-hour
+            usd_core_h = getattr(self, "usd_per_core_hour", 0.045)     # assumption, override on the instance
+            for r in ok:
+                r.cost_usd = (r.cpu_s or r.wall_s) / 3600 * usd_core_h
+        key = {"time": lambda r: r.wall_s, "cpu": lambda r: r.cpu_s, "cost": lambda r: r.cost_usd,
                "energy": lambda r: r.energy_j if r.energy_j is not None else float("inf")}[objective]
         best = min(ok, key=key)
         self.ledger.decide("compute", f"choose {best.strategy}", f"min {objective}",

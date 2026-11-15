@@ -26,7 +26,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Research prototype · v0.2.0 · Apache-2.0</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.3.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. Not more RAM: better utilization.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -83,7 +83,7 @@ def landing():
 <table><thead><tr><th>Engine</th><th>Level</th><th>Not done yet</th></tr></thead><tbody>
 <tr><td>Compute Engine</td><td><span class="tag ok">operational prototype</span></td><td>Second real machine, NVIDIA GPU, energy measurement</td></tr>
 <tr><td>Tiered memory</td><td><span class="tag ok">operational prototype</span></td><td>Kernel paging, multiple writers, RDMA/CXL</td></tr>
-<tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Windows execution, containers, remote GUI</td></tr>
+<tr><td>Runtime Engine</td><td><span class="tag ok">operational prototype</span></td><td>Containers, remote GUI, GUI Windows apps</td></tr>
 <tr><td>SPATIAL Q</td><td><span class="tag ok">operational prototype</span></td><td>Real QPU, QIR, sub-kernels</td></tr>
 <tr><td>Scientific, Simulation, Intelligence</td><td><span class="tag part">first components</span></td><td>Domain solvers, multiphysics, learned models</td></tr>
 <tr><td>AI, Holographic</td><td><span class="tag no">interface only</span></td><td>Real inference; display and synthesis</td></tr>
@@ -105,7 +105,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · research prototype · v0.2.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.3.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -121,7 +121,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Research prototype v0.2.0. Four engines are operational and tested (58 tests) on a single Mac. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.3.0. Four engines are operational and tested (64 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -150,7 +150,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Test binaries (optional)</h2>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">51 passed, 7 skipped</span>\n<span class="d"># the 7 skipped need benchmarks/build</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">55 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
 
     doc("compute", "Compute Engine", "Detects the hardware, measures its usage, compares execution strategies and picks the best one.",
         '''<h2>Detect and monitor</h2>
@@ -266,9 +266,9 @@ main {
 <tr><td><code>spatial status</code></td><td>Real status of every engine and what is not done</td></tr>
 <tr><td><code>spatial plan &lt;file&gt;</code></td><td>Detected format and execution routes, with reasons</td></tr>
 <tr><td><code>spatial run &lt;file&gt; [args] [--route R] [--timeout S]</code></td><td>Runs via the first feasible route; exit code 1 if impossible</td></tr>
-<tr><td><code>spatial q run|check|qasm|qir|ir &lt;file.sq&gt; [--noise p]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, QIR or SQIR</td></tr>
+<tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
-<tr><td><code>spatial serve compute|memory --token-file F</code></td><td>Start a worker or a page server, on loopback</td></tr></tbody></table>
+<tr><td><code>spatial serve compute|memory|runtime --token-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback</td></tr></tbody></table>
 <p>An error prints a single <code>spatial: Type: message</code> line and exits with code 1.</p>''',
         [("Clean error", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),
          ("Check a program", f'<span class="k">$ spatial q check examples/05_ghz_qft.sq</span>\n<span class="g">{out_block("q_qpu")}</span>')])

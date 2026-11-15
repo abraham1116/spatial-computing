@@ -230,7 +230,7 @@ def main():
     import argparse
     import json
     ap = argparse.ArgumentParser(prog="spatialq", description="SPATIAL Q compiler/runtime")
-    ap.add_argument("cmd", choices=["run", "check", "qasm", "ir", "qir"])
+    ap.add_argument("cmd", choices=["run", "check", "qasm", "qasm2", "ir", "qir"])
     ap.add_argument("file")
     ap.add_argument("--kernel", help="kernel name for qasm/ir")
     ap.add_argument("--args", default="[]", help="JSON list of kernel arguments")
@@ -243,12 +243,14 @@ def main():
     if a.cmd == "check":
         print(f"ok: {len(prog.kernels)} kernel(s), {len(prog.tasks)} task(s)")
         return
-    if a.cmd in ("qasm", "ir", "qir"):
+    if a.cmd in ("qasm", "qasm2", "ir", "qir"):
         name = a.kernel or next(k for k, v in prog.kernels.items() if "qubit" not in v.ptypes)
         c, info = compile_kernel(prog.kernels[name], json.loads(a.args), kernels=prog.kernels)
         if a.cmd == "qir":
             from .qir import to_qir
             print(to_qir(c))
+        elif a.cmd == "qasm2":
+            print(c.to_qasm2())
         else:
             print(c.to_qasm3() if a.cmd == "qasm" else c.to_json())
         return
