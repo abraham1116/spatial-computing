@@ -2,9 +2,9 @@
 
 **Measure. Decide. Prove.**
 
-Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
+One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. Spatial Computing prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines, picks the cheapest, and records the estimate next to what really happened. A gain is claimed only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
 
-> **Status: v0.9.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
+> **Status: v0.10.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
 
 [Français](README.fr.md)
 
@@ -60,6 +60,7 @@ st.put(0, b"..." * 1000); st.get(0); print(st.stats())
 
 | Engine | Level | Evidence |
 |---|---|---|
+| Planner (the one objective: price every option across all engines, choose, run, check) | operational prototype | `tests/test_unified.py`, `benchmarks/bench_unified.py` |
 | Fleet (agent on every machine + hub: measure, place, recommend, audit) | operational prototype | `tests/test_fleet.py`, `benchmarks/bench_fleet.py` |
 | Compute Engine (detect, monitor, compare strategies, offload, cost) | operational prototype | `tests/test_compute.py`, `benchmarks/bench_cpu.py` |
 | Tiered memory (hot / compressed / far) | operational prototype | `tests/test_memory.py`, `benchmarks/bench_memory.py` |

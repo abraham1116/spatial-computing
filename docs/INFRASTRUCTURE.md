@@ -2,6 +2,10 @@
 
 What Spatial Computing is made of, how the parts talk, and what each one does and does not do. Status: v0.9.0, validated on one machine (see [TESTS_NOT_DONE.md](TESTS_NOT_DONE.md)).
 
+## One objective
+
+Every decision in this infrastructure answers the same question: **get the job done correctly at the lowest cost in dollars, within stated constraints, and prove it.** The planner (`spatial.unified`, `spatial optimize`) asks each engine for priced options and ranks them with one formula; the fleet hub's placement and recommendations use the same prices. See [OBJECTIVE.md](OBJECTIVE.md).
+
 ## One picture
 
 ```

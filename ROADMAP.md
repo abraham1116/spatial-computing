@@ -16,6 +16,10 @@ Everything that needs hardware or people is tracked, with how to run it, in [`do
 - [x] Current limitations in English (`docs/LIMITATIONS.md`, v0.5)
 - [ ] Publish to PyPI; English translation of the remaining reports in `docs/`
 
+## Planner (one objective)
+- [x] Planner with providers for compute, fleet, memory, runtime, SPATIAL Q and the AI cache; probes, constraints, execution, estimate-versus-actual proof, calibration (v0.10)
+- [ ] Per-node speed measurement, GPU options, real invoices, a learned runtime model
+
 ## Fleet
 - [x] Agent and hub: measurement, placement, recommendations, audit (v0.9, validated with 3 agents on one machine)
 - [ ] Agents on several real machines; scale tests; hub persistence and high availability

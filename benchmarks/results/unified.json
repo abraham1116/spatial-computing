@@ -1,0 +1,317 @@
+{
+ "context": {
+  "date": "2026-11-15 19:00:35 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t66%; charging; 1:50 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794765635.542273,
+   "cpu_percent": 17.7,
+   "load1": 4.31103515625,
+   "ram_total": 17179869184,
+   "ram_available": 6960406528,
+   "ram_used_percent": 59.5,
+   "swap_used": 4023910400,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7286861824,
+   "compressor_physical_bytes": 975220736,
+   "compressor_ratio": 7.47,
+   "compressor_saved_bytes": 6311641088,
+   "swapins": 1986630,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "cases": 13,
+ "correct": 12,
+ "accuracy": 0.9230769230769231,
+ "mean_regret": 1.0067628519449987,
+ "max_regret": 1.087917075284984,
+ "median_abs_estimate_error_pct": 7.0578412904504235,
+ "rows": [
+  {
+   "family": "mandel",
+   "job": {
+    "family": "mandel",
+    "params": {
+     "n": 16,
+     "iters": 150
+    }
+   },
+   "chosen": "numba_jit",
+   "truly_fastest": "numba_jit",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -34.612751558266964,
+   "measured_s": {
+    "numba_jit": 5.275799776427448e-05,
+    "numba_threads": 8.503999561071396e-05,
+    "python": 0.0011114340013591573,
+    "numpy": 0.0023652090021641925
+   },
+   "estimated_s": {
+    "numba_jit": 3.449700307101011e-05,
+    "numba_threads": 5.9547004639171064e-05,
+    "python": 0.0010898780019488186,
+    "numpy": 0.002272600992000662
+   }
+  },
+  {
+   "family": "mandel",
+   "job": {
+    "family": "mandel",
+    "params": {
+     "n": 48,
+     "iters": 150
+    }
+   },
+   "chosen": "numba_threads",
+   "truly_fastest": "numba_threads",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 7.34709696431658,
+   "measured_s": {
+    "numba_threads": 0.00025618499785196036,
+    "numba_jit": 0.00029205900500528514,
+    "numpy": 0.004625344998203218,
+    "python": 0.009979285998269916
+   },
+   "estimated_s": {
+    "numba_threads": 0.00027500715805217624,
+    "numba_jit": 0.00030507505289278924,
+    "numpy": 0.006160899235207277,
+    "python": 0.009778527048183605
+   }
+  },
+  {
+   "family": "mandel",
+   "job": {
+    "family": "mandel",
+    "params": {
+     "n": 150,
+     "iters": 150
+    }
+   },
+   "chosen": "numba_threads",
+   "truly_fastest": "numba_threads",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -5.727173644379008,
+   "measured_s": {
+    "numba_threads": 0.0017111639899667352,
+    "numba_jit": 0.0028993270097998902,
+    "numpy": 0.02570793600170873,
+    "python": 0.10168816400982905
+   },
+   "estimated_s": {
+    "numba_threads": 0.0016131626569212561,
+    "numba_jit": 0.0026959246332377293,
+    "numpy": 0.02984612157329378,
+    "python": 0.09174927626797734
+   }
+  },
+  {
+   "family": "mandel",
+   "job": {
+    "family": "mandel",
+    "params": {
+     "n": 400,
+     "iters": 150
+    }
+   },
+   "chosen": "numba_threads",
+   "truly_fastest": "numba_threads",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -0.5187578251854488,
+   "measured_s": {
+    "numba_threads": 0.009963780990801752,
+    "numba_jit": 0.021193329986999743,
+    "numpy": 0.18387458100914955,
+    "python": 0.7121041399950627
+   },
+   "estimated_s": {
+    "numba_threads": 0.009912093097227627,
+    "numba_jit": 0.02027913578785956,
+    "numpy": 0.19213887983642053,
+    "python": 0.710560352075845
+   }
+  },
+  {
+   "family": "heat",
+   "job": {
+    "family": "heat",
+    "params": {
+     "n": 20,
+     "steps": 200
+    }
+   },
+   "chosen": "numba",
+   "truly_fastest": "numba",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -1.5280761570107764,
+   "measured_s": {
+    "numba": 0.0002810769947245717,
+    "numpy": 0.008598872998845764
+   },
+   "estimated_s": {
+    "numba": 0.0002767819241853431,
+    "numpy": 0.008669728005770594
+   }
+  },
+  {
+   "family": "heat",
+   "job": {
+    "family": "heat",
+    "params": {
+     "n": 60,
+     "steps": 200
+    }
+   },
+   "chosen": "numba",
+   "truly_fastest": "numba",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -0.14784082991439837,
+   "measured_s": {
+    "numba": 0.0012229190033394843,
+    "numpy": 0.01150670601055026
+   },
+   "estimated_s": {
+    "numba": 0.0012211110297357664,
+    "numpy": 0.011403752025216818
+   }
+  },
+  {
+   "family": "heat",
+   "job": {
+    "family": "heat",
+    "params": {
+     "n": 120,
+     "steps": 200
+    }
+   },
+   "chosen": "numba",
+   "truly_fastest": "numba",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -0.8569576237946284,
+   "measured_s": {
+    "numba": 0.0047785299975657836,
+    "numpy": 0.024355210989597254
+   },
+   "estimated_s": {
+    "numba": 0.00473758002044633,
+    "numpy": 0.022091863967943937
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "4 qubits",
+   "chosen": "statevector",
+   "truly_fastest": "statevector",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -15.383137814974683,
+   "measured_s": {
+    "statevector": 0.0008430659945588559,
+    "aer": 0.003019577998202294
+   },
+   "estimated_s": {
+    "statevector": 0.0007133759907446801,
+    "aer": 0.0027150780020747333
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "10 qubits",
+   "chosen": "statevector",
+   "truly_fastest": "statevector",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 7.0599228853292475,
+   "measured_s": {
+    "statevector": 0.0032540950051043183,
+    "aer": 0.007179854001151398
+   },
+   "estimated_s": {
+    "statevector": 0.003483831603080034,
+    "aer": 0.005825429985998198
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "14 qubits",
+   "chosen": "aer",
+   "truly_fastest": "statevector",
+   "correct": false,
+   "regret": 1.087917075284984,
+   "estimate_error_pct": 4.094330640942621,
+   "measured_s": {
+    "aer": 0.018661194990272634,
+    "statevector": 0.01715314100147225
+   },
+   "estimated_s": {
+    "aer": 0.019425246014725416,
+    "statevector": 0.019778384413802995
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "16 qubits",
+   "chosen": "aer",
+   "truly_fastest": "aer",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 7.0578412904504235,
+   "measured_s": {
+    "aer": 0.023761730000842363,
+    "statevector": 0.05065636801009532
+   },
+   "estimated_s": {
+    "aer": 0.02543879519216716,
+    "statevector": 0.054634043999249114
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "18 qubits",
+   "chosen": "aer",
+   "truly_fastest": "aer",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 12.289480244600615,
+   "measured_s": {
+    "aer": 0.059465391997946426,
+    "statevector": 0.20012233100715093
+   },
+   "estimated_s": {
+    "aer": 0.06677337959990837,
+    "statevector": 0.2428859255975112
+   }
+  },
+  {
+   "family": "quantum",
+   "job": "20 qubits",
+   "chosen": "aer",
+   "truly_fastest": "aer",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 11.783033850944094,
+   "measured_s": {
+    "aer": 0.23052942000504117,
+    "statevector": 1.441203502996359
+   },
+   "estimated_s": {
+    "aer": 0.25769277960062026,
+    "statevector": 1.7219140296103432
+   }
+  }
+ ],
+ "note": "one machine, equal price per hour for every option, so cheapest = fastest"
+}

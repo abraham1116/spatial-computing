@@ -4,7 +4,7 @@ import scaffold as S
 
 NAV_GROUPS = [
     ("Get started", [("index", "Overview"), ("quickstart", "Installation")]),
-    ("Engines", [("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
+    ("Engines", [("planner", "Planner"), ("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q")]),
     ("Reference", [("cli", "Commands"), ("security", "Security"), ("results", "Results"), ("limits", "Limitations")]),
 ]
 UI = {"nav_label": "Main", "proof": "Proof", "install": "Install", "docs_label": "Documentation", "examples_label": "Examples"}
@@ -16,6 +16,10 @@ spatial status"""
 
 RUN_FLEET = 'spatial token init --master-key-file hub.key\nspatial serve hub --master-key-file hub.key --port 7700\nspatial token issue --master-key-file hub.key --name node-1 --scopes fleet:report,fleet:work > node-1.tok\nspatial token issue --master-key-file hub.key --name ops --scopes fleet:read,fleet:submit > ops.tok\n# on every machine\nspatial agent --hub HUB:7700 --token-file node-1.tok --usd-per-hour 1.5\n# the operator\nspatial fleet status --hub HUB:7700 --token-file ops.tok\nspatial fleet advise --hub HUB:7700 --token-file ops.tok\nspatial fleet submit --hub HUB:7700 --token-file ops.tok --workload mandel_numba --params \'{"n":1400,"iters":300}\''
 FLEET_STATUS = 'node     up  cores cpu% ramfree%\nagent-0  yes     4   48       43\nagent-1  yes     4   50       43\nagent-2  yes     4   52       43\nfleet: 3 nodes, 12 cores,\nCPU utilization 50.1%\n(last 6 s)'
+
+PLAN_CMDS = 'spatial optimize compute --family heat --params \'{"n":100,"steps":600}\' --execute\nspatial optimize dataset --gib 24 --accesses 200000 --max-ram-gib 2\nspatial optimize kv --prefix-tokens 2000 --reuse 0.8 --execute\nspatial optimize quantum --file examples/01_bell.sq --kernel bell --shots 1000\nspatial optimize binary --file app.elf --isolated 64 50'
+PLAN_HEAT = "job: compute heat {'n': 100, 'steps': 600}\nobjective: minimize cost (0.134 $/h)\n>> compute/numba    0.0106 s   chosen\n   compute/numpy    0.0733 s   ok\nexecuted: 0.0114 s (estimated 0.0106 s, +8%)"
+PLAN_DATA = 'job: dataset 24 GiB, 200000 accesses\nobjective: minimize cost, RAM <= 2 GiB\n>> memory/tiered_ssd  41.4 s   chosen\n   memory/in_ram      -        rejected: 24.0 GiB does\n                      not fit the 2.0 GiB RAM budget'
 
 BELL = open(ROOT.parent / "examples/01_bell.sq").read().strip()
 
@@ -29,9 +33,9 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Compute infrastructure optimization · v0.9.0 · open source</p>
+<p class="eyebrow">One objective · v0.10.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
-<p class="sub">One platform for compute infrastructure: an agent on every machine, a hub that sees the fleet, and engines for compute, memory, runtime, quantum, AI, science, simulation and holography. Measure, place, prove.</p>
+<p class="sub">One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. A planner prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines; an agent on each machine and a hub keep the measurements honest.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
 <div class="cta"><a class="btn" href="docs/quickstart.html">Get started</a><a class="btn ghost" href="#proof">See the measurements</a></div>
 </div>
@@ -41,9 +45,9 @@ def landing():
 </div></div>
 
 <section id="engines"><div class="wrap">
-<p class="eyebrow">One core, a fleet layer, every engine</p>
-<h2>Every engine shares the same model.</h2>
-<p class="lead">A resource, a task, a measurement, a cost. Spatial Core gives the fleet layer and all engines the same data model, the same encrypted protocol and the same tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
+<p class="eyebrow">One objective, one core, every engine</p>
+<h2>Every engine answers the same question.</h2>
+<p class="lead">Which way of doing this job is the cheapest, correct, and within my constraints? Each engine prices its own options; the planner ranks them with one formula and records the estimate next to what really happened. They share a data model, an encrypted protocol and a tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
 <div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
 </div></section>
 
@@ -52,6 +56,7 @@ def landing():
 <h2>One proof per engine.</h2>
 <p class="lead">Each figure comes from a test or a benchmark in the repository, run on a 2017 MacBook Pro (two cores, 16 GB). Reproduce them with <code>pytest</code> and <code>spatial bench all</code>.</p>
 <div class="eng">
+<div class="card"><h3>Planner</h3><p>Prices every way to run a job across all engines and picks the cheapest.</p><div class="pf"><b>12 / 12</b><span>unseen cases where it picked the truly fastest option, each one run for real; median estimate error 5 %</span></div></div>
 <div class="card"><h3>Fleet</h3><p>Sees every machine from one place and places work on them.</p><div class="pf"><b>×1.66</b><span>12 tasks on 3 agents against 1, placed by the hub; identical results, audit chain intact (one machine, 2 cores)</span></div></div>
 <div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
 <div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
@@ -96,6 +101,7 @@ def landing():
 <h2>What runs, what is only sketched.</h2>
 <p class="lead">Each engine's status is declared in the code, and a test forbids showing one without evidence.</p>
 <table><thead><tr><th>Engine</th><th>Level</th><th>Not done yet</th></tr></thead><tbody>
+<tr><td>Planner (the one objective)</td><td><span class="tag ok">operational prototype</span></td><td>Several machines, GPUs, real invoices, a learned model</td></tr>
 <tr><td>Fleet (agent + hub)</td><td><span class="tag ok">operational prototype</span></td><td>Several real machines, scale, hub persistence, dashboard</td></tr>
 <tr><td>Compute Engine</td><td><span class="tag ok">operational prototype</span></td><td>Second real machine, NVIDIA GPU, energy measurement</td></tr>
 <tr><td>Tiered memory</td><td><span class="tag ok">operational prototype</span></td><td>Kernel paging, multiple writers, RDMA/CXL</td></tr>
@@ -122,7 +128,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.9.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.10.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -138,7 +144,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.9.0. Four engines are operational and tested (101 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.10.0. Four engines are operational and tested (111 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -167,6 +173,30 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
          ("Tests", '<span class="k">$ pytest</span>\n<span class="g">68 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
+
+    doc("planner", "Planner", "One objective for every engine: get each job done correctly at the lowest cost, and prove it.",
+        f'''<div class="callout"><b>The objective</b>Get the job done <b>correctly</b> at the lowest <b>cost in dollars</b>, within the constraints you state (deadline, RAM, isolation, hardware allowed), and <b>prove it</b>: the estimate is recorded next to what really happened, and future estimates are corrected by that history.</div>
+<h2>How the engines fit together</h2>
+<p>Each engine has a provider that turns a job into priced options. One function ranks them. One ledger records the decision and, after execution, the measurement.</p>
+<table><thead><tr><th>Engine</th><th>Options it proposes</th></tr></thead><tbody>
+<tr><td>Compute, Simulation, Scientific, Holographic</td><td>Each variant of a numerical job (e.g. pure Python, NumPy, Numba, multi-core), probed on reduced problems and checked against the others</td></tr>
+<tr><td>Fleet</td><td>The same job on each live node, at the node's own price per hour</td></tr>
+<tr><td>Tiered memory</td><td>A dataset in RAM or tiered over SSD, with tier latencies measured on this machine</td></tr>
+<tr><td>Runtime</td><td>Every route for a binary (native, WASM, micro-VM, Wine) with its isolation and overhead</td></tr>
+<tr><td>SPATIAL Q</td><td>Exact simulator, Aer, or real hardware (only if allowed and priced)</td></tr>
+<tr><td>AI</td><td>A cached prefix: recompute, or keep and restore it</td></tr></tbody></table>
+<h2>Use it</h2>
+<pre><code>{E(PLAN_CMDS)}</code></pre>
+<h2>Is the decision good?</h2>
+<p>Every feasible option was run for real and timed, then compared with the planner's choice (one machine, one price per hour, so cheapest = fastest).</p>
+<table><thead><tr><th>Estimator</th><th>Cases</th><th>Picked the fastest</th><th>Median estimate error</th></tr></thead><tbody>
+<tr><td>Single probe</td><td>13</td><td>10 (77 %)</td><td>28 %</td></tr>
+<tr><td>Two sizes, affine fit</td><td>13</td><td>10 (77 %)</td><td>16 %</td></tr>
+<tr><td>+ best of several probes</td><td>13</td><td>12 (92 %)</td><td>7 %</td></tr>
+<tr><td>Same, on 12 cases never used while tuning</td><td>12</td><td>12 (100 %)</td><td>5 %</td></tr></tbody></table>
+<p>The first versions mis-ranked the multi-core variant on mid-size jobs because microsecond probes were dominated by thread start-up noise; keeping the best of several runs fixed it.</p>
+<div class="callout warn"><b>Limits</b>One machine, 25 cases, numerical kernels and circuit simulation only. Estimates are per machine (the planner re-probes each time). Calibration is a median of past ratios, not a learned model. Dollar costs use the prices you give: the default local price (0.134 $/h) is an assumption, a fleet node without a price is rejected, and a QPU tariff is never guessed. The AI engine is a toy model. Details: <code>docs/OBJECTIVE.md</code>.</div>''',
+        [("Example: compute", f'<span class="d">{E(PLAN_HEAT)}</span>'), ("Example: dataset", f'<span class="d">{E(PLAN_DATA)}</span>')])
 
     doc("fleet", "Fleet", "An agent on every machine, a hub that sees the whole fleet: measure, place, recommend, audit.",
         f'''<div class="callout warn"><b>Scope</b>Validated with up to 3 agents on <b>one</b> machine. The three report the same CPU load, so this proves the chain (identity, scopes, placement, results, audit), not scaling.</div>
@@ -311,6 +341,7 @@ main {
 <tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p] [--compiled]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
 <tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback; with a master key, tenants get scoped credentials</td></tr>
+<tr><td><code>spatial optimize compute|binary|quantum|dataset|kv [--objective cost|time --deadline S --max-ram-gib G --isolated --allow-qpu --execute]</code></td><td>The one objective: price every option for a job, pick the cheapest, optionally run it and compare with the estimate</td></tr>
 <tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Run a fleet agent: measure this machine, report to a hub, run allow-listed tasks</td></tr>
 <tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>See the fleet, get recommendations with their evidence, submit and read tasks</td></tr>
 <tr><td><code>spatial serve hub --master-key-file F</code></td><td>Start the fleet hub</td></tr>

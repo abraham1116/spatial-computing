@@ -137,6 +137,40 @@ def cmd_fleet(a):
     return 0
 
 
+def cmd_optimize(a):
+    import json as _json
+    from .unified import Job, Objective, Planner, PlanError, Prices
+    prices = Prices(local_usd_per_hour=a.local_usd_per_hour, qpu_usd_per_shot=a.qpu_usd_per_shot, qpu_usd_per_task=a.qpu_usd_per_task,
+                    ram_usd_gb_hour=a.ram_usd_gb_hour, storage_usd_gb_hour=a.storage_usd_gb_hour)
+    obj = Objective(minimize=a.objective, deadline_s=a.deadline, max_ram_bytes=int(a.max_ram_gib * 2**30) if a.max_ram_gib else None,
+                    require_isolation=a.isolated, allow_qpu=a.allow_qpu, require_hardware=a.require_hardware)
+    hub = _hub_client(a) if a.hub else None
+    if a.job == "compute":
+        job = Job.compute(a.family, **_json.loads(a.params))
+    elif a.job == "binary":
+        job = Job.binary(a.file, a.args, a.est_native_s)
+    elif a.job == "quantum":
+        job = Job.quantum(Path(a.file).read_text(), a.kernel, _json.loads(a.kargs), a.shots)
+    elif a.job == "dataset":
+        job = Job.dataset(int(a.gib * 2**30), a.accesses, a.locality, a.hot_fraction)
+    else:
+        job = Job.kv_cache(a.prefix_tokens, a.reuse, a.horizon_h)
+    planner = Planner(prices=prices, hub=hub)
+    try:
+        plan = planner.plan(job, obj)
+    except PlanError as e:
+        print(e)
+        return 1
+    print(plan.explain())
+    if a.execute:
+        ex = planner.execute(plan)
+        err = "n/a" if ex.time_error_pct is None else f"{ex.time_error_pct:+.0f}%"
+        print(f"\nexecuted {ex.option}: {ex.wall_s:.4g} s (estimated {ex.est_time_s if ex.est_time_s is None else format(ex.est_time_s, '.4g')} s, error {err}); "
+              f"cost {ex.actual_cost_usd:.3g} $ (estimated {ex.est_cost_usd if ex.est_cost_usd is None else format(ex.est_cost_usd, '.3g')} $)")
+        print("result:", str(ex.result)[:300])
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -194,6 +228,26 @@ def main(argv=None):
     p.add_argument("--port", type=int, default=0)
     p.add_argument("--allow-remote", action="store_true", help="explicit consent to accept LAN connections")
     p.set_defaults(fn=cmd_worker)
+    p = sub.add_parser("optimize", help="ONE objective for every engine: price each way to do a job, pick the cheapest, optionally run and check")
+    p.add_argument("job", choices=["compute", "binary", "quantum", "dataset", "kv"])
+    p.add_argument("--family", default="mandel", help="compute: mandel|heat|nbody|hologram|option|ode")
+    p.add_argument("--params", default="{}", help="compute: JSON parameters, e.g. '{\"n\":800,\"iters\":300}'")
+    p.add_argument("--file", help="binary: path; quantum: .sq file")
+    p.add_argument("args", nargs="*", help="binary: arguments")
+    p.add_argument("--est-native-s", type=float, default=1.0, help="binary: expected run time when native")
+    p.add_argument("--kernel", help="quantum: kernel name"); p.add_argument("--kargs", default="[]"); p.add_argument("--shots", type=int, default=1000)
+    p.add_argument("--gib", type=float, default=1.0, help="dataset: size in GiB"); p.add_argument("--accesses", type=int, default=100000)
+    p.add_argument("--locality", type=float, default=0.8); p.add_argument("--hot-fraction", type=float, default=0.2)
+    p.add_argument("--prefix-tokens", type=int, default=1000); p.add_argument("--reuse", type=float, default=0.5); p.add_argument("--horizon-h", type=float, default=1.0)
+    p.add_argument("--objective", choices=["cost", "time"], default="cost")
+    p.add_argument("--deadline", type=float); p.add_argument("--max-ram-gib", type=float)
+    p.add_argument("--isolated", action="store_true"); p.add_argument("--allow-qpu", action="store_true"); p.add_argument("--require-hardware", action="store_true")
+    p.add_argument("--local-usd-per-hour", type=float, default=0.134, help="price of this machine (default is an assumption)")
+    p.add_argument("--ram-usd-gb-hour", type=float, default=0.0); p.add_argument("--storage-usd-gb-hour", type=float, default=0.0)
+    p.add_argument("--qpu-usd-per-shot", type=float, default=0.0); p.add_argument("--qpu-usd-per-task", type=float, default=0.0)
+    p.add_argument("--hub", help="host:port of a fleet hub: nodes become options"); p.add_argument("--token-file")
+    p.add_argument("--execute", action="store_true", help="run the chosen option and compare with the estimate")
+    p.set_defaults(fn=cmd_optimize)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")

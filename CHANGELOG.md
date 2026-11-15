@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+- New: one objective for every engine. `spatial.unified.Planner` and `spatial optimize`: each engine proposes priced options for a job (compute/simulation/scientific/holographic families, fleet nodes, tiered memory, runtime routes, quantum backends, AI cache); one function ranks them by cost within the stated constraints; executing a plan records the estimate beside reality and calibrates the next one.
+- Science, simulation and holographic workloads (heat, N-body, hologram, option pricing, ODE) join the allow-list, so the planner and the fleet can run them.
+- Decision quality measured by running every option: 12 of 13 tuning cases and 12 of 12 held-out cases picked the truly fastest option (`benchmarks/bench_unified.py`).
+- Docs: `docs/OBJECTIVE.md`.
+
 ## 0.9.0
 - New: Spatial Fleet. `spatial agent` measures a machine continuously and runs allow-listed tasks; `spatial serve hub` stores the fleet's measurements, places tasks, and produces recommendations with evidence; `spatial fleet status|advise|submit|result`.
 - Fix: the hash-chained ledger could break under concurrent writers (one thread per connection). Now locked; test added.

@@ -69,6 +69,19 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | B5 | Simulation above about 27 qubits, GPU state vector | design | A GPU with enough memory |
 | B6 | Any claim of quantum advantage | **not claimed, not tested** | Out of scope |
 
+## H. Planner tests (the one objective)
+
+| Id | Test | State |
+|---|---|---|
+| H-1 | Decision quality on a second and third machine (estimates are per machine; does the planner still pick the fastest?) | ready: `python benchmarks/bench_unified.py` and `HELDOUT=1 ...` on each machine |
+| H-2 | Real billed money: run on a rented node and compare the planner's dollar estimate with the invoice | design, needs a cloud account |
+| H-3 | GPU variants as options (CUDA kernels next to the CPU ones) and the GPU price per hour | design, needs an NVIDIA machine |
+| H-4 | Many more job families and sizes (the 25 cases are numerical kernels and circuit simulation only) | design |
+| H-5 | A learned runtime model instead of probes plus a median correction; compare accuracy and probe cost | design |
+| H-6 | Real QPU option priced with the provider's tariff and compared with simulators on cost and fidelity | design, needs tariff and QPU time |
+| H-7 | Fleet node speed: measure per-node speed instead of assuming it equals this machine's | design, needs several machines |
+| H-8 | Real LLM KV-cache policy against a real inference server | design, needs a GPU (see A2-G2) |
+
 ## G. Fleet tests (agent + hub)
 
 | Id | Test | State |
