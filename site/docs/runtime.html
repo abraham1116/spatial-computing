@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Runtime Engine — Spatial Computing docs</title><meta name="description" content="Inspects a binary, lists the possible execution routes with the reason for every refusal, and runs the first feasible one."><link rel="alternate" hreflang="fr" href="../fr/docs/runtime.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Main"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Proof</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../fr/docs/runtime.html" hreflang="fr" lang="fr" title="Français">FR</a><a class="btn" href="../docs/quickstart.html">Install</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Get started</h4><a href="index.html">Overview</a><a href="quickstart.html">Installation</a><h4>Engines</h4><a href="compute.html">Compute Engine</a><a href="memory.html">Tiered memory</a><a href="runtime.html" aria-current="page">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><h4>Reference</h4><a href="cli.html">Commands</a><a href="security.html">Security</a><a href="results.html">Results</a><a href="limits.html">Limitations</a></aside><main class="main"><h1>Runtime Engine</h1><p class="lead" style="margin-bottom:8px">Inspects a binary, lists the possible execution routes with the reason for every refusal, and runs the first feasible one.</p><h2>Inspect and plan</h2>
+<p><code>spatial plan</code> identifies the format (Mach-O, ELF, PE, WASM, script), the target system and architecture from the headers, then lists the routes. A route is marked feasible only if its prerequisites were detected on the machine.</p>
+<h2>Run</h2>
+<p><code>spatial run</code> takes the first feasible route (or the one given with <code>--route</code>) and returns the program's output.</p>
+<table><thead><tr><th>Route</th><th>Use</th><th>Isolation</th></tr></thead><tbody>
+<tr><td><code>native</code></td><td>Same system and same CPU</td><td>None</td></tr>
+<tr><td><code>microvm-hvf</code></td><td>Linux x86_64 ELF on an x86_64 host</td><td>Hardware VM, no network, no disk</td></tr>
+<tr><td><code>microvm-tcg</code></td><td>Other CPU, software emulation</td><td>Emulated VM</td></tr>
+<tr><td><code>wasm-node-wasi</code></td><td>WASM modules</td><td>WASI sandbox</td></tr>
+<tr><td><code>wine</code>, <code>windows-vm</code></td><td>Windows binaries</td><td>Not available on this machine</td></tr></tbody></table>
+<div class="callout warn"><b>Windows</b>A Windows binary is identified but not run: neither Wine nor a Windows image is installed. Wine is not installed automatically (unsigned third-party build, user consent required).</div>
+<h2>Measured on one C program</h2>
+<table><thead><tr><th>Route</th><th>Compute</th><th>Startup</th></tr></thead><tbody>
+<tr><td>native</td><td>1.00×</td><td>0.005 s</td></tr>
+<tr><td>WASM / WASI</td><td>1.48×</td><td>0.07 s</td></tr>
+<tr><td>micro-VM HVF</td><td>1.04×</td><td>0.88 s</td></tr>
+<tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr></tbody></table>
+<p>Comparison with Docker Desktop, UTM, Parallels or CrossOver: not done, none is installed here.</p><div class="pager"><a href="memory.html">← Tiered memory</a><a href="spatialq.html">SPATIAL Q →</a></div></main><aside class="rail" aria-label="Examples"><h5>Windows binary</h5><pre><span class="k">$ spatial plan bench-windows.exe</span>
+<span class="d">benchmarks/build/bench-windows.exe: pe / windows / x86_64 
+  [ ] native           host is not Windows
+  [ ] wine             Wine is not installed (not installed automatically: unsigned third-party build, needs user consent)
+  [ ] windows-vm       no Windows image/licence on this machine; would run under QEMU+HVF
+  [ ] remote-windows   no remote Windows host configured</span></pre><h5>Linux ELF</h5><pre><span class="k">$ spatial plan bench-linux.elf</span>
+<span class="d">benchmarks/build/bench-linux.elf: elf / linux / x86_64 64-bit
+  [x] microvm-hvf      Linux x86_64 guest under Hypervisor.framework
+  [x] microvm-tcg      software emulation (works without HVF or across CPU families)
+  [ ] container        no Docker/Podman installed</span>
+
+<span class="k">$ spatial run bench-linux.elf 300 200</span>
+<span class="g">[spatial] route=microvm-hvf ok=True wall=1.63s 
+RESULT 4503273 18.812</span></pre></aside></div><script src="../assets/app.js"></script></body></html>

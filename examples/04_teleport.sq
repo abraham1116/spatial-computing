@@ -1,0 +1,20 @@
+// Dynamic circuit: teleportation with mid-circuit measurement and feed-forward.
+// q[0] is prepared with ry(angle); after teleportation q[2] must carry that state,
+// so P(q[2] = 1) = sin^2(angle / 2).
+quantum teleport(angle: angle) {
+    qubit q[3];
+    ry(angle) q[0];
+    h q[1];
+    cx q[1], q[2];
+    cx q[0], q[1];
+    h q[0];
+    let m0 = measure q[0];
+    let m1 = measure q[1];
+    if m1 { x q[2]; }
+    if m0 { z q[2]; }
+}
+
+main {
+    let counts = sample teleport(1.0) shots 4000;
+    print "teleport counts:", counts;
+}

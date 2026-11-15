@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.DS_Store
+# downloaded or built artefacts (reproduced by the commands in the README)
+vendor/vmlinuz-virt
+vendor/busybox-x86_64
+benchmarks/build/
+.vercel/

@@ -1,0 +1,254 @@
+{
+ "context": {
+  "date": "2026-11-14 23:55:57 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t21%; charging; 2:21 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794696957.375445,
+   "cpu_percent": 15.2,
+   "load1": 4.11669921875,
+   "ram_total": 17179869184,
+   "ram_available": 7396823040,
+   "ram_used_percent": 56.9,
+   "swap_used": 2756968448,
+   "swap_total": 4294967296,
+   "compressor_logical_bytes": 7772327936,
+   "compressor_physical_bytes": 2280280064,
+   "compressor_ratio": 3.41,
+   "compressor_saved_bytes": 5492047872,
+   "swapins": 1066594,
+   "swapouts": 1735432,
+   "memory_pressure": "normal"
+  }
+ },
+ "reference_checksum": 163059162,
+ "build_s": 0.00042127400229219347,
+ "params": {
+  "n": "1500",
+  "iters": "300"
+ },
+ "artifacts": [
+  {
+   "target": "macos-x86_64",
+   "file": "bench-macos",
+   "bytes": 33120,
+   "format": "macho",
+   "os": "macos",
+   "arch": [
+    "x86_64"
+   ],
+   "routes": [
+    {
+     "name": "native",
+     "feasible": true,
+     "reason": "same OS and CPU",
+     "isolation": "none (host process)"
+    }
+   ]
+  },
+  {
+   "target": "linux-x86_64",
+   "file": "bench-linux.elf",
+   "bytes": 1359632,
+   "format": "elf",
+   "os": "linux",
+   "arch": [
+    "x86_64"
+   ],
+   "routes": [
+    {
+     "name": "microvm-hvf",
+     "feasible": true,
+     "reason": "Linux x86_64 guest under Hypervisor.framework",
+     "isolation": "hardware VM, no network, no host files"
+    },
+    {
+     "name": "microvm-tcg",
+     "feasible": true,
+     "reason": "software emulation (works without HVF or across CPU families)",
+     "isolation": "emulated VM"
+    },
+    {
+     "name": "container",
+     "feasible": false,
+     "reason": "no Docker/Podman installed",
+     "isolation": "namespace isolation inside a VM"
+    }
+   ]
+  },
+  {
+   "target": "windows-x86_64",
+   "file": "bench-windows.exe",
+   "bytes": 220672,
+   "format": "pe",
+   "os": "windows",
+   "arch": [
+    "x86_64"
+   ],
+   "routes": [
+    {
+     "name": "native",
+     "feasible": false,
+     "reason": "host is not Windows",
+     "isolation": "none"
+    },
+    {
+     "name": "wine",
+     "feasible": false,
+     "reason": "Wine is not installed (not installed automatically: unsigned third-party build, needs user consent)",
+     "isolation": "host process (weak)"
+    },
+    {
+     "name": "windows-vm",
+     "feasible": false,
+     "reason": "no Windows image/licence on this machine; would run under QEMU+HVF",
+     "isolation": "hardware VM"
+    },
+    {
+     "name": "remote-windows",
+     "feasible": false,
+     "reason": "no remote Windows host configured",
+     "isolation": "remote machine"
+    }
+   ]
+  },
+  {
+   "target": "wasm32-wasi",
+   "file": "bench.wasm",
+   "bytes": 962220,
+   "format": "wasm",
+   "os": "any",
+   "arch": [
+    "wasm32"
+   ],
+   "routes": [
+    {
+     "name": "wasm-node-wasi",
+     "feasible": true,
+     "reason": "Node.js WASI runtime found",
+     "isolation": "WASI sandbox (no files/network unless granted)"
+    }
+   ]
+  }
+ ],
+ "runs": [
+  {
+   "target": "macos-x86_64",
+   "route": "native",
+   "ok": true,
+   "app_ms": 568.462,
+   "total_wall_s": 0.57303261099878,
+   "boot_s": null,
+   "checksum_ok": true,
+   "startup_overhead_s": 0.004570610998779978,
+   "slowdown_vs_native": 1.0
+  },
+  {
+   "target": "wasm32-wasi",
+   "route": "wasm-node-wasi",
+   "ok": true,
+   "app_ms": 839.974,
+   "total_wall_s": 0.9050225730024977,
+   "boot_s": null,
+   "checksum_ok": true,
+   "startup_overhead_s": 0.06504857300249767,
+   "slowdown_vs_native": 1.477625593267448
+  },
+  {
+   "target": "linux-x86_64",
+   "route": "microvm-hvf",
+   "ok": true,
+   "app_ms": 589.242,
+   "total_wall_s": 1.468083308005589,
+   "boot_s": 0.8643422380046104,
+   "checksum_ok": true,
+   "startup_overhead_s": 0.8788413080055891,
+   "slowdown_vs_native": 1.036554774109791
+  },
+  {
+   "target": "linux-x86_64",
+   "route": "microvm-tcg",
+   "ok": true,
+   "app_ms": 13553.284,
+   "total_wall_s": 16.946327218996885,
+   "boot_s": 3.3403289400012,
+   "checksum_ok": true,
+   "startup_overhead_s": 3.393043218996885,
+   "slowdown_vs_native": 23.842022861686445
+  },
+  {
+   "target": "windows-x86_64",
+   "route": "none",
+   "ok": false,
+   "not_runnable": "native: host is not Windows; wine: Wine is not installed (not installed automatically: unsigned third-party build, needs user consent); windows-vm: no Windows image/licence on this machine; would run under QEMU+HVF; remote-windows: no remote Windows host configured"
+  }
+ ],
+ "isolated_env": {
+  "create_and_install_s": 3.4503663049981697,
+  "ok": true,
+  "stdout": "tomli (3, 11)"
+ },
+ "interpreters": [
+  {
+   "runtime": "python3",
+   "present": true,
+   "path": "~/anaconda3/bin/python3",
+   "version": "Python 3.13.5"
+  },
+  {
+   "runtime": "python3.14",
+   "present": true,
+   "path": "/opt/local/bin/python3.14",
+   "version": "Python 3.14.8"
+  },
+  {
+   "runtime": "node",
+   "present": true,
+   "path": "~/.local/bin/node",
+   "version": "v24.22.0"
+  },
+  {
+   "runtime": "swift",
+   "present": true,
+   "path": "/usr/bin/swift",
+   "version": "Apple Swift version 5.8.1 (swiftlang-5.8.0.124.5 clang-1403.0.22.11.100)"
+  },
+  {
+   "runtime": "clang",
+   "present": true,
+   "path": "/usr/bin/clang",
+   "version": "Apple clang version 14.0.3 (clang-1403.0.22.14.1)"
+  },
+  {
+   "runtime": "java",
+   "present": false,
+   "path": "/usr/bin/java",
+   "version": "The operation couldn\u2019t be completed. Unable to locate a Java Runtime."
+  },
+  {
+   "runtime": "go",
+   "present": false
+  },
+  {
+   "runtime": "rustc",
+   "present": false
+  },
+  {
+   "runtime": "ruby",
+   "present": true,
+   "path": "/usr/bin/ruby",
+   "version": "ruby 2.6.10p210 (2022-04-12 revision 67958) [universal.x86_64-darwin22]"
+  },
+  {
+   "runtime": "perl",
+   "present": true,
+   "path": "/usr/bin/perl",
+   "version": "v5.30.3"
+  }
+ ]
+}

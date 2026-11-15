@@ -1,0 +1,31 @@
+// Hybrid variational loop (VQE-style) on a 2-qubit Hamiltonian
+//   H = g0*II + g1*ZI + g2*IZ + g3*ZZ + g4*XX + g5*YY
+// The classical optimiser (gradient descent, parameter-shift rule) runs on the CPU;
+// each energy evaluation is a quantum kernel dispatched to a backend.
+quantum ansatz(theta: angle) {
+    qubit q[2];
+    x q[0];
+    ry(theta) q[1];
+    cx q[1], q[0];
+}
+
+task energy(theta: float) on cpu {
+    return -0.4804
+         + 0.3435 * expect "IZ" of ansatz(theta)
+         - 0.4347 * expect "ZI" of ansatz(theta)
+         + 0.5716 * expect "ZZ" of ansatz(theta)
+         + 0.0910 * expect "XX" of ansatz(theta)
+         + 0.0910 * expect "YY" of ansatz(theta);
+}
+
+main {
+    let theta = 0.0;
+    let lr = 0.4;
+    let e = energy(theta);
+    for step in 0..60 {
+        let grad = (energy(theta + pi / 2) - energy(theta - pi / 2)) / 2;
+        theta = theta - lr * grad;
+        e = energy(theta);
+    }
+    print "theta =", theta, "energy =", e;
+}

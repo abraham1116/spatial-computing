@@ -1,0 +1,438 @@
+{
+ "context": {
+  "date": "2026-11-14 23:58:02 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t23%; charging; 2:25 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794697082.822957,
+   "cpu_percent": 6.6,
+   "load1": 3.96875,
+   "ram_total": 17179869184,
+   "ram_available": 7168622592,
+   "ram_used_percent": 58.3,
+   "swap_used": 2756968448,
+   "swap_total": 4294967296,
+   "compressor_logical_bytes": 7726469120,
+   "compressor_physical_bytes": 2271924224,
+   "compressor_ratio": 3.4,
+   "compressor_saved_bytes": 5454544896,
+   "swapins": 1066594,
+   "swapouts": 1735432,
+   "memory_pressure": "normal"
+  }
+ },
+ "idle_watts": null,
+ "limitations": [
+  "Only 2 physical cores: parallel speed-up is bounded near 2x (hyper-threads add little for compute-bound code).",
+  "No AVX-512; SIMD width limited to AVX2 (256-bit).",
+  "Intel Mac: no Apple Neural Engine/NPU, no MLX, no Apple Virtualization.framework Rosetta-for-Linux; ARM guests run under slow TCG emulation only.",
+  "GPU Intel Iris Plus Graphics 640 is integrated: shares system RAM, no CUDA, low compute throughput.",
+  "No Wine installed: Windows PE binaries cannot be executed locally.",
+  "No Docker/Podman: OCI containers unavailable; QEMU micro-VM is the Linux path."
+ ],
+ "experiments": [
+  {
+   "name": "mandel_small_fast_strategies",
+   "params": {
+    "n": 700,
+    "iters": 300
+   },
+   "repeat": 5,
+   "rows": [
+    {
+     "strategy": "local_numba_jit",
+     "kind": "optimized",
+     "ok": true,
+     "wall_s": 0.12353803199948743,
+     "all_wall_s": [
+      0.12019731500186026,
+      0.12449427400133573,
+      0.1298378520004917,
+      0.12343321499793092,
+      0.12353803199948743
+     ],
+     "cpu_s": 0.129999999999999,
+     "cpu_utilisation": 1.0523075193600169,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 1.0
+    },
+    {
+     "strategy": "local_numba_threads",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 0.06057303000125103,
+     "all_wall_s": [
+      0.06057303000125103,
+      0.06031759100005729,
+      0.06545122600073228,
+      0.059117174001585227,
+      0.061023048001516145
+     ],
+     "cpu_s": 0.15000000000000013,
+     "cpu_utilisation": 2.4763496228751007,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 2.039489059684417
+    },
+    {
+     "strategy": "multiprocess_numba",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 1.1143167920017731,
+     "all_wall_s": [
+      1.0900293919985415,
+      1.161557477003953,
+      1.1143167920017731,
+      1.0853454370007967,
+      1.1459344609975233
+     ],
+     "cpu_s": 2.5,
+     "cpu_utilisation": 2.2435271710381097,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 0.11086437257897021
+    },
+    {
+     "strategy": "multiprocess_warm_pool",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 0.0669290279984125,
+     "all_wall_s": [
+      0.07057405899831792,
+      0.0673423330008518,
+      0.0669290279984125,
+      0.0661046079985681,
+      0.06486162900546333
+     ],
+     "cpu_s": 0.00999999999999801,
+     "cpu_utilisation": 0.14941200102644853,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 1.845806456391652
+    },
+    {
+     "strategy": "remote_worker",
+     "kind": "remote",
+     "ok": true,
+     "wall_s": 0.12346004899882246,
+     "all_wall_s": [
+      0.12129149000247708,
+      0.12346004899882246,
+      0.2288156579961651,
+      0.12032076199830044,
+      0.12823471500450978
+     ],
+     "cpu_s": 0.009999999999999787,
+     "cpu_utilisation": 0.08099786190830983,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "worker is a separate process on this same machine (loopback)",
+     "speedup_vs_local_numba_jit": 1.0006316456319058
+    },
+    {
+     "strategy": "distributed_local+worker",
+     "kind": "distributed",
+     "ok": true,
+     "wall_s": 0.06985682399681536,
+     "all_wall_s": [
+      0.07041088600090006,
+      0.06932633699761936,
+      0.06646589499723632,
+      0.06985682399681536,
+      0.07271025700174505
+     ],
+     "cpu_s": 0.08999999999999986,
+     "cpu_utilisation": 1.2883494389052497,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "worker is a separate process on this same machine (loopback)",
+     "speedup_vs_local_numba_jit": 1.768446157888874
+    }
+   ],
+   "fastest": "local_numba_threads",
+   "cloud_estimates_for_fastest": {
+    "aws_c7i_large": {
+     "estimated": true,
+     "offer": "AWS c7i.large",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 1.5,
+     "run_s": 0.04038202000083402,
+     "billed_s": 60.0,
+     "compute_usd": 0.0014883333333333335,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.0014883390933333334
+    },
+    "aws_c7i_4xlarge": {
+     "estimated": true,
+     "offer": "AWS c7i.4xlarge",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 12.0,
+     "run_s": 0.005047752500104252,
+     "billed_s": 60.0,
+     "compute_usd": 0.011899999999999999,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.011900005759999999
+    }
+   },
+   "cloud_note": "ESTIMATES: speed ratios are assumptions, prices are unverified list prices"
+  },
+  {
+   "name": "mandel_large_fast_strategies",
+   "params": {
+    "n": 4000,
+    "iters": 300
+   },
+   "repeat": 3,
+   "rows": [
+    {
+     "strategy": "local_numba_jit",
+     "kind": "optimized",
+     "ok": true,
+     "wall_s": 4.184262648996082,
+     "all_wall_s": [
+      4.1168463560024975,
+      4.184262648996082,
+      4.330501078999077
+     ],
+     "cpu_s": 4.0000000000000036,
+     "cpu_utilisation": 0.9559629343439308,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 1.0
+    },
+    {
+     "strategy": "local_numba_threads",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 2.0522319650044665,
+     "all_wall_s": [
+      1.9909800290042767,
+      2.150593205995392,
+      2.0522319650044665
+     ],
+     "cpu_s": 4.130000000000003,
+     "cpu_utilisation": 2.012443071946311,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 2.0388838690498496
+    },
+    {
+     "strategy": "multiprocess_numba",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 3.390894557996944,
+     "all_wall_s": [
+      3.150070345000131,
+      3.390894557996944,
+      3.489435584000603
+     ],
+     "cpu_s": 6.549999999999997,
+     "cpu_utilisation": 1.9316436674660824,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 1.2339701448775786
+    },
+    {
+     "strategy": "multiprocess_warm_pool",
+     "kind": "parallel",
+     "ok": true,
+     "wall_s": 2.2684819440037245,
+     "all_wall_s": [
+      2.2173701459978474,
+      2.2684819440037245,
+      2.370833027001936
+     ],
+     "cpu_s": 0.030000000000001137,
+     "cpu_utilisation": 0.013224703013087718,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_numba_jit": 1.8445210287242262
+    },
+    {
+     "strategy": "remote_worker",
+     "kind": "remote",
+     "ok": true,
+     "wall_s": 4.158159557002364,
+     "all_wall_s": [
+      4.158159557002364,
+      4.361988923003082,
+      3.9408218650060007
+     ],
+     "cpu_s": 0.00999999999999801,
+     "cpu_utilisation": 0.002404910120189581,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "worker is a separate process on this same machine (loopback)",
+     "speedup_vs_local_numba_jit": 1.0062775590103945
+    },
+    {
+     "strategy": "distributed_local+worker",
+     "kind": "distributed",
+     "ok": true,
+     "wall_s": 2.1933247450069757,
+     "all_wall_s": [
+      2.2787550819994067,
+      2.1933247450069757,
+      2.051362259000598
+     ],
+     "cpu_s": 2.0700000000000003,
+     "cpu_utilisation": 0.9437726924443269,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "worker is a separate process on this same machine (loopback)",
+     "speedup_vs_local_numba_jit": 1.9077260029648617
+    }
+   ],
+   "fastest": "local_numba_threads",
+   "cloud_estimates_for_fastest": {
+    "aws_c7i_large": {
+     "estimated": true,
+     "offer": "AWS c7i.large",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 1.5,
+     "run_s": 1.368154643336311,
+     "billed_s": 60.0,
+     "compute_usd": 0.0014883333333333335,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.0014883390933333334
+    },
+    "aws_c7i_4xlarge": {
+     "estimated": true,
+     "offer": "AWS c7i.4xlarge",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 12.0,
+     "run_s": 0.17101933041703887,
+     "billed_s": 60.0,
+     "compute_usd": 0.011899999999999999,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.011900005759999999
+    }
+   },
+   "cloud_note": "ESTIMATES: speed ratios are assumptions, prices are unverified list prices"
+  },
+  {
+   "name": "mandel_small_slow_references",
+   "params": {
+    "n": 700,
+    "iters": 300
+   },
+   "repeat": 1,
+   "rows": [
+    {
+     "strategy": "local_python",
+     "kind": "local",
+     "ok": true,
+     "wall_s": 3.9080619329979527,
+     "all_wall_s": [
+      3.9080619329979527
+     ],
+     "cpu_s": 3.8700000000000188,
+     "cpu_utilisation": 0.9902606627913044,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_python": 1.0
+    },
+    {
+     "strategy": "local_numpy",
+     "kind": "optimized",
+     "ok": true,
+     "wall_s": 1.1250179830021807,
+     "all_wall_s": [
+      1.1250179830021807
+     ],
+     "cpu_s": 1.1299999999999955,
+     "cpu_utilisation": 1.0044283887663021,
+     "energy_j_machine": null,
+     "mean_watts": null,
+     "power_gauge_static": null,
+     "energy_usd_upper_bound": null,
+     "matches_reference": true,
+     "notes": "",
+     "speedup_vs_local_python": 3.4737773013805926
+    }
+   ],
+   "fastest": "local_numpy",
+   "cloud_estimates_for_fastest": {
+    "aws_c7i_large": {
+     "estimated": true,
+     "offer": "AWS c7i.large",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 1.5,
+     "run_s": 0.7500119886681205,
+     "billed_s": 60.0,
+     "compute_usd": 0.0014883333333333335,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.0014883390933333334
+    },
+    "aws_c7i_4xlarge": {
+     "estimated": true,
+     "offer": "AWS c7i.4xlarge",
+     "basis": "AWS on-demand list price, unverified",
+     "assumed_speed_ratio": 12.0,
+     "run_s": 0.09375149858351506,
+     "billed_s": 60.0,
+     "compute_usd": 0.011899999999999999,
+     "network_usd": 5.76e-09,
+     "total_usd": 0.011900005759999999
+    }
+   },
+   "cloud_note": "ESTIMATES: speed ratios are assumptions, prices are unverified list prices"
+  }
+ ],
+ "jit_warmup_s": 1.6524169059994165,
+ "energy_note": "energy_j_machine = last battery-gauge reading x duration (whole machine, screen included). The gauge did not change between idle and load, so marginal energy per strategy is NOT resolved; treat energy as proportional to wall time."
+}

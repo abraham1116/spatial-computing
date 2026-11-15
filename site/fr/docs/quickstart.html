@@ -1,0 +1,26 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Installation — Spatial Computing docs</title><meta name="description" content="Python 3.10 ou plus récent. Testé sur macOS 13 (Intel) avec Python 3.13."><link rel="alternate" hreflang="en" href="../../docs/quickstart.html"><link rel="icon" href="../../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../../docs/quickstart.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="../docs/quickstart.html">Installer</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Démarrer</h4><a href="index.html">Vue d'ensemble</a><a href="quickstart.html" aria-current="page">Installation</a><h4>Moteurs</h4><a href="compute.html">Compute Engine</a><a href="memory.html">Mémoire à étages</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><h4>Référence</h4><a href="cli.html">Commandes</a><a href="security.html">Sécurité</a><a href="results.html">Résultats</a><a href="limits.html">Limitations</a></aside><main class="main"><h1>Installation</h1><p class="lead" style="margin-bottom:8px">Python 3.10 ou plus récent. Testé sur macOS 13 (Intel) avec Python 3.13.</p><div class="callout warn"><b>Pas encore sur PyPI</b>L'installation se fait depuis les sources du dépôt GitHub.</div>
+<h2>1. Environnement</h2>
+<pre id="q1"><code>git clone https://github.com/abraham1116/spatial-computing &amp;&amp; cd spatial-computing
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e &quot;.[quantum]&quot;</code></pre>
+<p>L'extra <code>quantum</code> ajoute Qiskit, Qiskit Aer et l'importeur OpenQASM 3. Sans lui, SPATIAL Q fonctionne avec son simulateur intégré mais pas avec le backend <code>aer</code>.</p>
+<p>Les versions de <code>numpy</code> (&lt; 2.2) et <code>numba</code> (&lt; 0.62) sont bornées : Numba 0.62 et plus a besoin d'un <code>llvmlite</code> qui ne se compile pas sur ce Mac.</p>
+<h2>2. Vérifier</h2>
+<pre><code>spatial audit
+spatial status
+pytest</code></pre>
+<h2>3. Micro-VM Linux (facultatif)</h2>
+<p>La route <code>microvm</code> du Runtime Engine demande QEMU (par exemple <code>sudo port install qemu</code> avec MacPorts) et deux fichiers téléchargés une fois dans <code>vendor/</code>, vérifiés par empreinte SHA-256.</p>
+<pre><code>mkdir -p vendor &amp;&amp; cd vendor
+curl -O https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/netboot/vmlinuz-virt
+curl -o busybox-x86_64 https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox
+shasum -a 256 -c SHA256SUMS</code></pre>
+<h2>4. Binaires de test (facultatif)</h2>
+<p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p><div class="pager"><a href="index.html">← Vue d'ensemble</a><a href="compute.html">Compute Engine →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Vérification</h5><pre><span class="k">$ spatial status</span>
+<span class="d">Spatial Compute Engine          operational-prototype
+Spatial Resource Engine         operational-prototype
+Spatial Runtime Engine          operational-prototype
+SPATIAL Q                       operational-prototype
+…</span></pre><h5>Tests</h5><pre><span class="k">$ pytest</span>
+<span class="g">41 passed, 7 skipped</span>
+<span class="d"># les 7 ignorés demandent benchmarks/build</span></pre></aside></div><script src="../../assets/app.js"></script></body></html>

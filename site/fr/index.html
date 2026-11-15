@@ -1,0 +1,106 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Mesurer. Décider. Prouver.</title><meta name="description" content="Choisit où et comment exécuter une charge à partir de mesures, et ne revendique un gain que s&#x27;il est mesuré."><link rel="alternate" hreflang="en" href="../index.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../index.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="docs/quickstart.html">Installer</a></nav></div></header><main>
+<div class="hero grid-bg"><div class="wrap">
+<div>
+<p class="eyebrow">Prototype de recherche · v0.1.0</p>
+<h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
+<p class="sub">Spatial choisit où et comment exécuter une charge de travail à partir de mesures, et ne revendique un gain que s'il est mesuré. Pas de RAM en plus : de l'utilisation en mieux.</p>
+<pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>git clone https://github.com/abraham1116/spatial-computing &amp;&amp; cd spatial-computing
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -e &quot;.[quantum]&quot;
+spatial audit</pre>
+<div class="cta"><a class="btn" href="docs/quickstart.html">Démarrer</a><a class="btn ghost" href="#proof">Voir les mesures</a></div>
+</div>
+<div class="term" aria-label="Sortie réelle de la commande spatial audit"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">$ spatial audit</span></div>
+<pre><span class="d">MacBookPro14,1 | Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz | macOS 13.7.8 | x86_64
+  cpu         Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz   2 physical cores
+  ram         physical RAM                               16.0 GiB
+  far_memory  OS swap (SSD-backed, NOT RAM)              4.0 GiB
+  gpu         Intel Iris Plus Graphics 640               1 device
+  storage     system volume                              328.2 GiB
+memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
+  idle: CPU 21% busy: 79% idle capacity</span>
+<span class="g">…</span></pre></div>
+</div></div>
+
+<section id="proof"><div class="wrap">
+<p class="eyebrow">Mesuré, pas promis</p>
+<h2>Cinq chiffres, une seule machine.</h2>
+<p class="lead">MacBook Pro 2017, Intel i7 à deux cœurs, 16 Go, sur secteur. Chaque chiffre est reproductible avec <code>spatial bench all</code> et détaillé dans les résultats complets.</p>
+<div class="nums">
+<div><b>×31,6</b><span>compilation JIT contre Python pur, même résultat vérifié</span></div>
+<div><b>×2,04</b><span>deux cœurs contre un : la limite matérielle</span></div>
+<div><b>0,88 s</b><span>démarrage d'une micro-VM Linux isolée sur macOS</span></div>
+<div><b>−75 %</b><span>de RAM locale pour un jeu de données à accès biaisé, contre 107× de latence moyenne en plus</span></div>
+<div><b>1,000</b><span>fidélité du simulateur SPATIAL Q face à Qiskit, jusqu'à 16 qubits</span></div>
+</div>
+<p class="note">Aucun gain venant d'une seconde machine n'a encore été démontré : il n'y avait qu'une machine. Le déport a été validé en boucle locale seulement.</p>
+</div></section>
+
+<section><div class="wrap">
+<p class="eyebrow">Comment ça marche</p>
+<h2>Une boucle, trois verbes.</h2>
+<p class="lead">Chaque exécution produit une mesure. Chaque choix est consigné avec sa raison. Un résultat qui diffère de la référence est rejeté.</p>
+<div class="cols3">
+<div><h3>Mesurer</h3><p>Détecte le matériel réel, surveille CPU, RAM, compresseur et swap, et dit ce qu'il ne peut pas faire.</p><pre class="mini">$ spatial audit</pre></div>
+<div><h3>Décider</h3><p>Compare les stratégies d'exécution et les routes (natif, micro-VM, WASM) et explique chaque refus.</p><pre class="mini">$ spatial plan app.exe
+[ ] wine  Wine is not installed</pre></div>
+<div><h3>Prouver</h3><p>Rejoue les benchmarks, régénère le tableau de résultats et conserve les échecs.</p><pre class="mini">$ spatial bench all</pre></div>
+</div>
+</div></section>
+
+<section><div class="wrap split">
+<div>
+<p class="eyebrow">SPATIAL Q</p>
+<h2>Un langage pour les flux hybrides.</h2>
+<p class="lead">Classique, distribué et quantique dans un même programme. L'orchestrateur choisit le backend d'après une estimation de ressources, et refuse quand un circuit ne tient pas ou qu'aucun QPU n'est branché. Aucune accélération quantique n'est revendiquée : tout est simulé.</p>
+<a class="btn ghost" href="docs/spatialq.html">Spécification</a>
+</div>
+<div class="term"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">examples/01_bell.sq</span></div><pre>// Quantum only: Bell pair. Expect ~50% &quot;00&quot; and ~50% &quot;11&quot;.
+quantum bell() {
+    qubit q[2];
+    h q[0];
+    cx q[0], q[1];
+}
+
+main {
+    let counts = sample bell() shots 2000;
+    print &quot;bell counts:&quot;, counts;
+    print &quot;&lt;ZZ&gt; =&quot;, expect &quot;ZZ&quot; of bell();
+}
+
+<span class="d">$ spatial q run examples/01_bell.sq</span>
+<span class="g">bell counts: {&#x27;00&#x27;: 989, &#x27;11&#x27;: 1011}
+&lt;ZZ&gt; = 0.9999999999999998</span></pre></div>
+</div></section>
+
+<section><div class="wrap">
+<p class="eyebrow">État réel</p>
+<h2>Ce qui tourne, ce qui n'est qu'esquissé.</h2>
+<p class="lead">Le statut de chaque moteur est déclaré dans le code, et un test interdit d'en afficher un sans preuve.</p>
+<table><thead><tr><th>Moteur</th><th>Niveau</th><th>Pas encore fait</th></tr></thead><tbody>
+<tr><td>Compute Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Seconde machine réelle, GPU Nvidia, mesure d'énergie</td></tr>
+<tr><td>Mémoire à étages</td><td><span class="tag ok">prototype opérationnel</span></td><td>Pagination noyau, chiffrement, RDMA/CXL</td></tr>
+<tr><td>Runtime Engine</td><td><span class="tag ok">prototype opérationnel</span></td><td>Exécution Windows, conteneurs, GUI distante</td></tr>
+<tr><td>SPATIAL Q</td><td><span class="tag ok">prototype opérationnel</span></td><td>QPU réel, QIR, sous-noyaux</td></tr>
+<tr><td>Scientifique, Simulation, Intelligence</td><td><span class="tag part">premiers composants</span></td><td>Solveurs métier, multiphysique, modèles appris</td></tr>
+<tr><td>AI, Holographique</td><td><span class="tag no">interface seule</span></td><td>Inférence réelle ; affichage et synthèse</td></tr>
+</tbody></table>
+</div></section>
+
+<section><div class="wrap split">
+<div class="never"><h3 style="font-size:32px;margin-bottom:12px">Ce que Spatial ne fait pas</h3><ul>
+<li>Il n'ajoute pas de RAM. La mémoire compressée, sur disque ou distante est typée <code>far_memory</code>, jamais <code>ram</code>.</li>
+<li>Il ne confond pas virtualisation et ressource supplémentaire.</li>
+<li>Il ne dit pas qu'un QPU accélère tout : le backend <code>qpu</code> refuse de s'exécuter tant qu'aucun fournisseur n'est configuré.</li>
+<li>Il n'expose jamais la machine : les serveurs écoutent sur 127.0.0.1 et refusent toute autre adresse sans consentement explicite.</li>
+</ul></div>
+<div>
+<p class="eyebrow">Open-core</p>
+<h2>Le cœur est ouvert.</h2>
+<p class="lead">CLI, audit, SPATIAL Q, runtime et bibliothèque mémoire sont publiés sous licence Apache-2.0. Les politiques avancées de placement et de coût sont développées dans un paquet privé, hors de ce dépôt.</p>
+<a class="btn" href="docs/index.html">Lire la documentation</a> <a class="btn ghost" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a>
+</div>
+</div></section>
+</main>
+<footer><div class="wrap"><span>Spatial Computing · prototype de recherche · v0.1.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<script src="../assets/app.js"></script></body></html>

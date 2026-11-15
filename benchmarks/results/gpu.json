@@ -1,0 +1,133 @@
+{
+ "context": {
+  "date": "2026-11-14 23:58:49 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t24%; charging; 2:21 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794697129.033589,
+   "cpu_percent": 13.1,
+   "load1": 3.6318359375,
+   "ram_total": 17179869184,
+   "ram_available": 6604136448,
+   "ram_used_percent": 61.6,
+   "swap_used": 2756968448,
+   "swap_total": 4294967296,
+   "compressor_logical_bytes": 7467536384,
+   "compressor_physical_bytes": 2231836672,
+   "compressor_ratio": 3.35,
+   "compressor_saved_bytes": 5235699712,
+   "swapins": 1066658,
+   "swapouts": 1735432,
+   "memory_pressure": "normal"
+  }
+ },
+ "rows": [
+  {
+   "n": 1024,
+   "iters": 300,
+   "cpu_numba_threads_f32_s": 0.13398702200356638,
+   "cpu_checksum": 75988274,
+   "gpu": {
+    "ok": true,
+    "device": "Intel(R) Iris(TM) Plus Graphics 640",
+    "n": 1024,
+    "iters": 300,
+    "checksum": 75988946,
+    "gpu_s_median": 0.006548678000399377,
+    "gpu_s_all": [
+     0.006525944001623429,
+     0.006548678000399377,
+     0.013351294001040515
+    ],
+    "setup_s": 0.24507403199822875,
+    "low_power": true,
+    "max_buffer_MB": 2147
+   },
+   "gpu_s": 0.006548678000399377,
+   "gpu_speedup_vs_cpu": 20.460163409377444,
+   "checksum_rel_diff": 8.843469717446142e-06
+  },
+  {
+   "n": 2048,
+   "iters": 300,
+   "cpu_numba_threads_f32_s": 0.5309667649999028,
+   "cpu_checksum": 303905568,
+   "gpu": {
+    "ok": true,
+    "device": "Intel(R) Iris(TM) Plus Graphics 640",
+    "n": 2048,
+    "iters": 300,
+    "checksum": 303902314,
+    "gpu_s_median": 0.023901057000330184,
+    "gpu_s_all": [
+     0.02210224400187144,
+     0.023901057000330184,
+     0.03053369499684777
+    ],
+    "setup_s": 0.0028041600016877055,
+    "low_power": true,
+    "max_buffer_MB": 2147
+   },
+   "gpu_s": 0.023901057000330184,
+   "gpu_speedup_vs_cpu": 22.215200147531874,
+   "checksum_rel_diff": 1.070727338565906e-05
+  },
+  {
+   "n": 4096,
+   "iters": 300,
+   "cpu_numba_threads_f32_s": 2.1380986719959765,
+   "cpu_checksum": 1215544323,
+   "gpu": {
+    "ok": true,
+    "device": "Intel(R) Iris(TM) Plus Graphics 640",
+    "n": 4096,
+    "iters": 300,
+    "checksum": 1215527846,
+    "gpu_s_median": 0.08129675700183725,
+    "gpu_s_all": [
+     0.06640280399733456,
+     0.08129675700183725,
+     0.10049515099672135
+    ],
+    "setup_s": 0.0014695900026708841,
+    "low_power": true,
+    "max_buffer_MB": 2147
+   },
+   "gpu_s": 0.08129675700183725,
+   "gpu_speedup_vs_cpu": 26.299925739321395,
+   "checksum_rel_diff": 1.3555244089606102e-05
+  },
+  {
+   "n": 2048,
+   "iters": 2000,
+   "cpu_numba_threads_f32_s": 3.4455649980009184,
+   "cpu_checksum": 1898018365,
+   "gpu": {
+    "ok": true,
+    "device": "Intel(R) Iris(TM) Plus Graphics 640",
+    "n": 2048,
+    "iters": 2000,
+    "checksum": 1897994695,
+    "gpu_s_median": 0.10479178400419187,
+    "gpu_s_all": [
+     0.08975094400375383,
+     0.10479178400419187,
+     0.1339295959987794
+    ],
+    "setup_s": 0.0014563340009772219,
+    "low_power": true,
+    "max_buffer_MB": 2147
+   },
+   "gpu_s": 0.10479178400419187,
+   "gpu_speedup_vs_cpu": 32.88010630550091,
+   "checksum_rel_diff": 1.247090146042923e-05
+  }
+ ],
+ "remote_gpu": "not tested: no remote GPU host or cloud account configured",
+ "swift_build_s": 1.9611982139977044
+}

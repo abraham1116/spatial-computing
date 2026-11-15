@@ -1,0 +1,66 @@
+### audit
+MacBookPro14,1 | Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz | macOS 13.7.8 | x86_64
+  cpu         Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz   2 physical cores
+  ram         physical RAM                               16.0 GiB
+  far_memory  OS swap (SSD-backed, NOT RAM)              4.0 GiB
+  gpu         Intel Iris Plus Graphics 640               1 device
+  storage     system volume                              328.2 GiB
+memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
+  idle: CPU 21% busy: 79% idle capacity
+limitations:
+  - Only 2 physical cores: parallel speed-up is bounded near 2x (hyper-threads add little for compute-bound code).
+  - No AVX-512; SIMD width limited to AVX2 (256-bit).
+  - Intel Mac: no Apple Neural Engine/NPU, no MLX, no Apple Virtualization.framework Rosetta-for-Linux; ARM guests run under slow TCG emulation only.
+  - GPU Intel Iris Plus Graphics 640 is integrated: shares system RAM, no CUDA, low compute throughput.
+  - No Wine installed: Windows PE binaries cannot be executed locally.
+  - No Docker/Podman: OCI containers unavailable; QEMU micro-VM is the Linux path.
+### plan_exe
+benchmarks/build/bench-windows.exe: pe / windows / x86_64 
+  [ ] native           host is not Windows
+  [ ] wine             Wine is not installed (not installed automatically: unsigned third-party build, needs user consent)
+  [ ] windows-vm       no Windows image/licence on this machine; would run under QEMU+HVF
+  [ ] remote-windows   no remote Windows host configured
+### plan_elf
+benchmarks/build/bench-linux.elf: elf / linux / x86_64 64-bit
+  [x] microvm-hvf      Linux x86_64 guest under Hypervisor.framework
+  [x] microvm-tcg      software emulation (works without HVF or across CPU families)
+  [ ] container        no Docker/Podman installed
+### run_elf
+[spatial] route=microvm-hvf ok=True wall=1.63s 
+RESULT 4503273 18.812
+### q_bell
+bell counts: {'00': 989, '11': 1011}
+<ZZ> = 0.9999999999999998
+### q_qasm
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[3] q;
+bit[2] m;
+bit[3] c;
+ry(1.0) q[0];
+h q[1];
+cx q[1], q[2];
+cx q[0], q[1];
+h q[0];
+m[0] = measure q[0];
+m[1] = measure q[1];
+if (m[1] == 1) { x q[2]; }
+if (m[0] == 1) { z q[2]; }
+c = measure q;
+
+### q_vqe
+theta = -0.2297437122524918 energy = -1.851199124123644
+### q_qpu
+ok: 2 kernel(s), 0 task(s)
+### mem
+logical_bytes 16777216
+local_ram_bytes 1035793
+far_bytes 6233979
+compression_ratio 2.691
+hot_hits 0
+compressed_hits 240
+far_hits 16
+prefetched 240
+clean_evictions 227
+### unknown
+spatial: FileNotFoundError: [Errno 2] No such file or directory: '/nonexistent'

@@ -1,0 +1,24 @@
+// Classical + distributed, no quantum at all: SPATIAL Q does not force a QPU into
+// work that does not need one. Two halves of a Mandelbrot checksum run concurrently,
+// one on the local CPU, one wherever the orchestrator decides ("any").
+task top(n: int) on cpu {
+    return workload("mandel_numba", n = n, iters = 200, r0 = 0, r1 = n / 2);
+}
+
+task bottom(n: int) on any {
+    return workload("mandel_numba", n = n, iters = 200, r0 = n / 2, r1 = n);
+}
+
+task whole(n: int) on cpu {
+    return workload("mandel_numba", n = n, iters = 200);
+}
+
+main {
+    let n = 800;
+    parallel {
+        let a = top(n);
+        let b = bottom(n);
+    }
+    let reference = whole(n);
+    print "distributed:", a + b, "reference:", reference, "equal:", a + b == reference;
+}

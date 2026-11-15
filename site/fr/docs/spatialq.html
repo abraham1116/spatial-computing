@@ -1,0 +1,51 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SPATIAL Q — Spatial Computing docs</title><meta name="description" content="Un langage de flux hybride : classique, distribué et quantique, avec choix de backend par estimation de ressources."><link rel="alternate" hreflang="en" href="../../docs/spatialq.html"><link rel="icon" href="../../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../../docs/spatialq.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="../docs/quickstart.html">Installer</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Démarrer</h4><a href="index.html">Vue d'ensemble</a><a href="quickstart.html">Installation</a><h4>Moteurs</h4><a href="compute.html">Compute Engine</a><a href="memory.html">Mémoire à étages</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html" aria-current="page">SPATIAL Q</a><h4>Référence</h4><a href="cli.html">Commandes</a><a href="security.html">Sécurité</a><a href="results.html">Résultats</a><a href="limits.html">Limitations</a></aside><main class="main"><h1>SPATIAL Q</h1><p class="lead" style="margin-bottom:8px">Un langage de flux hybride : classique, distribué et quantique, avec choix de backend par estimation de ressources.</p><div class="callout"><b>Honnêteté</b>Tout ce qui s'exécute est de la <b>simulation classique</b>. Aucun QPU n'est connecté et aucune accélération quantique n'est mesurée.</div>
+<h2>Un programme</h2>
+<pre><code>quantum bell() {
+    qubit q[2];
+    h q[0];
+    cx q[0], q[1];
+}
+
+task heavy(n: int) on any {
+    return workload("mandel_numba", n = n, iters = 200);
+}
+
+main {
+    let counts = sample bell() shots 2000;
+    print counts, expect "ZZ" of bell();
+}</code></pre>
+<h2>Noyaux, tâches, main</h2>
+<ul><li><code>quantum</code> : circuit spécialisé pour ses arguments au moment de l'appel. Boucles et <code>if</code> classiques évalués à la compilation ; <code>measure</code> et rétroaction (<code>if m { x q[2]; }</code>) pour les circuits dynamiques.</li>
+<li><code>task … on cpu|worker|any</code> : travail classique, local ou déporté.</li>
+<li><code>main</code> : orchestration ; <code>parallel { … }</code> lance des branches simultanées.</li></ul>
+<h2>Portes</h2>
+<p><code>h x y z s sdg t tdg sx</code> · <code>rx ry rz p</code> · <code>cx cz swap cp crz</code> · <code>ccx</code>. Les chaînes de bits suivent la convention de Qiskit (qubit 0 à droite).</p>
+<h2>Chaîne de compilation</h2>
+<p>Source → AST → circuit SQIR (représentation intermédiaire JSON) → optimiseur (annulation de paires inverses, fusion de rotations) → backend, ou export <b>OpenQASM 3</b>.</p>
+<table><thead><tr><th>Backend</th><th>État</th></tr></thead><tbody>
+<tr><td><code>statevector</code></td><td>Simulateur exact NumPy intégré</td></tr>
+<tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
+<tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
+<tr><td><code>qpu</code></td><td>Non connecté : refuse de s'exécuter, sans repli silencieux</td></tr></tbody></table>
+<h2>Refus de l'orchestrateur</h2>
+<p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>
+<p>La grammaire complète est dans <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p><div class="pager"><a href="runtime.html">← Runtime Engine</a><a href="cli.html">Commandes →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Exécuter</h5><pre><span class="k">$ spatial q run examples/01_bell.sq --seed 1</span>
+<span class="g">bell counts: {&#x27;00&#x27;: 989, &#x27;11&#x27;: 1011}
+&lt;ZZ&gt; = 0.9999999999999998</span></pre><h5>Exporter en OpenQASM 3</h5><pre><span class="k">$ spatial q qasm examples/04_teleport.sq --args '[1.0]'</span>
+<span class="d">OPENQASM 3.0;
+include &quot;stdgates.inc&quot;;
+qubit[3] q;
+bit[2] m;
+bit[3] c;
+ry(1.0) q[0];
+h q[1];
+cx q[1], q[2];
+cx q[0], q[1];
+h q[0];
+m[0] = measure q[0];
+m[1] = measure q[1];
+if (m[1] == 1) { x q[2]; }
+if (m[0] == 1) { z q[2]; }
+c = measure q;</span></pre><h5>Boucle hybride (VQE)</h5><pre><span class="k">$ spatial q run examples/03_vqe_hybrid.sq</span>
+<span class="g">theta = -0.2297437122524918 energy = -1.851199124123644</span>
+<span class="d"># énergie exacte : -1.851199124123644</span></pre></aside></div><script src="../../assets/app.js"></script></body></html>
