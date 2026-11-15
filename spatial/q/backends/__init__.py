@@ -103,16 +103,64 @@ class Qasm3Export(Backend):
         raise BackendUnavailable("qasm3 is an export target; use Circuit.to_qasm3()")
 
 
+def _ibm_token() -> str | None:
+    import os
+    from pathlib import Path
+    tok = os.environ.get("IBM_QUANTUM_TOKEN")
+    if tok:
+        return tok
+    f = Path.home() / ".spatial" / "secrets.env"
+    if f.exists():
+        for line in f.read_text().splitlines():
+            if line.startswith("IBM_QUANTUM_TOKEN="):
+                return line.split("=", 1)[1].strip() or None
+    return None
+
+
 class QpuBackend(Backend):
-    """Real quantum hardware. No provider credentials are configured in this prototype, so
-    this backend refuses to run instead of silently falling back to a simulator."""
+    """Real quantum hardware through IBM Quantum (qiskit-ibm-runtime, SamplerV2).
+
+    Needs: the `qiskit-ibm-runtime` package, a token in IBM_QUANTUM_TOKEN (or
+    ~/.spatial/secrets.env) and an IBM Quantum instance on the account. When any of these is
+    missing it raises BackendUnavailable with the real reason; it never falls back to a
+    simulator. Jobs wait in the provider's queue: a call can block for a long time.
+    """
     name = "qpu"
     kind = "qpu"
 
+    def __init__(self):
+        self.last_job: dict | None = None
+
+    def _service(self):
+        try:
+            from qiskit_ibm_runtime import QiskitRuntimeService
+        except ImportError:
+            raise BackendUnavailable("qiskit-ibm-runtime is not installed (pip install qiskit-ibm-runtime)")
+        tok = _ibm_token()
+        if not tok:
+            raise BackendUnavailable(
+                "no QPU provider configured: set IBM_QUANTUM_TOKEN or add it to ~/.spatial/secrets.env. "
+                "The circuit can be exported with to_qasm3() or to_qir().")
+        try:
+            return QiskitRuntimeService(channel="ibm_quantum_platform", token=tok)
+        except Exception as e:
+            raise BackendUnavailable(f"IBM Quantum refused the account: {type(e).__name__}: {str(e)[:200]}")
+
     def sample(self, c, shots, seed=None):
-        raise BackendUnavailable(
-            "no QPU provider configured (needs an account/API token with IBM Quantum, IonQ, "
-            "Quantinuum, AWS Braket...). The circuit can be exported with to_qasm3().")
+        from qiskit import transpile
+        from qiskit_ibm_runtime import SamplerV2
+        svc = self._service()
+        try:
+            backend = svc.least_busy(operational=True, simulator=False, min_num_qubits=c.n_qubits)
+        except Exception as e:
+            raise BackendUnavailable(f"no real backend available for {c.n_qubits} qubits: {str(e)[:200]}")
+        qc = transpile(to_qiskit(c), backend, optimization_level=1)
+        job = SamplerV2(mode=backend).run([qc], shots=shots)
+        res = job.result()[0]
+        counts = res.data.c.get_counts()
+        self.last_job = {"backend": backend.name, "job_id": job.job_id(), "shots": shots,
+                         "physical_qubits": backend.num_qubits}
+        return {k: int(v) for k, v in counts.items()}
 
 
 def get(name: str) -> Backend:

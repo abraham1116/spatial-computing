@@ -1,13 +1,13 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spatial Computing — Measure. Decide. Prove.</title><meta name="description" content="Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured."><link rel="alternate" hreflang="fr" href="fr/index.html"><link rel="icon" href="assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="index.html"><img src="assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Main"><a href="docs/index.html" class="">Docs</a><a href="index.html#proof" class="hide-sm">Proof</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="fr/index.html" hreflang="fr" lang="fr" title="Français">FR</a><a class="btn" href="docs/quickstart.html">Install</a></nav></div></header><main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.5.0 · open source</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.6.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
-<p class="sub">Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. Not more RAM: better utilization.</p>
-<pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>git clone https://github.com/abraham1116/spatial-computing &amp;&amp; cd spatial-computing
-python3 -m venv .venv &amp;&amp; source .venv/bin/activate
-pip install -e &quot;.[quantum]&quot;
-spatial audit</pre>
+<p class="sub">Seven engines on one core. Classical, AI, scientific, simulation and quantum workloads all go through the same loop: describe the work, measure the options, choose, and keep the proof.</p>
+<pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install &quot;spatial-computing[quantum]&quot;
+spatial audit
+spatial status</pre>
 <div class="cta"><a class="btn" href="docs/quickstart.html">Get started</a><a class="btn ghost" href="#proof">See the measurements</a></div>
 </div>
 <div class="term" aria-label="Real output of the spatial audit command"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">$ spatial audit</span></div>
@@ -22,18 +22,29 @@ memory pressure: normal | compressor ratio: 3.37 | swap used: 2.57 GiB
 <span class="g">…</span></pre></div>
 </div></div>
 
+<section id="engines"><div class="wrap">
+<p class="eyebrow">One core, seven engines</p>
+<h2>Every engine shares the same model.</h2>
+<p class="lead">A resource, a task, a measurement, a cost. Spatial Core gives all engines the same data model, the same encrypted protocol and the same tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
+<div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
+</div></section>
+
 <section id="proof"><div class="wrap">
 <p class="eyebrow">Measured, not promised</p>
-<h2>Five numbers, one machine.</h2>
-<p class="lead">2017 MacBook Pro, Intel i7 with two cores, 16 GB, on AC power. Every figure is reproducible with <code>spatial bench all</code> and detailed in the full results.</p>
-<div class="nums">
-<div><b>×31.6</b><span>JIT compilation over pure Python, identical result verified</span></div>
-<div><b>×2.04</b><span>two cores over one: the hardware limit</span></div>
-<div><b>0.88 s</b><span>to boot an isolated Linux micro-VM on macOS</span></div>
-<div><b>−75 %</b><span>local RAM for a skewed-access dataset, against 107× more mean latency</span></div>
-<div><b>1.000</b><span>SPATIAL Q simulator fidelity against Qiskit, up to 16 qubits</span></div>
+<h2>One proof per engine.</h2>
+<p class="lead">Each figure comes from a test or a benchmark in the repository, run on a 2017 MacBook Pro (two cores, 16 GB). Reproduce them with <code>pytest</code> and <code>spatial bench all</code>.</p>
+<div class="eng">
+<div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
+<div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
+<div class="card"><h3>Runtime</h3><p>Runs software built for another system, isolated.</p><div class="pf"><b>0.88 s</b><span>to boot a Linux micro-VM; a Windows .exe runs under Wine</span></div></div>
+<div class="card"><h3>SPATIAL Q</h3><p>One language for classical, distributed and quantum steps.</p><div class="pf"><b>1.000</b><span>fidelity against Qiskit up to 16 qubits; QIR and OpenQASM export</span></div></div>
+<div class="card"><h3>AI</h3><p>Reuses inference context instead of recomputing it.</p><div class="pf"><b>exact</b><span>restored KV cache gives the same output as recompute (toy model, CPU)</span></div></div>
+<div class="card"><h3>Scientific</h3><p>Runs a numerical job and checks its answer.</p><div class="pf"><b>2 / 2</b><span>jobs validated against their exact solutions</span></div></div>
+<div class="card"><h3>Simulation</h3><p>Steps physical systems forward.</p><div class="pf"><b>&lt; 0.1 %</b><span>energy drift over 400 N-body steps</span></div></div>
+<div class="card"><h3>Intelligence</h3><p>Predicts the best strategy before running it.</p><div class="pf"><b>confirmed</b><span>prediction from past runs matched the measured winner</span></div></div>
+<div class="card"><h3>Holographic</h3><p>Computes holograms for future displays.</p><div class="pf"><b>in focus</b><span>numerical reconstruction lands on the emitted points (no display hardware)</span></div></div>
 </div>
-<p class="note">No gain from a second machine has been demonstrated yet: there was only one machine. Offload was validated over loopback only.</p>
+<p class="note">Honest scope: one machine. Nothing is proven yet on a second machine, a data-center GPU or a real quantum computer; the AI, scientific, simulation, intelligence and holographic engines are first components, not products.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -103,5 +114,5 @@ main {
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.5.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.6.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="assets/app.js"></script></body></html>

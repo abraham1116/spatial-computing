@@ -82,7 +82,8 @@ class Runtime:
         counts = b.sample(c, shots, self.seed, noise=self.noise) if self.noise else b.sample(c, shots, self.seed)
         self.trace.append({"op": "sample", "kernel": name, "backend": b.name, "why": self._last_reason,
                            "shots": shots, "wall_s": time.perf_counter() - t0, "resources": est.to_dict(),
-                           "optimizer": info, **({"noise": self.noise} if self.noise else {})})
+                           "optimizer": info, **({"noise": self.noise} if self.noise else {}),
+                           **({"qpu_job": b.last_job} if getattr(b, "last_job", None) else {})})
         return counts
 
     def _expect(self, pauli, name, args, backend):

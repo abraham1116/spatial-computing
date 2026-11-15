@@ -9,10 +9,10 @@ NAV_GROUPS = [
 ]
 UI = {"nav_label": "Main", "proof": "Proof", "install": "Install", "docs_label": "Documentation", "examples_label": "Examples"}
 
-INSTALL = """git clone https://github.com/abraham1116/spatial-computing && cd spatial-computing
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[quantum]"
-spatial audit"""
+INSTALL = """python3 -m venv .venv && source .venv/bin/activate
+pip install "spatial-computing[quantum]"
+spatial audit
+spatial status"""
 
 BELL = open(ROOT.parent / "examples/01_bell.sq").read().strip()
 
@@ -26,9 +26,9 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.5.0 · open source</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.6.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
-<p class="sub">Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. Not more RAM: better utilization.</p>
+<p class="sub">Seven engines on one core. Classical, AI, scientific, simulation and quantum workloads all go through the same loop: describe the work, measure the options, choose, and keep the proof.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
 <div class="cta"><a class="btn" href="docs/quickstart.html">Get started</a><a class="btn ghost" href="#proof">See the measurements</a></div>
 </div>
@@ -37,18 +37,29 @@ def landing():
 <span class="g">…</span></pre></div>
 </div></div>
 
+<section id="engines"><div class="wrap">
+<p class="eyebrow">One core, seven engines</p>
+<h2>Every engine shares the same model.</h2>
+<p class="lead">A resource, a task, a measurement, a cost. Spatial Core gives all engines the same data model, the same encrypted protocol and the same tamper-evident ledger, so a quantum kernel, a simulation step and a memory page are scheduled and accounted for in the same way.</p>
+<div class="core"><span>Spatial Core</span><i>model · protocol · ledger · registry</i></div>
+</div></section>
+
 <section id="proof"><div class="wrap">
 <p class="eyebrow">Measured, not promised</p>
-<h2>Five numbers, one machine.</h2>
-<p class="lead">2017 MacBook Pro, Intel i7 with two cores, 16 GB, on AC power. Every figure is reproducible with <code>spatial bench all</code> and detailed in the full results.</p>
-<div class="nums">
-<div><b>×31.6</b><span>JIT compilation over pure Python, identical result verified</span></div>
-<div><b>×2.04</b><span>two cores over one: the hardware limit</span></div>
-<div><b>0.88 s</b><span>to boot an isolated Linux micro-VM on macOS</span></div>
-<div><b>−75 %</b><span>local RAM for a skewed-access dataset, against 107× more mean latency</span></div>
-<div><b>1.000</b><span>SPATIAL Q simulator fidelity against Qiskit, up to 16 qubits</span></div>
+<h2>One proof per engine.</h2>
+<p class="lead">Each figure comes from a test or a benchmark in the repository, run on a 2017 MacBook Pro (two cores, 16 GB). Reproduce them with <code>pytest</code> and <code>spatial bench all</code>.</p>
+<div class="eng">
+<div class="card"><h3>Compute</h3><p>Runs a computation the cheapest way the machine allows.</p><div class="pf"><b>×31.6</b><span>JIT over pure Python, identical result</span></div></div>
+<div class="card"><h3>Tiered memory</h3><p>Works on more data than local RAM holds, at a measured latency price.</p><div class="pf"><b>−75 %</b><span>local RAM on skewed access, for 107× mean latency</span></div></div>
+<div class="card"><h3>Runtime</h3><p>Runs software built for another system, isolated.</p><div class="pf"><b>0.88 s</b><span>to boot a Linux micro-VM; a Windows .exe runs under Wine</span></div></div>
+<div class="card"><h3>SPATIAL Q</h3><p>One language for classical, distributed and quantum steps.</p><div class="pf"><b>1.000</b><span>fidelity against Qiskit up to 16 qubits; QIR and OpenQASM export</span></div></div>
+<div class="card"><h3>AI</h3><p>Reuses inference context instead of recomputing it.</p><div class="pf"><b>exact</b><span>restored KV cache gives the same output as recompute (toy model, CPU)</span></div></div>
+<div class="card"><h3>Scientific</h3><p>Runs a numerical job and checks its answer.</p><div class="pf"><b>2 / 2</b><span>jobs validated against their exact solutions</span></div></div>
+<div class="card"><h3>Simulation</h3><p>Steps physical systems forward.</p><div class="pf"><b>&lt; 0.1 %</b><span>energy drift over 400 N-body steps</span></div></div>
+<div class="card"><h3>Intelligence</h3><p>Predicts the best strategy before running it.</p><div class="pf"><b>confirmed</b><span>prediction from past runs matched the measured winner</span></div></div>
+<div class="card"><h3>Holographic</h3><p>Computes holograms for future displays.</p><div class="pf"><b>in focus</b><span>numerical reconstruction lands on the emitted points (no display hardware)</span></div></div>
 </div>
-<p class="note">No gain from a second machine has been demonstrated yet: there was only one machine. Offload was validated over loopback only.</p>
+<p class="note">Honest scope: one machine. Nothing is proven yet on a second machine, a data-center GPU or a real quantum computer; the AI, scientific, simulation, intelligence and holographic engines are first components, not products.</p>
 </div></section>
 
 <section><div class="wrap">
@@ -106,7 +117,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.5.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.6.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -122,7 +133,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.5.0. Four engines are operational and tested (77 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.6.0. Four engines are operational and tested (77 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -131,11 +142,10 @@ def docs():
         [("First command", f'<span class="k">$ spatial audit</span>\n<span class="d">{out_block("audit", 7)}</span>')])
 
     doc("quickstart", "Installation", "Python 3.10 or newer. Tested on macOS 13 (Intel) with Python 3.13, and in CI on Linux and macOS.",
-        f'''<div class="callout warn"><b>Not on PyPI yet</b>Install from the sources of the GitHub repository.</div>
+        f'''<div class="callout"><b>On PyPI</b>Published as <code>spatial-computing</code>. To work on the code itself, clone the GitHub repository and run <code>pip install -e ".[quantum,dev]"</code>.</div>
 <h2>1. Environment</h2>
 <pre id="q1"><code>{E(INSTALL.splitlines()[0])}
-{E(INSTALL.splitlines()[1])}
-{E(INSTALL.splitlines()[2])}</code></pre>
+{E(INSTALL.splitlines()[1])}</code></pre>
 <p>The <code>quantum</code> extra adds Qiskit, Qiskit Aer and the OpenQASM 3 importer. Without it SPATIAL Q works with its built-in simulator but not with the <code>aer</code> backend.</p>
 <p><code>numpy</code> (&lt; 2.2) and <code>numba</code> (&lt; 0.62) are bounded: newer Numba needs an <code>llvmlite</code> that does not build on the reference Mac.</p>
 <h2>2. Verify</h2>
@@ -254,7 +264,7 @@ main {
 <tr><td><code>aer</code></td><td>Qiskit Aer (<code>quantum</code> extra)</td></tr>
 <tr><td><code>qasm3</code></td><td>OpenQASM 3 export, reloaded successfully by Qiskit in a test</td></tr>
 <tr><td><code>qir</code></td><td>QIR base-profile export for static circuits, validated with pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>Not connected: refuses to run, no silent fallback</td></tr></tbody></table>
+<tr><td><code>qpu</code></td><td>IBM Quantum through <code>qiskit-ibm-runtime</code> (<code>qpu</code> extra). Needs a token and an instance; otherwise refuses with the reason, no silent fallback. Not yet run on hardware.</td></tr></tbody></table>
 <h2>Orchestrator refusals</h2>
 <p>A circuit whose state vector (16 × 2<sup>n</sup> bytes) exceeds half of the available RAM is refused with an explicit message. On the reference Mac: about 27 qubits.</p>
 <p>The full grammar is in <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p>''',

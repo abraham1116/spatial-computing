@@ -169,8 +169,10 @@ def test_classical_distributed_example_uses_worker_when_told():
     assert {t["where"] for t in rt.trace if t["op"] == "workload"} == {"cpu", "worker"}
 
 
-def test_qpu_backend_refuses_instead_of_faking():
-    with pytest.raises(BackendUnavailable, match="no QPU provider"):
+def test_qpu_backend_refuses_instead_of_faking(monkeypatch, tmp_path):
+    monkeypatch.delenv("IBM_QUANTUM_TOKEN", raising=False)
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)        # no secrets file either
+    with pytest.raises(BackendUnavailable, match="no QPU provider|not installed"):
         _run("quantum k() { qubit q[1]; h q[0]; } main { let c = sample k() shots 10 on qpu; }")
 
 

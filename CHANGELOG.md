@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+- SPATIAL Q: real QPU backend for IBM Quantum (`qpu` extra); refuses with the real reason when the token or instance is missing.
+- Landing page reorganised around the seven engines and the shared core, with one measured proof per engine.
+- Published on PyPI.
+
 ## 0.5.0
 - Memory: several writers on shared pages (versioned compare-and-swap on the page server).
 - SPATIAL Q: QIR adaptive profile for dynamic circuits; classical part compiled to Python bytecode (`--compiled`).
