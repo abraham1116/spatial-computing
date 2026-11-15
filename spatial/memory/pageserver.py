@@ -17,6 +17,7 @@ import threading
 import time
 from pathlib import Path
 
+from ..core.auth import authorizer_from_file, require
 from ..core.protocol import RpcClient, RpcServer
 
 
@@ -41,6 +42,7 @@ class PageStore:
 
     def handle(self, h: dict, blob: bytes):
         op = h["op"]
+        require("mem:write" if op in ("put", "del", "vput") else "mem:read")
         if op == "put":
             if self.bytes + len(blob) > self.max_bytes:
                 raise MemoryError("page server quota exceeded")
@@ -124,7 +126,9 @@ class LocalPageServer:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--token-file", required=True)
+    ap.add_argument("--token-file", help="shared secret (every client may do everything)")
+    ap.add_argument("--master-key-file", help="issue scoped credentials instead (see `spatial token`)")
+    ap.add_argument("--audit-log")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--delay-ms", type=float, default=0.0)
@@ -132,7 +136,10 @@ def main():
     ap.add_argument("--allow-remote", action="store_true")
     a = ap.parse_args()
     store = PageStore(a.delay_ms, a.mbps)
-    srv = RpcServer(store.handle, Path(a.token_file).read_bytes(), a.host, a.port, a.allow_remote)
+    if bool(a.token_file) == bool(a.master_key_file):
+        raise SystemExit("give exactly one of --token-file or --master-key-file")
+    srv = RpcServer(store.handle, Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port,
+                    a.allow_remote, authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None)
     print(f"PORT {srv.port}", flush=True)
     srv.serve_forever()
 

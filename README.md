@@ -4,7 +4,7 @@
 
 Spatial Computing chooses where and how a workload should run from measurements, and claims a gain only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
 
-> **Status: v0.7.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
+> **Status: v0.8.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
 
 [Français](README.fr.md)
 

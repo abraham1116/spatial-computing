@@ -1,0 +1,61 @@
+{
+ "context": {
+  "date": "2026-11-15 18:22:36 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t25%; charging; 3:13 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794763356.61679,
+   "cpu_percent": 12.6,
+   "load1": 3.55712890625,
+   "ram_total": 17179869184,
+   "ram_available": 7477084160,
+   "ram_used_percent": 56.5,
+   "swap_used": 4057464832,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7431925760,
+   "compressor_physical_bytes": 988364800,
+   "compressor_ratio": 7.52,
+   "compressor_saved_bytes": 6443560960,
+   "swapins": 1978873,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "logical_GiB": 24.0,
+ "physical_RAM_GiB": 16.0,
+ "logical_over_RAM": 1.5,
+ "page_MiB": 1,
+ "pages": 24576,
+ "local_RAM_budget_MiB": 512,
+ "peak_process_RSS_MiB": 578.2734375,
+ "far_file_GiB": 11.437899055890739,
+ "load_s": 84.46968243799347,
+ "load_MBps": 305.07755010108866,
+ "verified_random_pages": 600,
+ "verified_scan_pages": 2048,
+ "corrupt_pages": 0,
+ "random_access_ms_mean": 5.043416796664436,
+ "random_p50_ms": {
+  "hot": 0.0032400000000000003,
+  "compressed": 3.48054,
+  "far": 3.84624
+ },
+ "random_p99_ms": {
+  "hot": 0.00525,
+  "compressed": 4.40167,
+  "far": 10.19331
+ },
+ "scan_MBps": 154.6448315983462,
+ "tier_hits": {
+  "hot": 6,
+  "compressed": 25,
+  "far": 2617
+ },
+ "compression_ratio": 2.25,
+ "local_ram_bytes_accounted": 536823689
+}

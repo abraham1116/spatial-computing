@@ -71,7 +71,7 @@ def test_wire_is_encrypted_and_tampering_is_detected():
         assert rh["echo"] == secret.decode() and rb == secret
         cl.close()
         assert secret not in bytes(seen)                    # nothing readable on the wire
-        threading.Thread(target=serve, args=(60,), daemon=True).start()   # corrupt a byte of the first record
+        threading.Thread(target=serve, args=(100,), daemon=True).start()  # corrupt a byte of the first record
         cl = RpcClient("127.0.0.1", relay.getsockname()[1], b"tok", timeout=5)
         with pytest.raises((ConnectionError, OSError)):
             cl.call({"msg": "x"}, b"y")

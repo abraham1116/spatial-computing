@@ -14,6 +14,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from ..core.auth import authorizer_from_file, require
 from ..core.protocol import RpcClient, RpcServer
 from . import microvm
 from .inspect import inspect
@@ -28,6 +29,7 @@ def _handler(h: dict, blob: bytes):
         return {"pong": True, "microvm": microvm.available()}, b""
     if op != "run_elf":
         raise ValueError(f"unknown op {op!r}")
+    require("exec:elf")
     if len(blob) > MAX_ELF:
         raise ValueError("binary too large")
     args = [str(a) for a in h.get("args", [])]
@@ -49,8 +51,9 @@ def _handler(h: dict, blob: bytes):
             "total_wall_s": r.total_wall_s, "accel": r.accel}, b""
 
 
-def serve(token: bytes, host: str = "127.0.0.1", port: int = 0, allow_remote: bool = False) -> RpcServer:
-    return RpcServer(_handler, token, host=host, port=port, allow_remote=allow_remote)
+def serve(token: bytes | None, host: str = "127.0.0.1", port: int = 0, allow_remote: bool = False,
+          authorizer=None) -> RpcServer:
+    return RpcServer(_handler, token, host=host, port=port, allow_remote=allow_remote, authorizer=authorizer)
 
 
 def run_remote(client: RpcClient, elf_path: str, args: list[str] | None = None, **opts) -> dict:
@@ -94,12 +97,17 @@ class LocalRunnerProcess:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--token-file", required=True)
+    ap.add_argument("--token-file", help="shared secret (every client may do everything)")
+    ap.add_argument("--master-key-file", help="issue scoped credentials instead (see `spatial token`)")
+    ap.add_argument("--audit-log")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--allow-remote", action="store_true")
     a = ap.parse_args()
-    srv = serve(Path(a.token_file).read_bytes(), a.host, a.port, a.allow_remote)
+    if bool(a.token_file) == bool(a.master_key_file):
+        raise SystemExit("give exactly one of --token-file or --master-key-file")
+    srv = serve(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
+                authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None)
     print(f"PORT {srv.port}", flush=True)
     srv.serve_forever()
 

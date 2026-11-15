@@ -4,14 +4,15 @@
 <li><b>No code transmitted.</b> The worker only runs named workloads from an allow-list.</li>
 <li><b>Closed micro-VM.</b> No network device, no disk, no host folder; RAM capped.</li>
 <li><b>Quota</b> on the page server's memory.</li>
-<li><b>Encrypted channel.</b> Every record is sealed with AES-256-GCM keyed from the token; a modified or replayed record is rejected.</li>
+<li><b>Encrypted, forward-secret channel.</b> Every record is sealed with AES-256-GCM; keys come from an ephemeral X25519 exchange mixed with the secret, so a recorded session stays unreadable if the secret leaks later. A modified or replayed record is rejected.</li>
+<li><b>Scoped permissions.</b> A server started with a master key issues credentials with scopes (<code>run:mandel_numba</code>, <code>mem:read</code>, <code>exec:elf</code>), an expiry and quotas; every request, allowed or denied, goes to the audit log.</li>
 <li><b>Encrypted and replicated far pages</b> with <code>EncryptedBackend</code> and <code>ReplicatedBackend</code>.</li>
 <li><b>Tamper-evident ledger.</b> Measurements are hash-chained; <code>Ledger.verify()</code> finds an edited row.</li></ul>
 <h2>Not in place yet</h2>
-<ul><li>Forward secrecy and peer identity: put TLS or WireGuard on top before any use beyond loopback.</li>
-<li>Per-user or per-tenant permissions, CPU quotas, a signed log.</li>
+<ul><li>An independent security review. None has been done.</li>
+<li>Certificate-based identity (the secret is the identity), a <i>signed</i> audit log, revocation and usage counters that survive a restart.</li>
 <li>A sandbox for arbitrary third-party workloads.</li></ul>
-<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the channel has no forward secrecy and no per-user identity.</div>
+<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the protocol has had no independent review.</div>
 <p>To report a vulnerability, use GitHub's private vulnerability reporting on the repository.</p><div class="pager"><a href="cli.html">← Commands</a><a href="results.html">Results →</a></div></main><aside class="rail" aria-label="Examples"><h5>Refusal of a public address</h5><pre><span class="d">RpcServer(handler, token, host="0.0.0.0")
 → PermissionError: refusing to bind a
   non-loopback address without

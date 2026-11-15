@@ -83,10 +83,27 @@ def cmd_bench(a):
     return rc
 
 
+def cmd_token(a):
+    from .core import auth
+    if a.action == "init":
+        auth.init_master_key(a.master_key_file)
+        print(f"master key written to {a.master_key_file} (mode 600). Keep it private; it can issue any credential.")
+        return 0
+    az = auth.authorizer_from_file(a.master_key_file)
+    print(az.issue(a.name, [s for s in a.scopes.split(",") if s], ttl_s=a.ttl, max_ops=a.max_ops, max_bytes=a.max_bytes))
+    return 0
+
+
 def cmd_worker(a):
     mod = {"compute": "spatial.compute.worker", "memory": "spatial.memory.pageserver",
            "runtime": "spatial.runtime.runner"}[a.kind]
-    cmd = [sys.executable, "-m", mod, "--token-file", a.token_file, "--host", a.host, "--port", str(a.port)]
+    cmd = [sys.executable, "-m", mod, "--host", a.host, "--port", str(a.port)]
+    if a.token_file:
+        cmd += ["--token-file", a.token_file]
+    if a.master_key_file:
+        cmd += ["--master-key-file", a.master_key_file]
+    if a.audit_log:
+        cmd += ["--audit-log", a.audit_log]
     if a.allow_remote:
         cmd.append("--allow-remote")
     return subprocess.run(cmd).returncode
@@ -116,12 +133,25 @@ def main(argv=None):
     p.set_defaults(fn=cmd_bench)
     p = sub.add_parser("serve", help="start a compute worker, a page server or a sandboxed binary runner (loopback by default)")
     p.add_argument("kind", choices=["compute", "memory", "runtime"])
-    p.add_argument("--token-file", required=True)
+    p.add_argument("--token-file", help="shared secret: every client may do everything")
+    p.add_argument("--master-key-file", help="scoped credentials with quotas and an audit log (see `spatial token`)")
+    p.add_argument("--audit-log")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=0)
     p.add_argument("--allow-remote", action="store_true", help="explicit consent to accept LAN connections")
     p.set_defaults(fn=cmd_worker)
+    p = sub.add_parser("token", help="scoped credentials: `init` a master key, `issue` a tenant token")
+    p.add_argument("action", choices=["init", "issue"])
+    p.add_argument("--master-key-file", required=True)
+    p.add_argument("--name", default="tenant")
+    p.add_argument("--scopes", default="", help="comma list, e.g. run:mandel_numba,mem:read,exec:elf (trailing * = prefix)")
+    p.add_argument("--ttl", type=float, default=3600, help="seconds")
+    p.add_argument("--max-ops", type=int)
+    p.add_argument("--max-bytes", type=int)
+    p.set_defaults(fn=cmd_token)
     a = ap.parse_args(argv)
+    if getattr(a, "cmd", None) == "serve" and bool(a.token_file) == bool(a.master_key_file):
+        ap.error("serve needs exactly one of --token-file or --master-key-file")
     try:
         return a.fn(a)
     except (Exception, SystemExit) as e:  # user-facing tool: one clean line, no traceback

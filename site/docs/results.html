@@ -5,6 +5,7 @@
 <tr><td>Integrated GPU (Metal, float32)</td><td>20 to 33× the two cores, against a non-vectorized CPU reference</td></tr>
 <tr><td>System memory</td><td>macOS holds 7.3 GiB of pages in 2.1 GiB (ratio 3.4)</td></tr>
 <tr><td>Tiers + SSD</td><td>33.5 MB of local RAM for 134 MB; 80.5 µs/access against 0.76 µs</td></tr>
+<tr><td>Dataset larger than RAM</td><td>24 GiB through a 512 MiB budget on a 16 GiB Mac: 0 corrupt pages in 2,648 verified, process RSS peak 578 MiB, about 5 ms per random access (disk-backed, one run)</td></tr>
 <tr><td>Linux micro-VM (HVF)</td><td>0.88 s startup; compute at 1.04× native</td></tr>
 <tr><td>SPATIAL Q</td><td>Fidelity 1.000 against Qiskit up to 16 qubits; VQE reaches the exact energy</td></tr>
 <tr><td>SPATIAL Q on real hardware</td><td>5 circuits on ibm_marrakesh; the simulator with asymmetric readout error halves the gap to the device (one shared parameter set)</td></tr></tbody></table>

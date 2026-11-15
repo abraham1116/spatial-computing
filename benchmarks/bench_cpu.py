@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import time
 
+import numpy as np
+
 from common import save
 from spatial.compute import detect_node, limitations
 from spatial.compute.cost import CostModel
@@ -34,8 +36,8 @@ def main():
         slow_only = {x.name for x in s.mandel_strategies()} - fast_only
         # fast strategies first (cool CPU), repeated; the slow pure-Python reference last, once
         plans = [
-            ("mandel_small_fast_strategies", {"n": 700, "iters": 300}, fast_only, 5),
-            ("mandel_large_fast_strategies", {"n": 4000, "iters": 300}, fast_only, 3),
+            ("mandel_small_fast_strategies", {"n": 700, "iters": 300}, fast_only, 9),
+            ("mandel_large_fast_strategies", {"n": 4000, "iters": 300}, fast_only, 7),
             ("mandel_small_slow_references", {"n": 700, "iters": 300}, slow_only, 1),
         ]
         for name, params, skip, repeat in plans:
@@ -54,6 +56,9 @@ def main():
                 rows.append({
                     "strategy": strat, "kind": best.metrics["kind"], "ok": True,
                     "wall_s": best.wall_s, "all_wall_s": [r.wall_s for r in rs_ok],
+                    "wall_min": min(r.wall_s for r in rs_ok), "wall_max": max(r.wall_s for r in rs_ok),
+                    "wall_q1": float(np.percentile([r.wall_s for r in rs_ok], 25)),
+                    "wall_q3": float(np.percentile([r.wall_s for r in rs_ok], 75)),
                     "cpu_s": best.cpu_s, "cpu_utilisation": best.cpu_s / best.wall_s if best.wall_s else None,
                     "energy_j_machine": best.energy_j, "mean_watts": best.metrics.get("mean_watts_machine"),
                     "power_gauge_static": best.metrics.get("power_gauge_static"), "energy_usd_upper_bound": loc["energy_usd"],

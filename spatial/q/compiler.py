@@ -211,6 +211,69 @@ def _key(o: Op):
     return tuple(sorted(o.qubits)) if o.name in _SYMMETRIC else o.qubits
 
 
+_DIAG_1Q = {"z", "s", "sdg", "t", "tdg", "rz", "p"}
+_DIAG_ANY = _DIAG_1Q | {"cz", "cp", "crz"}
+_X_1Q = {"x", "rx"}
+
+
+def _commutes(g: Op, o: Op, q: int) -> bool:
+    """Does single-qubit gate `g` (acting on q) commute with `o`, which also touches q?"""
+    if o.cond or o.name in ("measure", "reset"):
+        return False
+    if g.name in _DIAG_1Q:                       # diagonal: commutes with diagonal gates and with controls
+        if o.name in _DIAG_ANY:
+            return True
+        if o.name == "cx":
+            return o.qubits[0] == q              # control
+        if o.name == "ccx":
+            return q in o.qubits[:2]
+        return False
+    if g.name in _X_1Q:                          # X-type: commutes with X-type and with a CX/CCX target
+        if o.name in _X_1Q:
+            return True
+        if o.name == "cx":
+            return o.qubits[1] == q
+        if o.name == "ccx":
+            return o.qubits[2] == q
+    return False
+
+
+def _merge(prev: Op, g: Op):
+    """Result of applying prev then g on the same qubit: Op, None (cancel) or "no" (not mergeable)."""
+    if prev.cond or prev.qubits != g.qubits:
+        return "no"
+    if prev.name == g.name and g.name in _SELF_INVERSE:
+        return None
+    if (prev.name, g.name) in _INVERSE_PAIR:
+        return None
+    if prev.name == g.name and g.name in ("rz", "rx", "p"):
+        return Op(g.name, g.qubits, (prev.params[0] + g.params[0],))
+    return "no"
+
+
+def _commute_pass(ops: list) -> tuple[list, bool]:
+    """Move single-qubit gates backwards across gates they commute with, to meet and merge with
+    an earlier gate of the same kind (e.g. rz a; cx q0,q1; rz b  ->  rz (a+b); cx q0,q1)."""
+    ops, changed = list(ops), False
+    for i, g in enumerate(ops):
+        if g is None or g.cond or len(g.qubits) != 1 or g.name not in (_DIAG_1Q | _X_1Q):
+            continue
+        q = g.qubits[0]
+        for j in range(i - 1, -1, -1):
+            o = ops[j]
+            if o is None or q not in o.qubits:
+                continue
+            m = _merge(o, g) if len(o.qubits) == 1 else "no"
+            if m != "no":
+                ops[j] = m
+                ops[i] = None
+                changed = True
+                break
+            if not _commutes(g, o, q):
+                break
+    return [o for o in ops if o is not None], changed
+
+
 def optimize(c: Circuit) -> tuple[Circuit, dict]:
     """Peephole passes to a fixed point: cancel adjacent inverse pairs, merge same-axis
     rotations, drop identity rotations. 'Adjacent' = no other op touches those qubits in
@@ -264,6 +327,8 @@ def optimize(c: Circuit) -> tuple[Circuit, dict]:
                     changed = True
                     continue
             ops.append(o)
+        ops, moved = _commute_pass(ops)
+        changed = changed or moved
     oc = Circuit(c.name, c.n_qubits, c.n_cbits, ops)
     return oc, {"ops_before": before, "ops_after": len(ops), "passes": passes}
 

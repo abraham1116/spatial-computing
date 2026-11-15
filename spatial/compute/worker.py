@@ -14,6 +14,7 @@ import sys
 import time
 from pathlib import Path
 
+from ..core.auth import authorizer_from_file, require
 from ..core.protocol import RpcClient, RpcServer
 from . import workloads
 
@@ -23,6 +24,7 @@ def _handler(header: dict, blob: bytes):
     if op == "ping":
         return {"pong": True, "pid": os.getpid()}, b""
     if op == "run":
+        require(f"run:{header.get('workload')}")
         t = os.times()
         c0, w0 = t.user + t.system, time.perf_counter()
         result = workloads.run(header["workload"], **header.get("params", {}))
@@ -32,8 +34,9 @@ def _handler(header: dict, blob: bytes):
     raise ValueError(f"unknown op {op!r}")
 
 
-def serve(token: bytes, host: str = "127.0.0.1", port: int = 0, allow_remote: bool = False) -> RpcServer:
-    return RpcServer(_handler, token, host=host, port=port, allow_remote=allow_remote)
+def serve(token: bytes | None, host: str = "127.0.0.1", port: int = 0, allow_remote: bool = False,
+          authorizer=None) -> RpcServer:
+    return RpcServer(_handler, token, host=host, port=port, allow_remote=allow_remote, authorizer=authorizer)
 
 
 class LocalWorkerProcess:
@@ -74,13 +77,18 @@ class LocalWorkerProcess:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--token-file", required=True)
+    ap.add_argument("--token-file", help="shared secret (every client may do everything)")
+    ap.add_argument("--master-key-file", help="issue scoped credentials instead (see `spatial token`)")
+    ap.add_argument("--audit-log")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--allow-remote", action="store_true",
                     help="explicit consent to accept non-loopback connections")
     a = ap.parse_args()
-    srv = serve(Path(a.token_file).read_bytes(), a.host, a.port, a.allow_remote)
+    if bool(a.token_file) == bool(a.master_key_file):
+        raise SystemExit("give exactly one of --token-file or --master-key-file")
+    srv = serve(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
+                authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None)
     print(f"PORT {srv.port}", flush=True)
     srv.serve_forever()
 

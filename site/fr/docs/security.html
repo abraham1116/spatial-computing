@@ -4,14 +4,15 @@
 <li><b>Aucun code transmis.</b> Le worker n'exécute que des charges nommées dans une liste blanche.</li>
 <li><b>Micro-VM fermée.</b> Aucun périphérique réseau, aucun disque, aucun dossier hôte ; RAM plafonnée.</li>
 <li><b>Quota</b> de mémoire sur le serveur de pages.</li>
-<li><b>Canal chiffré.</b> Chaque enregistrement est scellé en AES-256-GCM avec une clé dérivée du jeton ; un enregistrement modifié ou rejoué est rejeté.</li>
+<li><b>Canal chiffré à confidentialité persistante.</b> Chaque enregistrement est scellé en AES-256-GCM ; les clés viennent d'un échange X25519 éphémère mêlé au secret : une session enregistrée reste illisible si le secret fuit plus tard. Un enregistrement modifié ou rejoué est rejeté.</li>
+<li><b>Permissions à portée limitée.</b> Un serveur lancé avec une clé maître délivre des identifiants avec des portées (<code>run:mandel_numba</code>, <code>mem:read</code>, <code>exec:elf</code>), une expiration et des quotas ; chaque requête, acceptée ou refusée, va dans le journal d'audit.</li>
 <li><b>Pages lointaines chiffrées et répliquées</b> avec <code>EncryptedBackend</code> et <code>ReplicatedBackend</code>.</li>
 <li><b>Registre infalsifiable en silence.</b> Les mesures sont chaînées par hachage ; <code>Ledger.verify()</code> repère une ligne modifiée.</li></ul>
 <h2>Pas encore en place</h2>
-<ul><li>Confidentialité persistante et identité des pairs : ajouter TLS ou WireGuard avant tout usage hors boucle locale.</li>
-<li>Permissions par utilisateur ou par locataire, quotas CPU, journal signé.</li>
+<ul><li>Une revue de sécurité indépendante. Aucune n'a été faite.</li>
+<li>Identité par certificat (le secret est l'identité), journal d'audit <i>signé</i>, révocation et compteurs qui survivent à un redémarrage.</li>
 <li>Bac à sable pour des charges arbitraires de tiers.</li></ul>
-<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le canal n'a ni confidentialité persistante ni identité par utilisateur.</div><div class="pager"><a href="cli.html">← Commandes</a><a href="results.html">Résultats →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Refus d&#x27;une adresse publique</h5><pre><span class="d">RpcServer(handler, token, host="0.0.0.0")
+<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le protocole n'a pas fait l'objet d'une revue indépendante.</div><div class="pager"><a href="cli.html">← Commandes</a><a href="results.html">Résultats →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Refus d&#x27;une adresse publique</h5><pre><span class="d">RpcServer(handler, token, host="0.0.0.0")
 → PermissionError: refusing to bind a
   non-loopback address without
   allow_remote=True (explicit user

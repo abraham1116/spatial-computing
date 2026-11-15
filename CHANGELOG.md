@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+- Core: SWP/2 with forward secrecy (ephemeral X25519 mixed with the secret); scoped credentials with expiry, quotas, revocation and a hash-chained audit log (`spatial token init|issue`, `--master-key-file` on every service).
+- SPATIAL Q: commutation-aware optimizer rules, fuzz-tested.
+- Benchmarks: CPU runs repeated 9 and 7 times with quartiles; new 24 GiB dataset-larger-than-RAM test.
+- Docs: `docs/TESTS_NOT_DONE.md` and ready-to-run hardware scripts in `benchmarks/hardware/`.
+- CI: Python 3.10, 3.11 and 3.13 added.
+
 ## 0.7.0
 - SPATIAL Q: asymmetric readout error in the simulator (`readout=(p01, p10)`), motivated by real hardware data.
 - Benchmark `bench_qpu.py`: one batched IBM job, ideal / depolarising / readout models fitted and compared (`docs/QPU.md`).

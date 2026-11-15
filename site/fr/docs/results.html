@@ -5,6 +5,7 @@
 <tr><td>GPU intégré (Metal, float32)</td><td>20 à 33× les deux cœurs, face à une référence CPU non vectorisée</td></tr>
 <tr><td>Mémoire du système</td><td>macOS tient 7,3 Gio de pages dans 2,1 Gio (taux 3,4)</td></tr>
 <tr><td>Étages + SSD</td><td>33,5 Mo de RAM locale pour 134 Mo ; 80,5 µs/accès contre 0,76 µs</td></tr>
+<tr><td>Jeu de données plus grand que la RAM</td><td>24 Gio avec un budget de 512 Mio sur un Mac de 16 Gio : 0 page corrompue sur 2 648 vérifiées, pic de RAM du processus 578 Mio, environ 5 ms par accès aléatoire (sur disque, une seule exécution)</td></tr>
 <tr><td>Micro-VM Linux (HVF)</td><td>Démarrage 0,88 s ; calcul à 1,04× le natif</td></tr>
 <tr><td>SPATIAL Q</td><td>Fidélité 1,000 face à Qiskit jusqu'à 16 qubits ; VQE à l'énergie exacte</td></tr>
 <tr><td>SPATIAL Q sur matériel réel</td><td>5 circuits sur ibm_marrakesh ; le simulateur avec erreur de lecture asymétrique réduit de moitié l'écart avec la machine (un seul jeu de paramètres)</td></tr></tbody></table>

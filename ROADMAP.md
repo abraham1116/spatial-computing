@@ -3,13 +3,16 @@
 What exists is a prototype. This is what is missing, by area. Items marked **needs hardware** cannot be validated on a laptop.
 
 ## Cross-cutting
+Everything that needs hardware or people is tracked, with how to run it, in [`docs/TESTS_NOT_DONE.md`](docs/TESTS_NOT_DONE.md).
+
 - [ ] Test offload and remote memory between **two real machines** (needs hardware)
 - [x] `nvidia-smi` detection in `spatial audit` (v0.3; parser tested, never run on a real NVIDIA GPU)
 - [ ] Validation of the scheduler on Linux + NVIDIA (needs hardware)
 - [ ] Real per-run energy measurement (`powermetrics` as root, or an external meter)
 - [x] Channel encryption (SWP/1: AES-256-GCM, v0.2) and far-page encryption
 - [x] Tamper-evident (hash-chained) ledger
-- [ ] Forward secrecy / TLS, per-tenant permissions, signed audit log
+- [x] Forward secrecy (ephemeral X25519), scoped credentials with quotas, hash-chained audit log (v0.8)
+- [ ] Independent security review, certificate-based identity, signed audit log, durable revocation
 - [x] Current limitations in English (`docs/LIMITATIONS.md`, v0.5)
 - [ ] Publish to PyPI; English translation of the remaining reports in `docs/`
 

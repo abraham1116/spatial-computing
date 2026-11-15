@@ -26,7 +26,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Infrastructure efficiency toolkit · v0.7.0 · open source</p>
+<p class="eyebrow">Infrastructure efficiency toolkit · v0.8.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">Seven engines on one core. Classical, AI, scientific, simulation and quantum workloads all go through the same loop: describe the work, measure the options, choose, and keep the proof.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -117,7 +117,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.7.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.8.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -133,7 +133,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.7.0. Four engines are operational and tested (80 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.8.0. Four engines are operational and tested (94 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -280,7 +280,8 @@ main {
 <tr><td><code>spatial run &lt;file&gt; [args] [--route R] [--timeout S]</code></td><td>Runs via the first feasible route; exit code 1 if impossible</td></tr>
 <tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;file.sq&gt; [--noise p] [--compiled]</code></td><td>Run (optionally with depolarising noise), check, export to OpenQASM 3, OpenQASM 2, QIR or SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
-<tr><td><code>spatial serve compute|memory|runtime --token-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback</td></tr></tbody></table>
+<tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback; with a master key, tenants get scoped credentials</td></tr>
+<tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Create a master key; issue a scoped, expiring, quota-limited credential</td></tr></tbody></table>
 <p>An error prints a single <code>spatial: Type: message</code> line and exits with code 1.</p>''',
         [("Clean error", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),
          ("Check a program", f'<span class="k">$ spatial q check examples/05_ghz_qft.sq</span>\n<span class="g">{out_block("q_qpu")}</span>')])
@@ -292,14 +293,15 @@ main {
 <li><b>No code transmitted.</b> The worker only runs named workloads from an allow-list.</li>
 <li><b>Closed micro-VM.</b> No network device, no disk, no host folder; RAM capped.</li>
 <li><b>Quota</b> on the page server's memory.</li>
-<li><b>Encrypted channel.</b> Every record is sealed with AES-256-GCM keyed from the token; a modified or replayed record is rejected.</li>
+<li><b>Encrypted, forward-secret channel.</b> Every record is sealed with AES-256-GCM; keys come from an ephemeral X25519 exchange mixed with the secret, so a recorded session stays unreadable if the secret leaks later. A modified or replayed record is rejected.</li>
+<li><b>Scoped permissions.</b> A server started with a master key issues credentials with scopes (<code>run:mandel_numba</code>, <code>mem:read</code>, <code>exec:elf</code>), an expiry and quotas; every request, allowed or denied, goes to the audit log.</li>
 <li><b>Encrypted and replicated far pages</b> with <code>EncryptedBackend</code> and <code>ReplicatedBackend</code>.</li>
 <li><b>Tamper-evident ledger.</b> Measurements are hash-chained; <code>Ledger.verify()</code> finds an edited row.</li></ul>
 <h2>Not in place yet</h2>
-<ul><li>Forward secrecy and peer identity: put TLS or WireGuard on top before any use beyond loopback.</li>
-<li>Per-user or per-tenant permissions, CPU quotas, a signed log.</li>
+<ul><li>An independent security review. None has been done.</li>
+<li>Certificate-based identity (the secret is the identity), a <i>signed</i> audit log, revocation and usage counters that survive a restart.</li>
 <li>A sandbox for arbitrary third-party workloads.</li></ul>
-<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the channel has no forward secrecy and no per-user identity.</div>
+<div class="callout warn"><b>Do not expose</b>Do not use <code>--allow-remote</code> on a network you do not control: the protocol has had no independent review.</div>
 <p>To report a vulnerability, use GitHub's private vulnerability reporting on the repository.</p>''',
         [("Refusal of a public address", '<span class="d">RpcServer(handler, token, host="0.0.0.0")\n→ PermissionError: refusing to bind a\n  non-loopback address without\n  allow_remote=True (explicit user\n  consent required to expose this machine)</span>')])
 
@@ -311,6 +313,7 @@ main {
 <tr><td>Integrated GPU (Metal, float32)</td><td>20 to 33× the two cores, against a non-vectorized CPU reference</td></tr>
 <tr><td>System memory</td><td>macOS holds 7.3 GiB of pages in 2.1 GiB (ratio 3.4)</td></tr>
 <tr><td>Tiers + SSD</td><td>33.5 MB of local RAM for 134 MB; 80.5 µs/access against 0.76 µs</td></tr>
+<tr><td>Dataset larger than RAM</td><td>24 GiB through a 512 MiB budget on a 16 GiB Mac: 0 corrupt pages in 2,648 verified, process RSS peak 578 MiB, about 5 ms per random access (disk-backed, one run)</td></tr>
 <tr><td>Linux micro-VM (HVF)</td><td>0.88 s startup; compute at 1.04× native</td></tr>
 <tr><td>SPATIAL Q</td><td>Fidelity 1.000 against Qiskit up to 16 qubits; VQE reaches the exact energy</td></tr>
 <tr><td>SPATIAL Q on real hardware</td><td>5 circuits on ibm_marrakesh; the simulator with asymmetric readout error halves the gap to the device (one shared parameter set)</td></tr></tbody></table>
@@ -326,8 +329,8 @@ main {
 <tr><td>No CXL, RDMA, NPU, QPU</td><td>Studied on paper only</td></tr>
 <tr><td>Energy not measurable</td><td>Energy costs are estimated</td></tr>
 <tr><td>Windows</td><td>One console program run under Wine; graphical apps untested</td></tr>
-<tr><td>No forward secrecy, no per-user identity</td><td>Do not expose to an untrusted network</td></tr>
+<tr><td>Protocol not independently reviewed; no certificates</td><td>Do not expose to an untrusted network</td></tr>
 <tr><td>Exact quantum simulation</td><td>About 27 qubits here, bounded by RAM</td></tr>
 <tr><td>AI, scientific, simulation, intelligence, holographic domains</td><td>First components only (toy model, small solvers, numerical optics)</td></tr></tbody></table>
-<p>The detailed, current list is in <code>docs/LIMITATIONS.md</code> and the open work in <code>ROADMAP.md</code>.</p>''',
+<p>The detailed, current list is in <code>docs/LIMITATIONS.md</code>; every test not yet done, with how to run it, is in <code>docs/TESTS_NOT_DONE.md</code>; open work is in <code>ROADMAP.md</code>.</p>''',
         [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nAI / scientific / simulation /\nintelligence / holographic\n  first-components</span>')])

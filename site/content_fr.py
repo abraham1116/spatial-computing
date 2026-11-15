@@ -28,7 +28,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.7.0 · open source</p>
+<p class="eyebrow">Outils d'efficacité d'infrastructure · v0.8.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Sept moteurs sur un même cœur. Calcul classique, IA, scientifique, simulation et quantique passent par la même boucle : décrire le travail, mesurer les options, choisir, et garder la preuve.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -119,7 +119,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.7.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.8.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -136,7 +136,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.7.0. Quatre moteurs sont opérationnels et testés (80 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.8.0. Quatre moteurs sont opérationnels et testés (94 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -283,7 +283,8 @@ main {
 <tr><td><code>spatial run &lt;fichier&gt; [args] [--route R] [--timeout S]</code></td><td>Exécute via la première route réalisable ; code de sortie 1 si impossible</td></tr>
 <tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;fichier.sq&gt; [--noise p] [--compiled]</code></td><td>Exécute (avec bruit dépolarisant en option), vérifie, exporte en OpenQASM 3, OpenQASM 2, QIR ou SQIR</td></tr>
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Refait les mesures et régénère <code>docs/RESULTATS.md</code></td></tr>
-<tr><td><code>spatial serve compute|memory|runtime --token-file F</code></td><td>Lance un worker, un serveur de pages ou un exécuteur de binaires en bac à sable, en boucle locale</td></tr></tbody></table>
+<tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Lance un worker, un serveur de pages ou un exécuteur de binaires en bac à sable, en boucle locale ; avec une clé maître, les locataires reçoivent des identifiants à portée limitée</td></tr>
+<tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Crée une clé maître ; délivre un identifiant à portée, durée et quotas limités</td></tr></tbody></table>
 <p>Une erreur affiche une seule ligne <code>spatial: Type: message</code> et renvoie le code 1.</p>''',
         [("Erreur propre", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),
          ("Vérifier un programme", f'<span class="k">$ spatial q check examples/05_ghz_qft.sq</span>\n<span class="g">{out_block("q_qpu")}</span>')])
@@ -295,14 +296,15 @@ main {
 <li><b>Aucun code transmis.</b> Le worker n'exécute que des charges nommées dans une liste blanche.</li>
 <li><b>Micro-VM fermée.</b> Aucun périphérique réseau, aucun disque, aucun dossier hôte ; RAM plafonnée.</li>
 <li><b>Quota</b> de mémoire sur le serveur de pages.</li>
-<li><b>Canal chiffré.</b> Chaque enregistrement est scellé en AES-256-GCM avec une clé dérivée du jeton ; un enregistrement modifié ou rejoué est rejeté.</li>
+<li><b>Canal chiffré à confidentialité persistante.</b> Chaque enregistrement est scellé en AES-256-GCM ; les clés viennent d'un échange X25519 éphémère mêlé au secret : une session enregistrée reste illisible si le secret fuit plus tard. Un enregistrement modifié ou rejoué est rejeté.</li>
+<li><b>Permissions à portée limitée.</b> Un serveur lancé avec une clé maître délivre des identifiants avec des portées (<code>run:mandel_numba</code>, <code>mem:read</code>, <code>exec:elf</code>), une expiration et des quotas ; chaque requête, acceptée ou refusée, va dans le journal d'audit.</li>
 <li><b>Pages lointaines chiffrées et répliquées</b> avec <code>EncryptedBackend</code> et <code>ReplicatedBackend</code>.</li>
 <li><b>Registre infalsifiable en silence.</b> Les mesures sont chaînées par hachage ; <code>Ledger.verify()</code> repère une ligne modifiée.</li></ul>
 <h2>Pas encore en place</h2>
-<ul><li>Confidentialité persistante et identité des pairs : ajouter TLS ou WireGuard avant tout usage hors boucle locale.</li>
-<li>Permissions par utilisateur ou par locataire, quotas CPU, journal signé.</li>
+<ul><li>Une revue de sécurité indépendante. Aucune n'a été faite.</li>
+<li>Identité par certificat (le secret est l'identité), journal d'audit <i>signé</i>, révocation et compteurs qui survivent à un redémarrage.</li>
 <li>Bac à sable pour des charges arbitraires de tiers.</li></ul>
-<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le canal n'a ni confidentialité persistante ni identité par utilisateur.</div>''',
+<div class="callout warn"><b>Ne pas exposer</b>N'utilise pas <code>--allow-remote</code> sur un réseau que tu ne contrôles pas : le protocole n'a pas fait l'objet d'une revue indépendante.</div>''',
         [("Refus d'une adresse publique", '<span class="d">RpcServer(handler, token, host="0.0.0.0")\n→ PermissionError: refusing to bind a\n  non-loopback address without\n  allow_remote=True (explicit user\n  consent required to expose this machine)</span>')])
 
     doc("results", "Résultats", "Chiffres mesurés le 14 novembre 2026 sur un MacBook Pro 2017 (Intel i7-7660U, 2 cœurs, 16 Go, macOS 13.7.8), sur secteur.",
@@ -313,6 +315,7 @@ main {
 <tr><td>GPU intégré (Metal, float32)</td><td>20 à 33× les deux cœurs, face à une référence CPU non vectorisée</td></tr>
 <tr><td>Mémoire du système</td><td>macOS tient 7,3 Gio de pages dans 2,1 Gio (taux 3,4)</td></tr>
 <tr><td>Étages + SSD</td><td>33,5 Mo de RAM locale pour 134 Mo ; 80,5 µs/accès contre 0,76 µs</td></tr>
+<tr><td>Jeu de données plus grand que la RAM</td><td>24 Gio avec un budget de 512 Mio sur un Mac de 16 Gio : 0 page corrompue sur 2 648 vérifiées, pic de RAM du processus 578 Mio, environ 5 ms par accès aléatoire (sur disque, une seule exécution)</td></tr>
 <tr><td>Micro-VM Linux (HVF)</td><td>Démarrage 0,88 s ; calcul à 1,04× le natif</td></tr>
 <tr><td>SPATIAL Q</td><td>Fidélité 1,000 face à Qiskit jusqu'à 16 qubits ; VQE à l'énergie exacte</td></tr>
 <tr><td>SPATIAL Q sur matériel réel</td><td>5 circuits sur ibm_marrakesh ; le simulateur avec erreur de lecture asymétrique réduit de moitié l'écart avec la machine (un seul jeu de paramètres)</td></tr></tbody></table>
@@ -328,10 +331,10 @@ main {
 <tr><td>Pas de CXL, RDMA, NPU, QPU</td><td>Étudiés sur documents seulement</td></tr>
 <tr><td>Énergie non mesurable</td><td>Coûts énergétiques estimés</td></tr>
 <tr><td>Windows</td><td>Un programme console exécuté sous Wine ; applications graphiques non testées</td></tr>
-<tr><td>Ni confidentialité persistante ni identité par utilisateur</td><td>Ne pas exposer à un réseau non maîtrisé</td></tr>
+<tr><td>Protocole sans revue indépendante ; pas de certificats</td><td>Ne pas exposer à un réseau non maîtrisé</td></tr>
 <tr><td>Simulation quantique exacte</td><td>~27 qubits ici, bornés par la RAM</td></tr>
 <tr><td>Domaines AI, scientifique, simulation, intelligence, holographie</td><td>Premiers composants seulement (modèle jouet, petits solveurs, optique numérique)</td></tr></tbody></table>
-<p>La liste détaillée et à jour est dans <code>docs/LIMITATIONS.md</code> (en anglais).</p>''',
+<p>La liste détaillée et à jour est dans <code>docs/LIMITATIONS.md</code> (en anglais) ; chaque test non fait, avec la façon de le lancer, est dans <code>docs/TESTS_NOT_DONE.md</code>.</p>''',
         [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nAI / scientifique / simulation /\nintelligence / holographique\n  first-components</span>')])
 
 
