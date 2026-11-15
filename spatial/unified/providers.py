@@ -29,6 +29,9 @@ ROOT = Path(__file__).resolve().parents[2]
 FAMILIES = {
     "mandel": dict(variants={"python": "mandel_python", "numpy": "mandel_numpy", "numba_jit": "mandel_numba",
                              "numba_threads": "mandel_numba_parallel"}, scale="n", exp=2.0, min=8, exact=True),
+    # one job, three devices: the planner picks by measured cost (CPU for small sizes, the GPU once its fixed cost is amortised)
+    "mandel_f32": dict(variants={"cpu": "mandel_f32_cpu", "gpu_metal": "mandel_f32_metal", "gpu_cuda": "mandel_f32_cuda"},
+                       scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "heat": dict(variants={"numpy": "heat_numpy", "numba": "heat_numba"}, scale="steps", exp=1.0, min=2, exact=False),
     "nbody": dict(variants={"cpu": "nbody"}, scale="steps", exp=1.0, min=2, exact=False),
     "hologram": dict(variants={"cpu": "hologram_peak"}, scale="n", exp=2.0, min=32, exact=True),
@@ -37,8 +40,19 @@ FAMILIES = {
 }
 
 
-def _same(a, b, exact: bool) -> bool:
-    return a == b if exact else math.isclose(a, b, rel_tol=1e-6, abs_tol=1e-12)
+def _same(a, b, exact: bool, tol: float = 1e-6) -> bool:
+    return a == b if exact else math.isclose(a, b, rel_tol=tol, abs_tol=1e-12)
+
+
+def _variant_available(workload: str) -> str | None:
+    """None if the variant can run here, else why not."""
+    if workload == "mandel_f32_metal":
+        from ..fabric import metal
+        return None if metal.available() else "no Metal GPU (macOS with swiftc is required)"
+    if workload == "mandel_f32_cuda":
+        from ..fabric import cuda
+        return None if cuda.available() else "no NVIDIA GPU usable by numba.cuda on this machine"
+    return None
 
 
 def _best_of(fn, min_total_s: float = 0.01, max_reps: int = 25):
@@ -74,6 +88,10 @@ class ComputeProvider(Provider):
         s1, s2 = (s, s) if small else (max(fam["min"], s // 8), max(fam["min"] * 2, s // 4))
         out, ref = [], None
         for vname, wname in fam["variants"].items():
+            why = _variant_available(wname)
+            if why:
+                out.append(Option("compute", vname, False, why, isolated=None, basis="device not available"))
+                continue
             workloads.run(wname, **{**params, scale: fam["min"]})                 # warm-up (JIT), not timed
             t1, r1 = _best_of(lambda: workloads.run(wname, **{**params, scale: s1}))
             if small:
@@ -87,11 +105,12 @@ class ComputeProvider(Provider):
                     est, basis = a_ + b_ * wf, f"probe 1/8+1/4, affine fit"
                 else:                                      # noisy probes: fall back to proportional scaling from the larger one
                     est, basis = t2 * wf / w2, "probe 1/4, proportional"
-            o = Option("compute", vname, True, est_time_s=est, rate_usd_h=planner.prices.local_usd_per_hour, isolated=None, basis=basis,
+            o = Option("compute", vname, True, est_time_s=est, rate_usd_h=planner.prices.device_usd_h.get(vname, planner.prices.local_usd_per_hour),
+                       isolated=None, basis=basis,
                        run=(lambda wn=wname: workloads.run(wn, **params)), meta={"workload": wname, "params": params})
             if ref is None:
                 ref = r
-            elif not _same(r, ref, fam["exact"]):
+            elif not _same(r, ref, fam["exact"], fam.get("tol", 1e-6)):
                 o.reject("result differs from the other variants on the probe")
             out.append(planner.calibrate("compute", o))
         return out

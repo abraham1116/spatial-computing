@@ -41,7 +41,11 @@ def timed(fn, reps=3):
 def main():
     pl = Planner(ledger=Ledger(os.path.join(tempfile.mkdtemp(), "plan.jsonl")))
     held_out = os.environ.get("HELDOUT") == "1"       # sizes and parameters never used while tuning the planner
-    if held_out:
+    fabric = os.environ.get("FABRIC") == "1"          # one job, several devices (CPU / Metal GPU / NVIDIA GPU when present)
+    if fabric:
+        cases = [("mandel_f32", Job.compute("mandel_f32", n=n, iters=iters)) for n, iters in
+                 ((32, 100), (128, 100), (300, 150), (600, 150), (1024, 200), (2048, 200), (3000, 300))]
+    elif held_out:
         cases = ([("mandel", Job.compute("mandel", n=n, iters=iters)) for n, iters in ((24, 100), (96, 250), (250, 100), (600, 60))]
                  + [("heat", Job.compute("heat", n=n, steps=steps)) for n, steps in ((40, 100), (90, 300), (160, 150))]
                  + [("quantum", Job.quantum(LAYERED, "layered", [q, 2], 500)) for q in (6, 12, 15, 17, 19)])
@@ -69,8 +73,8 @@ def main():
            "max_regret": max(r["regret"] for r in rows),
            "median_abs_estimate_error_pct": statistics.median(abs(r["estimate_error_pct"]) for r in rows), "rows": rows,
            "note": "one machine, equal price per hour for every option, so cheapest = fastest"}
-    out["held_out"] = held_out
-    save("unified_heldout" if held_out else "unified", out)
+    out["held_out"], out["fabric"] = held_out, fabric
+    save("unified_fabric" if fabric else ("unified_heldout" if held_out else "unified"), out)
     print({k: round(v, 3) if isinstance(v, float) else v for k, v in out.items() if k != "rows"})
 
 

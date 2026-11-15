@@ -171,6 +171,13 @@ def cmd_optimize(a):
     return 0
 
 
+def cmd_devices(a):
+    from .fabric import discover
+    for d in discover():
+        print(f"{d.id:<8}{d.kind:<5}{d.vendor:<22}{d.name:<40}{'available' if d.available else 'UNAVAILABLE'}" + (f"  ({d.note})" if d.note else ""))
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -248,6 +255,7 @@ def main(argv=None):
     p.add_argument("--hub", help="host:port of a fleet hub: nodes become options"); p.add_argument("--token-file")
     p.add_argument("--execute", action="store_true", help="run the chosen option and compare with the estimate")
     p.set_defaults(fn=cmd_optimize)
+    sub.add_parser("devices", help="compute devices the planner can use on this machine (CPU, Metal GPU, NVIDIA GPU)").set_defaults(fn=cmd_devices)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")

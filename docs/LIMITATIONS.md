@@ -27,6 +27,7 @@ The list of tests not yet done, with how to run each one, is in [TESTS_NOT_DONE.
 
 | Component | Limit |
 |---|---|
+| Fabric (devices) | CPU and Metal GPU tested on one Mac; the NVIDIA `numba.cuda` path has never run on real NVIDIA hardware; one job family; no host-device transfer model. See [FABRIC.md](FABRIC.md). |
 | Planner (the one objective) | Estimates come from probes and measured constants on one machine; calibration is a median of past ratios; dollar costs use caller-supplied prices (default local price is an assumption); decision quality measured on 25 cases of numerical and quantum-simulation jobs only. See [OBJECTIVE.md](OBJECTIVE.md). |
 | Fleet (agent + hub) | Single-process hub with in-memory state (no persistence, no high availability), no dashboard UI, heuristic recommendations, pull-based placement that does not move running work. Validated with 3 agents on one machine only (all three report the same CPU load). See [INFRASTRUCTURE.md](INFRASTRUCTURE.md). |
 | Protocol SWP/2 | Encrypted, authenticated and forward-secret; scoped credentials with quotas and a hash-chained audit log. Not independently reviewed; no certificates (the secret is the identity); revocation and usage counters live in server memory; one request at a time per connection. Do not expose to an untrusted network. |

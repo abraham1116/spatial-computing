@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0
+- New: virtual accelerator fabric. The same job (`mandel_f32`) has CPU, Metal GPU and NVIDIA (`numba.cuda`, never run on real hardware) implementations; the planner picks by measured cost. 7 of 7 device choices correct on the reference Mac (CPU up to n = 600, Metal GPU from n = 1024). `spatial devices` lists the devices.
+- Per-device prices (`Prices.device_usd_h`).
+- Docs: `docs/FABRIC.md`.
+
 ## 0.10.0
 - New: one objective for every engine. `spatial.unified.Planner` and `spatial optimize`: each engine proposes priced options for a job (compute/simulation/scientific/holographic families, fleet nodes, tiered memory, runtime routes, quantum backends, AI cache); one function ranks them by cost within the stated constraints; executing a plan records the estimate beside reality and calibrates the next one.
 - Science, simulation and holographic workloads (heat, N-body, hologram, option pricing, ODE) join the allow-list, so the planner and the fleet can run them.

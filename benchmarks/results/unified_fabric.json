@@ -1,0 +1,199 @@
+{
+ "context": {
+  "date": "2026-11-15 19:19:31 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t83%; charging; 0:59 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794766771.524527,
+   "cpu_percent": 12.6,
+   "load1": 3.1728515625,
+   "ram_total": 17179869184,
+   "ram_available": 6957502464,
+   "ram_used_percent": 59.5,
+   "swap_used": 3990355968,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7265484800,
+   "compressor_physical_bytes": 978444288,
+   "compressor_ratio": 7.43,
+   "compressor_saved_bytes": 6287040512,
+   "swapins": 1988419,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "cases": 7,
+ "correct": 7,
+ "accuracy": 1.0,
+ "mean_regret": 1.0,
+ "max_regret": 1.0,
+ "median_abs_estimate_error_pct": 13.114272242582194,
+ "rows": [
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 32,
+     "iters": 100
+    }
+   },
+   "chosen": "cpu",
+   "truly_fastest": "cpu",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -23.46472598607638,
+   "measured_s": {
+    "cpu": 0.00011867599096149206,
+    "gpu_metal": 0.02386172499973327
+   },
+   "estimated_s": {
+    "cpu": 9.082899487111717e-05,
+    "gpu_metal": 0.023803513002349064
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 128,
+     "iters": 100
+    }
+   },
+   "chosen": "cpu",
+   "truly_fastest": "cpu",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -29.64387771445168,
+   "measured_s": {
+    "cpu": 0.0007986339915078133,
+    "gpu_metal": 0.02365883599850349
+   },
+   "estimated_s": {
+    "cpu": 0.0005618879076791927,
+    "gpu_metal": 0.3800001440104097
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 300,
+     "iters": 150
+    }
+   },
+   "chosen": "cpu",
+   "truly_fastest": "cpu",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -8.735174520253915,
+   "measured_s": {
+    "cpu": 0.0056663430004846305,
+    "gpu_metal": 0.02495963299588766
+   },
+   "estimated_s": {
+    "cpu": 0.005171378050476106,
+    "gpu_metal": 0.057889634656551336
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 600,
+     "iters": 150
+    }
+   },
+   "chosen": "cpu",
+   "truly_fastest": "cpu",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 1.2739049091511008,
+   "measured_s": {
+    "cpu": 0.02322724601253867
+   },
+   "estimated_s": {
+    "cpu": 0.023523139039753005
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 1024,
+     "iters": 200
+    }
+   },
+   "chosen": "gpu_metal",
+   "truly_fastest": "gpu_metal",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 8.282191890861334,
+   "measured_s": {
+    "gpu_metal": 0.032527007002499886,
+    "cpu": 0.0899707619973924
+   },
+   "estimated_s": {
+    "gpu_metal": 0.03522095613880083,
+    "cpu": 0.08575031709915493
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 2048,
+     "iters": 200
+    }
+   },
+   "chosen": "gpu_metal",
+   "truly_fastest": "gpu_metal",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": 54.13341961079424,
+   "measured_s": {
+    "gpu_metal": 0.0574802949995501,
+    "cpu": 0.3704097270092461
+   },
+   "estimated_s": {
+    "gpu_metal": 0.08859634428517893,
+    "cpu": 0.34944980185537133
+   }
+  },
+  {
+   "family": "mandel_f32",
+   "job": {
+    "family": "mandel_f32",
+    "params": {
+     "n": 3000,
+     "iters": 300
+    }
+   },
+   "chosen": "gpu_metal",
+   "truly_fastest": "gpu_metal",
+   "correct": true,
+   "regret": 1.0,
+   "estimate_error_pct": -13.114272242582194,
+   "measured_s": {
+    "gpu_metal": 0.10009235699544661,
+    "cpu": 1.1287539610057138
+   },
+   "estimated_s": {
+    "gpu_metal": 0.08696597280504648,
+    "cpu": 1.114919829997234
+   }
+  }
+ ],
+ "note": "one machine, equal price per hour for every option, so cheapest = fastest",
+ "held_out": false,
+ "fabric": true
+}

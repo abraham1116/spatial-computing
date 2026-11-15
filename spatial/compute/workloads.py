@@ -73,6 +73,27 @@ if HAVE_NUMBA:
                 total += k
         return total
 
+    @njit(cache=True, parallel=True)
+    def _mandel_f32_cpu(n, iters):
+        total = 0
+        fn = np.float32(n)
+        for i in prange(n):
+            ci = np.float32(-1.3) + np.float32(2.6) * np.float32(i) / fn
+            row = 0
+            for j in range(n):
+                cr = np.float32(-2.0) + np.float32(2.6) * np.float32(j) / fn
+                zr = np.float32(0.0)
+                zi = np.float32(0.0)
+                k = 0
+                while k < iters and zr * zr + zi * zi <= np.float32(4.0):
+                    t = zr * zr - zi * zi + cr
+                    zi = np.float32(2.0) * zr * zi + ci
+                    zr = t
+                    k += 1
+                row += k
+            total += row
+        return total
+
     @njit(cache=True, parallel=True, fastmath=False)
     def _mandel_nb_par(n, iters, r0, r1):
         total = 0
@@ -100,6 +121,25 @@ def mandel_numba(n: int, iters: int, r0: int = 0, r1: int | None = None) -> int:
 
 def mandel_numba_parallel(n: int, iters: int, r0: int = 0, r1: int | None = None) -> int:
     return int(_mandel_nb_par(n, iters, r0, n if r1 is None else r1))
+
+
+def mandel_f32_cpu(n: int, iters: int) -> int:
+    """Fabric: float32 Mandelbrot on the CPU (Numba, all cores). Same job as the GPU variants."""
+    return int(_mandel_f32_cpu(n, iters))
+
+
+def mandel_f32_metal(n: int, iters: int) -> int:
+    """Fabric: the same job on a Metal GPU (macOS)."""
+    from ..fabric import metal
+    return int(metal.mandel(n, iters, 1)["checksum"])
+
+
+def mandel_f32_cuda(n: int, iters: int) -> int:
+    """Fabric: the same job on an NVIDIA GPU. Never run on real NVIDIA hardware."""
+    from ..fabric import cuda
+    if not cuda.available():
+        raise RuntimeError("no CUDA device visible to numba")
+    return cuda.mandel(n, iters)
 
 
 def montecarlo_pi(samples: int, seed: int = 0) -> float:
@@ -188,6 +228,9 @@ REGISTRY = {
     "montecarlo_pi": montecarlo_pi,
     "sha256_chain": sha256_chain,
     "matmul": matmul,
+    "mandel_f32_cpu": mandel_f32_cpu,
+    "mandel_f32_metal": mandel_f32_metal,
+    "mandel_f32_cuda": mandel_f32_cuda,
     "heat_numpy": heat_numpy,
     "heat_numba": heat_numba,
     "nbody": nbody,

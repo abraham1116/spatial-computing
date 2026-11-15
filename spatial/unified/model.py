@@ -25,6 +25,7 @@ class Prices:
     local_usd_per_hour: float = 0.134
     ram_usd_gb_hour: float = 0.0          # cost of holding a GB in RAM for an hour (0 = not charged)
     storage_usd_gb_hour: float = 0.0      # same for SSD/object storage
+    device_usd_h: dict = field(default_factory=dict)   # price per hour of a specific device/variant, e.g. {"gpu_cuda": 1.2}
     qpu_usd_per_shot: float = 0.0         # provider tariff, supplied by the caller
     qpu_usd_per_task: float = 0.0
     qpu_seconds_per_shot: float = 0.0

@@ -16,6 +16,10 @@ Everything that needs hardware or people is tracked, with how to run it, in [`do
 - [x] Current limitations in English (`docs/LIMITATIONS.md`, v0.5)
 - [ ] Publish to PyPI; English translation of the remaining reports in `docs/`
 
+## Virtual accelerator fabric
+- [x] One job on several devices chosen by measured cost: CPU and Metal GPU tested (v0.11); NVIDIA path written, never run
+- [ ] First run on a real NVIDIA GPU; more job families; host-to-device transfer model; AMD (ROCm) and remote GPUs
+
 ## Planner (one objective)
 - [x] Planner with providers for compute, fleet, memory, runtime, SPATIAL Q and the AI cache; probes, constraints, execution, estimate-versus-actual proof, calibration (v0.10)
 - [ ] Per-node speed measurement, GPU options, real invoices, a learned runtime model

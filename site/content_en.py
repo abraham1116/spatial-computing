@@ -33,7 +33,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">One objective · v0.10.0 · open source</p>
+<p class="eyebrow">One objective · v0.11.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. A planner prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines; an agent on each machine and a hub keep the measurements honest.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -128,7 +128,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.10.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.11.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -144,7 +144,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.10.0. Four engines are operational and tested (111 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.11.0. Four engines are operational and tested (115 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -181,6 +181,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <table><thead><tr><th>Engine</th><th>Options it proposes</th></tr></thead><tbody>
 <tr><td>Compute, Simulation, Scientific, Holographic</td><td>Each variant of a numerical job (e.g. pure Python, NumPy, Numba, multi-core), probed on reduced problems and checked against the others</td></tr>
 <tr><td>Fleet</td><td>The same job on each live node, at the node's own price per hour</td></tr>
+<tr><td>Accelerator fabric</td><td>The same job on the CPU, a Metal GPU or an NVIDIA GPU (the NVIDIA path is written, never run on real hardware); on the reference Mac the planner picked the faster device in 7 of 7 sizes</td></tr>
 <tr><td>Tiered memory</td><td>A dataset in RAM or tiered over SSD, with tier latencies measured on this machine</td></tr>
 <tr><td>Runtime</td><td>Every route for a binary (native, WASM, micro-VM, Wine) with its isolation and overhead</td></tr>
 <tr><td>SPATIAL Q</td><td>Exact simulator, Aer, or real hardware (only if allowed and priced)</td></tr>
@@ -342,6 +343,7 @@ main {
 <tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Redo the measurements and regenerate the results table</td></tr>
 <tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Start a worker, a page server or a sandboxed binary runner, on loopback; with a master key, tenants get scoped credentials</td></tr>
 <tr><td><code>spatial optimize compute|binary|quantum|dataset|kv [--objective cost|time --deadline S --max-ram-gib G --isolated --allow-qpu --execute]</code></td><td>The one objective: price every option for a job, pick the cheapest, optionally run it and compare with the estimate</td></tr>
+<tr><td><code>spatial devices</code></td><td>Compute devices the planner can use on this machine</td></tr>
 <tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Run a fleet agent: measure this machine, report to a hub, run allow-listed tasks</td></tr>
 <tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>See the fleet, get recommendations with their evidence, submit and read tasks</td></tr>
 <tr><td><code>spatial serve hub --master-key-file F</code></td><td>Start the fleet hub</td></tr>

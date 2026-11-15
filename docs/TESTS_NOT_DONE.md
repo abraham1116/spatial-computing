@@ -26,6 +26,7 @@ Last reviewed: v0.9.0.
 | Pass (G1) | `nvidia-smi` detection (parser tested, never run for real) reports the right name and VRAM; throughput numbers recorded in `benchmarks/results/gpu_node.json`. |
 | Design (G2) | Real LLM: run vLLM with prefix caching on a small open model; replay a prompt trace; record GPU utilization, tokens per second and cost per million tokens with and without KV-cache offload (LMCache or llm-d). Feed measured restore bandwidth and prefill speed into the private KV policy and check its restore-versus-recompute choice against reality. |
 | Pass (G2) | The policy picks the cheaper option on at least 90 % of prompts, and the end-to-end cost per token falls by at least 20 % against a tuned baseline (the go/no-go figure of the business plan). If not, say so and revisit the thesis. |
+| Design (G2b) | Run `mandel_f32_cuda` through the planner on the real NVIDIA machine: the code in `spatial/fabric/cuda.py` has never executed. Pass: result within 1e-3 of the CPU variant, the planner picks the GPU for large sizes, estimate error comparable to the Metal case. See [FABRIC.md](FABRIC.md). |
 | Design (G3) | Scheduler GPU strategies (CUDA and Metal) next to the CPU ones, same checksum rule. |
 | Design (G4) | Cloud provider integration: create, run, destroy an instance from the CLI; compare the cost model's estimate with the actual bill. |
 
@@ -75,7 +76,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 |---|---|---|
 | H-1 | Decision quality on a second and third machine (estimates are per machine; does the planner still pick the fastest?) | ready: `python benchmarks/bench_unified.py` and `HELDOUT=1 ...` on each machine |
 | H-2 | Real billed money: run on a rented node and compare the planner's dollar estimate with the invoice | design, needs a cloud account |
-| H-3 | GPU variants as options (CUDA kernels next to the CPU ones) and the GPU price per hour | design, needs an NVIDIA machine |
+| H-3 | NVIDIA GPU as a planner option on a real GPU, with its price per hour (the Metal GPU path is tested; the CUDA path is not) | design, needs an NVIDIA machine |
 | H-4 | Many more job families and sizes (the 25 cases are numerical kernels and circuit simulation only) | design |
 | H-5 | A learned runtime model instead of probes plus a median correction; compare accuracy and probe cost | design |
 | H-6 | Real QPU option priced with the provider's tariff and compared with simulators on cost and fidelity | design, needs tariff and QPU time |
