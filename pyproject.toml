@@ -20,7 +20,7 @@ build = ["ziglang>=0.13"]
 dev = ["pytest>=8"]
 
 [project.urls]
-Homepage = "https://spatial-computing.vercel.app"
+Homepage = "https://spatial-computing-ecru.vercel.app"
 Repository = "https://github.com/abraham1116/spatial-computing"
 
 [project.scripts]

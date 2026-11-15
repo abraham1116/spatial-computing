@@ -42,4 +42,4 @@ spatial bench all    # refait les mesures et régénère le tableau
 
 Le cœur de ce dépôt est sous licence [Apache-2.0](LICENSE). Les politiques avancées de placement et de coût sont développées dans un paquet privé séparé.
 
-Documentation complète : <https://spatial-computing.vercel.app> (anglais et français). Rapports techniques dans [`docs/`](docs/) (en français).
+Documentation complète : <https://spatial-computing-ecru.vercel.app> (anglais et français). Rapports techniques dans [`docs/`](docs/) (en français).

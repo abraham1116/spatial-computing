@@ -4,7 +4,7 @@ Ce fichier est généré par `benchmarks/report.py` à partir des fichiers JSON 
 
 ## Test 2 — CPU : local, optimisé, parallèle, distribué, distant
 
-*Mesuré le 2026-11-14 23:58:02 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0 (id=6815843)	23%; charging; 2:25 remaining present: true).*
+*Mesuré le 2026-11-14 23:58:02 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	23%; charging; 2:25 remaining present: true).*
 
 Problème : la même somme de contrôle Mandelbrot calculée par chaque stratégie ; une stratégie ne compte que si son résultat est identique à la référence. La compilation JIT est faite avant le chronométrage (durée : 1.65 s, pool de processus inclus). « Distant » et « distribué » utilisent un worker qui est **un processus sur ce même Mac** (boucle locale) : ils mesurent le surcoût du protocole, pas l'apport d'une seconde machine. La colonne CPU ne compte que le processus appelant et ses enfants terminés : elle **exclut** le worker et le pool persistant, d'où des valeurs proches de zéro sur ces lignes.
 
@@ -49,7 +49,7 @@ Lecture :
 
 ## Test 3 — GPU local (Metal) contre CPU
 
-*Mesuré le 2026-11-14 23:58:49 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0 (id=6815843)	24%; charging; 2:21 remaining present: true).*
+*Mesuré le 2026-11-14 23:58:49 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	24%; charging; 2:21 remaining present: true).*
 
 Même calcul en float32 des deux côtés (le GPU intégré n'a pas de float64). Le noyau GPU est un compute shader Metal compilé à l'exécution ; la référence CPU est Numba multi-fils. Les arrondis diffèrent (contraction FMA) : les sommes de contrôle sont comparées en écart relatif.
 
@@ -68,7 +68,7 @@ GPU distant : not tested: no remote GPU host or cloud account configured.
 
 ## Test 1 — Mémoire
 
-*Mesuré le 2026-11-14 23:54:00 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0 (id=6815843)	19%; charging; 2:23 remaining present: true).*
+*Mesuré le 2026-11-14 23:54:00 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	19%; charging; 2:23 remaining present: true).*
 
 ### A. État réel de la mémoire du Mac
 
@@ -125,7 +125,7 @@ Lecture :
 
 ## Test 4 — Runtime logiciel
 
-*Mesuré le 2026-11-14 23:55:57 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0 (id=6815843)	21%; charging; 2:21 remaining present: true).*
+*Mesuré le 2026-11-14 23:55:57 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	21%; charging; 2:21 remaining present: true).*
 
 Un même programme C compilé pour quatre cibles ; le moteur inspecte chaque binaire, choisit une route et l'exécute. La somme imprimée doit valoir 163059162 partout (n = 1500, itérations = 300).
 
@@ -155,7 +155,7 @@ Lecture :
 
 ## Test 5 — SPATIAL Q
 
-*Mesuré le 2026-11-14 23:56:15 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0 (id=6815843)	21%; charging; 2:21 remaining present: true).*
+*Mesuré le 2026-11-14 23:56:15 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	21%; charging; 2:21 remaining present: true).*
 
 Tout ce qui suit est de la **simulation classique** de circuits quantiques. Aucun QPU n'a été utilisé ; aucune accélération quantique n'est mesurée.
 

@@ -6,7 +6,7 @@
   "os": "macOS 13.7.8",
   "arch": "x86_64",
   "power_source": "Now drawing from 'AC Power'",
-  "battery": "-InternalBattery-0 (id=6815843)\t24%; charging; 2:21 remaining present: true",
+  "battery": "-InternalBattery-0\t24%; charging; 2:21 remaining present: true",
   "energy_measurable": false,
   "system_before": {
    "ts": 1794697129.033589,
