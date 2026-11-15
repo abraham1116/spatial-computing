@@ -33,7 +33,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">One objective · v0.11.0 · open source</p>
+<p class="eyebrow">One objective · v0.12.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. A planner prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines; an agent on each machine and a hub keep the measurements honest.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -128,7 +128,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.11.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.12.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -144,7 +144,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.11.0. Four engines are operational and tested (115 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.12.0. Four engines are operational and tested (142 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -182,6 +182,8 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <tr><td>Compute, Simulation, Scientific, Holographic</td><td>Each variant of a numerical job (e.g. pure Python, NumPy, Numba, multi-core), probed on reduced problems and checked against the others</td></tr>
 <tr><td>Fleet</td><td>The same job on each live node, at the node's own price per hour</td></tr>
 <tr><td>Accelerator fabric</td><td>The same job on the CPU, a Metal GPU or an NVIDIA GPU (the NVIDIA path is written, never run on real hardware); on the reference Mac the planner picked the faster device in 7 of 7 sizes</td></tr>
+<tr><td>Portable kernels</td><td>One kernel source, run on the CPU or a Metal GPU (CUDA C is generated, never run); the integer kernel is bit-identical on both; device choice right in 4 of 6 cases, misses at the crossover</td></tr>
+<tr><td>Virtual interconnect</td><td>Encrypted all-reduce between workers (ring, halving-doubling, tree), algorithm chosen by a measured cost model; on one machine it is about 3,000 times below NVLink 5 on bandwidth, so it is a software layer, not a replacement</td></tr>
 <tr><td>Tiered memory</td><td>A dataset in RAM or tiered over SSD, with tier latencies measured on this machine</td></tr>
 <tr><td>Runtime</td><td>Every route for a binary (native, WASM, micro-VM, Wine) with its isolation and overhead</td></tr>
 <tr><td>SPATIAL Q</td><td>Exact simulator, Aer, or real hardware (only if allowed and priced)</td></tr>

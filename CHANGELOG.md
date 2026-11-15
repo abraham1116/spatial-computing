@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+- New: virtual interconnect (`spatial.interconnect`): ring, halving-doubling and tree all-reduce plus broadcast between processes over SWP/2, with an alpha-beta cost model. Measured: the shared-link model picked the fastest algorithm in 1 of 6 sizes; calibrated per algorithm, 4 of 6 on an unseen rank count. About 3,000x below NVLink 5 on bandwidth (vendor figure).
+- New: portable kernels (`spatial.kernel`): one kernel source, Numba CPU, generated Metal and generated CUDA C (CUDA never run). Integer kernel bit-identical on CPU and Metal; planner families `pk_mandel` and `pk_collatz` (4 of 6 device choices right).
+- Fleet hub: weighted fair share between tenants, all-or-nothing gang scheduling with node holds, cache-affinity routing. Still pull-based: nothing running is preempted.
+- Docs: `docs/INTERCONNECT.md`, `docs/KERNELS.md` (includes why ZLUDA is not used).
+
 ## 0.11.0
 - New: virtual accelerator fabric. The same job (`mandel_f32`) has CPU, Metal GPU and NVIDIA (`numba.cuda`, never run on real hardware) implementations; the planner picks by measured cost. 7 of 7 device choices correct on the reference Mac (CPU up to n = 600, Metal GPU from n = 1024). `spatial devices` lists the devices.
 - Per-device prices (`Prices.device_usd_h`).

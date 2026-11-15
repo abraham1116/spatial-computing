@@ -142,6 +142,28 @@ def mandel_f32_cuda(n: int, iters: int) -> int:
     return cuda.mandel(n, iters)
 
 
+def _pk(name: str, device: str, n: int, **params) -> int:
+    from ..kernel.library import LIBRARY
+    return int(LIBRARY[name].run(device, n, **params).astype("uint64").sum())
+
+
+def pk_mandel_cpu(n: int, iters: int) -> int:
+    """Portable kernel (spatial.kernel) on the CPU: the SAME source as the Metal variant."""
+    return _pk("mandelbrot", "cpu", n, iters=iters)
+
+
+def pk_mandel_metal(n: int, iters: int) -> int:
+    return _pk("mandelbrot", "metal", n, iters=iters)
+
+
+def pk_collatz_cpu(n: int, limit: int) -> int:
+    return _pk("collatz", "cpu", n, limit=limit)
+
+
+def pk_collatz_metal(n: int, limit: int) -> int:
+    return _pk("collatz", "metal", n, limit=limit)
+
+
 def montecarlo_pi(samples: int, seed: int = 0) -> float:
     rng = np.random.default_rng(seed)
     inside = 0
@@ -231,6 +253,10 @@ REGISTRY = {
     "mandel_f32_cpu": mandel_f32_cpu,
     "mandel_f32_metal": mandel_f32_metal,
     "mandel_f32_cuda": mandel_f32_cuda,
+    "pk_mandel_cpu": pk_mandel_cpu,
+    "pk_mandel_metal": pk_mandel_metal,
+    "pk_collatz_cpu": pk_collatz_cpu,
+    "pk_collatz_metal": pk_collatz_metal,
     "heat_numpy": heat_numpy,
     "heat_numba": heat_numba,
     "nbody": nbody,

@@ -5,6 +5,8 @@
 <tr><td>Compute, Simulation, Scientifique, Holographique</td><td>Chaque variante d'un calcul numérique (Python pur, NumPy, Numba, multi-cœurs), sondée sur des problèmes réduits et comparée aux autres</td></tr>
 <tr><td>Flotte</td><td>Le même travail sur chaque nœud en ligne, au prix horaire du nœud</td></tr>
 <tr><td>Fabric d'accélérateurs</td><td>Le même travail sur le CPU, un GPU Metal ou un GPU NVIDIA (le chemin NVIDIA est écrit, jamais exécuté sur du vrai matériel) ; sur le Mac de référence le planificateur a choisi le périphérique le plus rapide pour 7 tailles sur 7</td></tr>
+<tr><td>Noyaux portables</td><td>Une source de noyau, exécutée sur le CPU ou un GPU Metal (le C CUDA est généré, jamais exécuté) ; le noyau entier est identique au bit près sur les deux ; bon choix de périphérique dans 4 cas sur 6, erreurs au point de croisement</td></tr>
+<tr><td>Interconnexion virtuelle</td><td>All-reduce chiffré entre processus (anneau, halving-doubling, arbre), algorithme choisi par un modèle de coût mesuré ; sur une seule machine, environ 3 000 fois sous NVLink 5 en bande passante : c'est une couche logicielle, pas un remplaçant</td></tr>
 <tr><td>Mémoire à étages</td><td>Un jeu de données en RAM ou en étages sur SSD, avec les latences mesurées sur cette machine</td></tr>
 <tr><td>Runtime</td><td>Chaque route pour un binaire (natif, WASM, micro-VM, Wine) avec son isolation et son surcoût</td></tr>
 <tr><td>SPATIAL Q</td><td>Simulateur exact, Aer, ou matériel réel (seulement si autorisé et chiffré)</td></tr>

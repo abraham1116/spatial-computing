@@ -161,3 +161,67 @@ def test_agent_buffers_while_the_hub_is_down_and_delivers_on_reconnect():
             srv.stop()
     finally:
         agent.stop()
+
+
+def test_fair_share_gives_the_idle_tenant_the_next_slot_and_honours_weights():
+    clk = Clock(); hub = Hub(clock=clk)
+    feed(hub, "n1", 10, clk=clk)
+    a = [hub.submit("montecarlo_pi", {"samples": 1}, tenant="A") for _ in range(4)]
+    b = [hub.submit("montecarlo_pi", {"samples": 1}, tenant="B") for _ in range(2)]
+    order = []
+    for _ in range(6):
+        t = hub.poll("n1"); order.append(hub.task(t["id"])["tenant"])
+        clk.t += 10; hub.result("n1", t["id"], True, 0, wall_s=10)
+    assert order[:4] == ["A", "B", "A", "B"]                       # alternates while both have work: A cannot starve B
+    assert order[4:] == ["A", "A"]                                 # B is out of work, A takes the rest
+    # weights: B counts double, so it gets about two slots for each of A's
+    hub2 = Hub(clock=clk); feed(hub2, "n1", 10, clk=clk); hub2.set_weight("B", 2)
+    for _ in range(6): hub2.submit("montecarlo_pi", {"samples": 1}, tenant="A"); hub2.submit("montecarlo_pi", {"samples": 1}, tenant="B")
+    got = []
+    for _ in range(9):
+        t = hub2.poll("n1"); got.append(hub2.task(t["id"])["tenant"]); clk.t += 10; hub2.result("n1", t["id"], True, 0, wall_s=10)
+    assert got.count("B") == 6 and got.count("A") == 3
+    with pytest.raises(ValueError):
+        hub.set_weight("A", 0)
+    assert {r["tenant"] for r in hub.tenants()} == {"A", "B"}
+
+
+def test_gang_starts_only_when_every_member_can_and_holds_the_other_nodes():
+    clk = Clock(); hub = Hub(clock=clk, gang_hold_s=30)
+    feed(hub, "n1", 10, clk=clk); feed(hub, "n2", 10, clk=clk)
+    g = hub.submit_gang("montecarlo_pi", [{"samples": 1}] * 3)       # needs 3 nodes, only 2 exist
+    assert hub.poll("n1") is None and hub.poll("n2") is None         # all-or-nothing: nothing starts
+    feed(hub, "n3", 10, clk=clk)
+    first = hub.poll("n1")
+    assert first and hub.task(first["id"])["gang"] == g["gang"]
+    lone = hub.submit("montecarlo_pi", {"samples": 1}, priority=0)   # a better-priority task must not steal a held node
+    assert hub.poll("n2")["id"] in g["tasks"] and hub.poll("n3")["id"] in g["tasks"]
+    assert hub.task(lone)["state"] == "queued"
+
+
+def test_a_held_node_is_released_when_the_gang_does_not_complete():
+    clk = Clock(); hub = Hub(clock=clk, gang_hold_s=30)
+    for n in ("a", "b", "c"):
+        feed(hub, n, 10, clk=clk)
+    hub.submit_gang("montecarlo_pi", [{"samples": 1}] * 3)
+    assert hub.poll("a") is not None                                  # starts, holds b and c
+    only = hub.submit("montecarlo_pi", {"samples": 1}, priority=0)
+    assert hub.poll("b") is not None and hub.task(only)["state"] == "queued"      # b serves its gang, not the lone task
+    clk.t += 31                                                       # c never polled: the hold on c expires
+    assert hub.poll("c")["id"] == only
+
+
+def test_cache_affinity_prefers_the_node_that_holds_the_cache_then_gives_up_waiting():
+    clk = Clock(); hub = Hub(clock=clk, affinity_wait_s=5)
+    feed(hub, "n1", 10, clk=clk); feed(hub, "n2", 10, clk=clk)
+    t1 = hub.submit("montecarlo_pi", {"samples": 1}, needs={"affinity": "prompt-42"})
+    assert hub.poll("n1")["id"] == t1
+    hub.result("n1", t1, True, 0, wall_s=1)                           # n1 now holds the cache for this key
+    feed(hub, "n1", 10, clk=clk); feed(hub, "n2", 10, clk=clk)
+    t2 = hub.submit("montecarlo_pi", {"samples": 1}, needs={"affinity": "prompt-42"})
+    assert hub.poll("n2") is None                                     # n1 is free: n2 waits
+    assert hub.poll("n1")["id"] == t2
+    hub.result("n1", t2, True, 0, wall_s=1)
+    t3 = hub.submit("montecarlo_pi", {"samples": 1}, needs={"affinity": "prompt-42"})
+    clk.t += 6; feed(hub, "n1", 10, clk=clk); feed(hub, "n2", 10, clk=clk)
+    assert hub.poll("n2")["id"] == t3                                 # after the wait, anyone may take it

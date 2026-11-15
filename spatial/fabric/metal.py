@@ -44,3 +44,42 @@ def device_name() -> str | None:
         return mandel(8, 8, 1)["device"]
     except Exception:
         return None
+
+
+RUN_SRC = Path(__file__).with_name("metal_run.swift")
+RUN_BIN = CACHE / "metal_run"
+
+
+def _ensure_run_binary() -> Path:
+    if RUN_BIN.exists() and RUN_BIN.stat().st_mtime >= RUN_SRC.stat().st_mtime:
+        return RUN_BIN
+    if platform.system() != "Darwin" or not shutil.which("swiftc"):
+        raise RuntimeError("Metal backend needs macOS and swiftc")
+    CACHE.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["swiftc", "-O", str(RUN_SRC), "-o", str(RUN_BIN)], capture_output=True, text=True, timeout=600)
+    if r.returncode != 0:
+        raise RuntimeError("swiftc failed: " + r.stderr[-300:])
+    return RUN_BIN
+
+
+def run_kernel(k, n: int, params: dict, reps: int = 1, timing: dict | None = None):
+    """Run a portable Kernel (spatial.kernel) on the Metal GPU; returns the (n, n) uint32 output.
+    `timing`, if given, receives the GPU-side median seconds."""
+    import numpy as np
+    import tempfile
+    binary = _ensure_run_binary()
+    with tempfile.TemporaryDirectory() as d:
+        msl, out = Path(d) / "k.metal", Path(d) / "out.bin"
+        msl.write_text(k.to_metal())
+        args = [str(binary), str(msl), k.name, str(n), str(reps), str(out)]
+        args += [f"{t}:{float(params[p]) if t == 'float' else int(params[p])}" for p, t in k.params]
+        r = subprocess.run(args, capture_output=True, text=True, timeout=600)
+        try:
+            info = json.loads(r.stdout.strip().splitlines()[-1])
+        except Exception:
+            raise RuntimeError("Metal program failed: " + (r.stdout + r.stderr)[-300:])
+        if not info.get("ok"):
+            raise RuntimeError(info.get("error", "Metal error"))
+        if timing is not None:
+            timing.update(info)
+        return np.fromfile(out, dtype=np.uint32).reshape(n, n)

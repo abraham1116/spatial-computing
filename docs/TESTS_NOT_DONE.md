@@ -96,6 +96,19 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | G-7 | Network faults: packet loss, high latency, partitions between agents and hub | design |
 | G-8 | Security: stolen agent token, replayed handshake, hostile agent flooding the hub (quotas exist, never stress-tested) | design, external review |
 
+| G-9 | Fair share, gang and affinity on a real fleet with real tenants (today: unit tests with injected clocks); preemption is not possible with synchronous agents | design |
+
+## I. Interconnect and kernel tests
+
+| Id | Test | State |
+|---|---|---|
+| I-1 | All-reduce between **real machines** over Ethernet (today: processes on one machine over loopback); fit alpha and beta on a real link | ready: `launch` takes any importable function; needs a multi-host launcher |
+| I-2 | RDMA / RoCE / InfiniBand transport and GPU-memory buffers (NCCL-style); comparison with NCCL or MPI on the same hardware | design, needs hardware |
+| I-3 | Per-algorithm calibration on more rank counts (N=16, 32, non power of two) and message sizes; today N=4 and 8 only | design |
+| I-4 | Generated CUDA C compiled with NVRTC and run on an NVIDIA GPU; compare with the CPU result | needs an NVIDIA GPU (same machine as A2) |
+| I-5 | Kernels with shared memory, reductions and tensor-core ops; larger kernel library | not built |
+| I-6 | ZLUDA as an optional external runtime on an AMD GPU, with a legal opinion on running CUDA binaries | external, needs AMD hardware and counsel |
+
 ## C. Runtime tests
 
 | Id | Test | State |

@@ -29,7 +29,7 @@ HISTORY = 2000          # samples kept per node
 
 class Hub:
     def __init__(self, ledger: Ledger | None = None, stale_after_s: float = 30.0, clock=time.time,
-                 busy_cpu_pct: float = 90.0):
+                 busy_cpu_pct: float = 90.0, gang_hold_s: float = 30.0, affinity_wait_s: float = 5.0):
         self.nodes: dict[str, dict] = {}
         self.series: dict[str, deque] = {}
         self.tasks: dict[int, dict] = {}
@@ -40,6 +40,12 @@ class Hub:
         self.busy_cpu_pct = busy_cpu_pct
         self._ids = itertools.count(1)
         self._lock = threading.RLock()
+        self.gang_hold_s = gang_hold_s              # how long idle nodes are held for a gang that has started
+        self.affinity_wait_s = affinity_wait_s      # how long a task waits for the node that holds its cache
+        self.weights: dict[str, float] = {}         # tenant -> share weight (default 1)
+        self.usage: dict[str, float] = {}           # tenant -> finished compute-seconds
+        self.gangs: dict[int, dict] = {}
+        self.affinity: dict[str, str] = {}          # cache key -> node that last ran it
 
     # ------------------------------------------------------------------ identity
     @staticmethod
@@ -69,15 +75,50 @@ class Hub:
             n["latest"] = {**m, "ts": ts}
             self.series.setdefault(node, deque(maxlen=HISTORY)).append((ts, m))
 
-    def submit(self, workload: str, params: dict, needs: dict | None = None, priority: int = 10) -> int:
+    def submit(self, workload: str, params: dict, needs: dict | None = None, priority: int = 10,
+               tenant: str = "default", _gang: int | None = None) -> int:
         if workload not in workloads.REGISTRY:
             raise KeyError(f"workload '{workload}' is not allow-listed")
         with self._lock:
             tid = next(self._ids)
             self.tasks[tid] = {"id": tid, "workload": workload, "params": params, "needs": needs or {},
-                               "priority": int(priority), "state": "queued", "submitted": self.clock()}
+                               "priority": int(priority), "state": "queued", "submitted": self.clock(),
+                               "tenant": str(tenant), "gang": _gang}
             self.queue.append(tid)
             return tid
+
+    def submit_gang(self, workload: str, params_list: list[dict], needs: dict | None = None, priority: int = 10,
+                    tenant: str = "default") -> dict:
+        """All-or-nothing group: the members start only when enough eligible idle nodes exist for ALL of
+        them; the first start holds the other nodes for `gang_hold_s`. Admission and reservation, not
+        preemption: a member that already runs is never stopped."""
+        if not params_list:
+            raise ValueError("a gang needs at least one member")
+        with self._lock:
+            gid = next(self._ids)
+            tids = [self.submit(workload, p, {**(needs or {}), "distinct_nodes": True}, priority, tenant, _gang=gid) for p in params_list]
+            self.gangs[gid] = {"id": gid, "size": len(tids), "tasks": tids, "reserved": {}, "started": [], "tenant": str(tenant)}
+            return {"gang": gid, "tasks": tids}
+
+    def set_weight(self, tenant: str, weight: float) -> None:
+        if not weight > 0:
+            raise ValueError("weight must be positive")
+        with self._lock:
+            self.weights[str(tenant)] = float(weight)
+
+    def _tenant_load(self, tenant: str, now: float) -> float:
+        """Weighted compute-seconds consumed so far (finished plus running): lowest goes first."""
+        running = sum(now - t.get("started", now) for t in self.tasks.values() if t["state"] == "running" and t["tenant"] == tenant)
+        return (self.usage.get(tenant, 0.0) + running) / self.weights.get(tenant, 1.0)
+
+    def tenants(self) -> list[dict]:
+        with self._lock:
+            now = self.clock()
+            names = sorted({t["tenant"] for t in self.tasks.values()} | set(self.weights))
+            return [{"tenant": n, "weight": self.weights.get(n, 1.0), "finished_s": self.usage.get(n, 0.0),
+                     "weighted_load": self._tenant_load(n, now),
+                     "queued": sum(1 for t in self.tasks.values() if t["tenant"] == n and t["state"] == "queued"),
+                     "running": sum(1 for t in self.tasks.values() if t["tenant"] == n and t["state"] == "running")} for n in names]
 
     def _eligible(self, node: str, needs: dict) -> bool:
         n = self.nodes.get(node)
@@ -94,28 +135,83 @@ class Hub:
             return False
         return True
 
+    def _ready(self, node: str, now: float) -> bool:
+        """Fresh, not saturated, not running a task."""
+        n = self.nodes.get(node)
+        if not n or "latest" not in n or now - n.get("last_seen", 0) > self.stale_after_s:
+            return False
+        if (n["latest"].get("cpu_percent") or 0) >= self.busy_cpu_pct:
+            return False
+        return not any(t["state"] == "running" and t.get("node") == node for t in self.tasks.values())
+
+    def _gang_nodes(self, g: dict, needs: dict, now: float, exclude: str) -> list[str]:
+        """Other ready, eligible nodes not held by a different gang."""
+        held = {nd for og in self.gangs.values() if og["id"] != g["id"] for nd, exp in og["reserved"].items() if exp > now}
+        return sorted(nd for nd in self.nodes if nd != exclude and nd not in held and nd not in g["started"]
+                      and self._ready(nd, now) and self._eligible(nd, needs))
+
     def poll(self, node: str) -> dict | None:
-        """Hand the best eligible queued task to an agent that asks for work. Backpressure: a node
-        that reports itself saturated gets nothing."""
+        """Hand the best eligible queued task to an agent that asks for work. Backpressure: a node that
+        reports itself saturated gets nothing. Order: tenant with the lowest weighted usage first (fair
+        share), then priority, then submission order. Gang members start only when the whole gang can;
+        a task with a cache-affinity key waits `affinity_wait_s` for the node that holds that cache."""
         with self._lock:
             n = self.nodes.get(node)
             if not n or "latest" not in n:
                 return None
             if (n["latest"].get("cpu_percent") or 0) >= self.busy_cpu_pct:
                 return None
+            now = self.clock()
+            for g in self.gangs.values():
+                g["reserved"] = {nd: exp for nd, exp in g["reserved"].items() if exp > now}
+            for g in self.gangs.values():                    # a node held for a gang serves only that gang
+                if node in g["reserved"]:
+                    mine = [self.tasks[t] for t in g["tasks"] if self.tasks[t]["state"] == "queued" and self._eligible(node, self.tasks[t]["needs"])]
+                    if not mine:
+                        return None
+                    return self._assign(min(mine, key=lambda t: t["id"]), node, now, g, "held for its gang")
+            held_elsewhere = {nd for g in self.gangs.values() for nd, exp in g["reserved"].items() if exp > now}
+            if node in held_elsewhere:
+                return None
+            load = {}
             best = None
             for tid in self.queue:
                 t = self.tasks[tid]
-                if self._eligible(node, t["needs"]) and (best is None or (t["priority"], tid) < (best["priority"], best["id"])):
-                    best = t
+                if not self._eligible(node, t["needs"]):
+                    continue
+                key = t["needs"].get("affinity")
+                owner = self.affinity.get(key) if key else None
+                if owner and owner != node and now - t["submitted"] < self.affinity_wait_s and self._ready(owner, now):
+                    continue                                  # the node holding its cache is free: wait for it
+                g = self.gangs.get(t["gang"]) if t["gang"] else None
+                if g is not None:
+                    missing = sum(1 for x in g["tasks"] if self.tasks[x]["state"] == "queued")
+                    if len(self._gang_nodes(g, t["needs"], now, node)) + 1 < missing:
+                        continue                              # not enough idle nodes for the whole gang yet
+                tn = t["tenant"]
+                if tn not in load:
+                    load[tn] = self._tenant_load(tn, now)
+                rank = (load[tn], 0 if owner == node else 1, t["priority"], tid)
+                if best is None or rank < best[0]:
+                    best = (rank, t, g)
             if best is None:
                 return None
-            self.queue.remove(best["id"])
-            best.update(state="running", node=node, started=self.clock())
-            if self.ledger:
-                self.ledger.decide("fleet", f"task {best['id']} -> {node}", "agent asked for work and is eligible",
-                                   workload=best["workload"], node_cpu=n["latest"].get("cpu_percent"))
-            return {"id": best["id"], "workload": best["workload"], "params": best["params"]}
+            _, t, g = best
+            if g is not None and not g["started"]:
+                for nd in self._gang_nodes(g, t["needs"], now, node)[: g["size"] - 1]:
+                    g["reserved"][nd] = now + self.gang_hold_s
+            return self._assign(t, node, now, g, "agent asked for work and is eligible")
+
+    def _assign(self, t: dict, node: str, now: float, g: dict | None, why: str) -> dict:
+        self.queue.remove(t["id"])
+        t.update(state="running", node=node, started=now)
+        if g is not None:
+            g["started"].append(node)
+            g["reserved"].pop(node, None)
+        if self.ledger:
+            self.ledger.decide("fleet", f"task {t['id']} -> {node}", why, workload=t["workload"], tenant=t["tenant"],
+                               gang=t["gang"], node_cpu=(self.nodes[node]["latest"] or {}).get("cpu_percent"))
+        return {"id": t["id"], "workload": t["workload"], "params": t["params"]}
 
     def result(self, node: str, task_id: int, ok: bool, value=None, error: str | None = None, wall_s: float | None = None):
         with self._lock:
@@ -123,6 +219,9 @@ class Hub:
             if t is None or t.get("node") != node:
                 raise PermissionError("task is not assigned to this node")
             t.update(state="done" if ok else "failed", finished=self.clock(), result=value, error=error, wall_s=wall_s)
+            self.usage[t["tenant"]] = self.usage.get(t["tenant"], 0.0) + (wall_s if wall_s is not None else self.clock() - t.get("started", self.clock()))
+            if ok and t["needs"].get("affinity"):
+                self.affinity[t["needs"]["affinity"]] = node
 
     def task(self, task_id: int) -> dict:
         with self._lock:
@@ -218,6 +317,13 @@ def _avg(xs):
 
 
 # ---------------------------------------------------------------------- service
+def _tenant(h: dict) -> str:
+    """With scoped credentials the tenant is the credential name (it cannot be spoofed); otherwise the declared one."""
+    p = auth.current()
+    t = p.name if p is not None else h.get("tenant", "default")
+    return str(t)[:128]
+
+
 def make_handler(hub: Hub):
     def handle(h: dict, blob: bytes):
         op = h.get("op")
@@ -236,7 +342,13 @@ def make_handler(hub: Hub):
             return {}, b""
         if op == "submit":
             require("fleet:submit")
-            return {"task_id": hub.submit(h["workload"], h.get("params", {}), h.get("needs"), h.get("priority", 10))}, b""
+            return {"task_id": hub.submit(h["workload"], h.get("params", {}), h.get("needs"), h.get("priority", 10), _tenant(h))}, b""
+        if op == "submit_gang":
+            require("fleet:submit")
+            return hub.submit_gang(h["workload"], h["params_list"], h.get("needs"), h.get("priority", 10), _tenant(h)), b""
+        if op == "tenants":
+            require("fleet:read")
+            return {"tenants": hub.tenants()}, b""
         if op == "task":
             require("fleet:submit")
             return {"task": hub.task(int(h["task_id"]))}, b""

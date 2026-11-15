@@ -5,6 +5,8 @@
 <tr><td>Compute, Simulation, Scientific, Holographic</td><td>Each variant of a numerical job (e.g. pure Python, NumPy, Numba, multi-core), probed on reduced problems and checked against the others</td></tr>
 <tr><td>Fleet</td><td>The same job on each live node, at the node's own price per hour</td></tr>
 <tr><td>Accelerator fabric</td><td>The same job on the CPU, a Metal GPU or an NVIDIA GPU (the NVIDIA path is written, never run on real hardware); on the reference Mac the planner picked the faster device in 7 of 7 sizes</td></tr>
+<tr><td>Portable kernels</td><td>One kernel source, run on the CPU or a Metal GPU (CUDA C is generated, never run); the integer kernel is bit-identical on both; device choice right in 4 of 6 cases, misses at the crossover</td></tr>
+<tr><td>Virtual interconnect</td><td>Encrypted all-reduce between workers (ring, halving-doubling, tree), algorithm chosen by a measured cost model; on one machine it is about 3,000 times below NVLink 5 on bandwidth, so it is a software layer, not a replacement</td></tr>
 <tr><td>Tiered memory</td><td>A dataset in RAM or tiered over SSD, with tier latencies measured on this machine</td></tr>
 <tr><td>Runtime</td><td>Every route for a binary (native, WASM, micro-VM, Wine) with its isolation and overhead</td></tr>
 <tr><td>SPATIAL Q</td><td>Exact simulator, Aer, or real hardware (only if allowed and priced)</td></tr>
