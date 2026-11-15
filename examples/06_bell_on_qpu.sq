@@ -1,0 +1,12 @@
+// Bell pair on a REAL quantum computer (IBM Quantum). Needs the `qpu` extra and a token.
+// Ideal result: only "00" and "11". Hardware noise adds "01" and "10".
+quantum bell() {
+    qubit q[2];
+    h q[0];
+    cx q[0], q[1];
+}
+
+main {
+    let counts = sample bell() shots 100 on qpu;
+    print "qpu counts:", counts;
+}
