@@ -33,7 +33,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">One objective · v0.12.2 · open source</p>
+<p class="eyebrow">One objective · v0.13.0 · open source</p>
 <h1>Measure.<br>Decide.<br><em>Prove.</em></h1>
 <p class="sub">One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. A planner prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines; an agent on each machine and a hub keep the measurements honest.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(INSTALL)}</pre>
@@ -128,7 +128,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.12.2 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.13.0 · Apache-2.0</span><span>Measured on 14 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -144,7 +144,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Language, compiler, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.12.2. Four engines are operational and tested (153 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.13.0. Four engines are operational and tested (160 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -202,11 +202,14 @@ shasum -a 256 -c SHA256SUMS</code></pre>
         [("Example: compute", f'<span class="d">{E(PLAN_HEAT)}</span>'), ("Example: dataset", f'<span class="d">{E(PLAN_DATA)}</span>')])
 
     doc("fleet", "Fleet", "An agent on every machine, a hub that sees the whole fleet: measure, place, recommend, audit.",
-        f'''<div class="callout warn"><b>Scope</b>Validated with up to 3 agents on <b>one</b> machine. The three report the same CPU load, so this proves the chain (identity, scopes, placement, results, audit), not scaling.</div>
+        f'''<div class="callout warn"><b>Scope</b>Validated on <b>one</b> machine: up to 3 real agents, and 1,000 simulated agents (threads) against one hub. This proves the chain (identity, scopes, placement, results, audit) and the hub's limits on one box, not behaviour on a real network.</div>
 <h2>The parts</h2>
 <ul><li><b>Agent</b> (<code>spatial agent</code>): measures CPU, RAM, memory pressure and NVIDIA GPUs every few seconds, reports to the hub, asks for work and runs it. Outbound connections only. Buffers measurements while the hub is down and delivers them with their original times.</li>
 <li><b>Hub</b> (<code>spatial serve hub</code>): keeps each node's measurements, queues and places tasks, computes utilization and recommendations. It never changes a machine by itself.</li>
-<li><b>Operator CLI</b> (<code>spatial fleet</code>): status, recommendations, submit, result.</li></ul>
+<li><b>Operator CLI</b> (<code>spatial fleet</code>): status, recommendations, submit, result.</li>
+<li><b>Dashboard</b> (<code>spatial dashboard</code>): a read-only page in your browser, served on 127.0.0.1 only behind a random key printed at start; nodes, alerts, recommendations, tenants, queue.</li>
+<li><b>Alerts</b> (<code>spatial watch</code>, dashboard banner): edge-triggered (one event when a condition appears, one when it clears). A webhook receives them only if you pass <code>--webhook</code>; that sends fleet data off the machine.</li>
+<li><b>High availability</b> (<code>--peer</code>): an active hub and a standby that copies its state; the standby promotes itself after 6 s of silence and agents follow. Measured: about 6.7 s from <code>kill -9</code> to a task finishing on the survivor. <b>Not consensus</b>: under a partition two hubs can be active until they see each other, then the lower epoch steps down and loses its divergent state. Details: <code>docs/HA.md</code>.</li></ul>
 <h2>Run it</h2>
 <pre><code>{E(RUN_FLEET)}</code></pre>
 <h2>Placement</h2>
@@ -348,7 +351,9 @@ main {
 <tr><td><code>spatial devices</code></td><td>Compute devices the planner can use on this machine</td></tr>
 <tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Run a fleet agent: measure this machine, report to a hub, run allow-listed tasks</td></tr>
 <tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>See the fleet, get recommendations with their evidence, submit and read tasks</td></tr>
-<tr><td><code>spatial serve hub --master-key-file F</code></td><td>Start the fleet hub</td></tr>
+<tr><td><code>spatial serve hub --master-key-file F [--state-file S] [--peer H:P --name N]</code></td><td>Start the fleet hub; with a state file it survives restarts; with a peer it joins an active/standby pair</td></tr>
+<tr><td><code>spatial dashboard --hub H:P --token-file F</code></td><td>Read-only fleet dashboard on 127.0.0.1, behind a random key</td></tr>
+<tr><td><code>spatial watch --hub H:P --token-file F [--webhook URL]</code></td><td>Print alerts as they fire and clear</td></tr>
 <tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Create a master key; issue a scoped, expiring, quota-limited credential</td></tr></tbody></table>
 <p>An error prints a single <code>spatial: Type: message</code> line and exits with code 1.</p>''',
         [("Clean error", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),

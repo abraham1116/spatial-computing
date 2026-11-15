@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -89,19 +90,58 @@ def _read_token(path: str) -> bytes:
 
 
 def _hub_client(a):
-    from .core.protocol import RpcClient
-    host, _, port = a.hub.rpartition(":")
-    return RpcClient(host or "127.0.0.1", int(port), _read_token(a.token_file), timeout=30)
+    from .fleet.ha import connect_active
+    return connect_active(a.hub, _read_token(a.token_file), timeout=30)       # a.hub may be "h1:p,h2:p": the active one is used
 
 
 def cmd_agent(a):
     from .fleet import Agent
-    host, _, port = a.hub.rpartition(":")
-    ag = Agent(host or "127.0.0.1", int(port), _read_token(a.token_file), name=a.name, interval_s=a.interval,
+    ag = Agent(a.hub, None, _read_token(a.token_file), name=a.name, interval_s=a.interval,
                usd_per_hour=a.usd_per_hour, labels=[x for x in a.labels.split(",") if x], run_tasks=not a.no_tasks)
-    print(f"agent '{ag.name}' reporting to {a.hub} every {a.interval:g} s" + ("" if a.no_tasks else "; accepts allow-listed tasks"))
+    print(f"agent '{ag.name}' reporting to {a.hub} every {a.interval:g} s" + ("" if a.no_tasks else "; accepts allow-listed tasks"), flush=True)
     ag.run_forever()
     return 0
+
+
+def cmd_dashboard(a):
+    from .fleet.dashboard import Dashboard
+    d = Dashboard(a.hub, _read_token(a.token_file), port=a.port, min_severity=a.min_severity, webhook=a.webhook).start()
+    print(f"dashboard (read-only, this machine only): {d.url}", flush=True)
+    if a.webhook:
+        print(f"alert events are POSTed to {a.webhook}")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        d.stop()
+    return 0
+
+
+def cmd_watch(a):
+    from .fleet.alerts import AlertEngine, post_webhook
+    eng, cli = AlertEngine(a.min_severity), None
+    print(f"watching {a.hub} every {a.interval:g} s (alert level: {a.min_severity} and above)", flush=True)
+    while True:
+        try:
+            cli = cli or _hub_client(a)
+            events = eng.update(cli.call({"op": "advise", "window_s": a.window})[0]["recommendations"])
+        except Exception as e:
+            cli = None
+            events = [{"event": "hub_unreachable", "key": "hub", "ts": time.time(), "severity": "high", "text": f"{type(e).__name__}: {e}"}] if "hub" not in eng.firing else []
+            eng.firing.setdefault("hub", {"since": time.time(), "severity": "high", "text": "hub unreachable"})
+        else:
+            if "hub" in eng.firing:
+                eng.firing.pop("hub"); events.append({"event": "resolved", "key": "hub", "ts": time.time(), "severity": "high", "text": "hub reachable again"})
+        for e in events:
+            print(f"{time.strftime('%H:%M:%S', time.localtime(e['ts']))} {e['event']:<9} [{e['severity']}] {e['text']}", flush=True)
+            if a.webhook:
+                try:
+                    post_webhook(a.webhook, e)
+                except Exception as err:
+                    print(f"webhook failed: {err}", flush=True)
+        if a.once:
+            return 0
+        time.sleep(a.interval)
 
 
 def cmd_fleet(a):
@@ -273,6 +313,19 @@ def main(argv=None):
     p.add_argument("--workload"); p.add_argument("--params", default="{}"); p.add_argument("--needs", default="{}")
     p.add_argument("--task-id", type=int)
     p.set_defaults(fn=cmd_fleet)
+    p = sub.add_parser("dashboard", help="read-only fleet dashboard in your browser (served on 127.0.0.1 only, behind a random key)")
+    p.add_argument("--hub", required=True, help="host:port, or h1:p,h2:p for a hub pair")
+    p.add_argument("--token-file", required=True, help="scoped token with fleet:read")
+    p.add_argument("--port", type=int, default=0)
+    p.add_argument("--min-severity", default="high", choices=["low", "medium", "high"])
+    p.add_argument("--webhook", help="POST each alert event (JSON) to this http(s) URL: this sends fleet data off the machine")
+    p.set_defaults(fn=cmd_dashboard)
+    p = sub.add_parser("watch", help="print alerts as they fire and clear; optional webhook")
+    p.add_argument("--hub", required=True); p.add_argument("--token-file", required=True)
+    p.add_argument("--interval", type=float, default=10.0); p.add_argument("--window", type=float, default=60.0)
+    p.add_argument("--min-severity", default="high", choices=["low", "medium", "high"])
+    p.add_argument("--webhook"); p.add_argument("--once", action="store_true")
+    p.set_defaults(fn=cmd_watch)
     p = sub.add_parser("token", help="scoped credentials: `init` a master key, `issue` a tenant token")
     p.add_argument("action", choices=["init", "issue"])
     p.add_argument("--master-key-file", required=True)

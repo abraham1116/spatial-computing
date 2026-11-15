@@ -48,6 +48,9 @@ class Hub:
         self.usage: dict[str, float] = {}           # tenant -> finished compute-seconds
         self.gangs: dict[int, dict] = {}
         self.affinity: dict[str, str] = {}          # cache key -> node that last ran it
+        self.role = "active"                        # "standby": answers only ping and role (see fleet/ha.py)
+        self.epoch = 1                              # raised at every promotion; the higher epoch wins a split brain
+        self.name = "hub"
 
     # ------------------------------------------------------------------ identity
     @staticmethod
@@ -112,6 +115,15 @@ class Hub:
         """Weighted compute-seconds consumed so far (finished plus running): lowest goes first."""
         running = sum(now - t.get("started", now) for t in self.tasks.values() if t["state"] == "running" and t["tenant"] == tenant)
         return (self.usage.get(tenant, 0.0) + running) / self.weights.get(tenant, 1.0)
+
+    def queue_view(self, recent: int = 12) -> dict:
+        """Counts per state plus the most recent tasks (no parameters or results: those can be large)."""
+        with self._lock:
+            counts: dict[str, int] = {}
+            for t in self.tasks.values():
+                counts[t["state"]] = counts.get(t["state"], 0) + 1
+            last = sorted(self.tasks.values(), key=lambda t: t["id"], reverse=True)[:recent]
+            return {"counts": counts, "recent": [{k: t.get(k) for k in ("id", "workload", "state", "node", "tenant", "gang", "wall_s")} for t in last]}
 
     def tenants(self) -> list[dict]:
         with self._lock:
@@ -240,23 +252,30 @@ class Hub:
         """Durable state: tasks, queue order, tenant usage and weights, gangs, cache owners. Node
         measurements are not saved: agents rebuild them within one report interval."""
         with self._lock:
-            return {"version": 1, "next_id": next(self._ids), "tasks": list(self.tasks.values()), "queue": list(self.queue),
+            return {"version": 1, "epoch": self.epoch, "next_id": next(self._ids), "tasks": list(self.tasks.values()), "queue": list(self.queue),
                     "usage": self.usage, "weights": self.weights, "affinity": self.affinity,
                     "gangs": [{**g, "reserved": {}} for g in self.gangs.values()]}
 
-    def restore(self, snap: dict) -> dict:
-        """Load a snapshot. A task that was running is put back in the queue (at-least-once: the
-        allow-listed workloads are pure functions); if its agent still finishes it, that result is accepted."""
+    def requeue_running(self) -> int:
+        """Put running tasks back in the queue (at-least-once: the allow-listed workloads are pure
+        functions); if the agent still finishes one, its result is accepted."""
         with self._lock:
-            self.tasks = {int(t["id"]): t for t in snap["tasks"]}
-            self.queue = deque(int(i) for i in snap["queue"])
-            requeued = 0
+            n = 0
             for t in self.tasks.values():
                 if t["state"] == "running":
                     t["state"] = "queued"
                     t["requeued_after_restart"] = True
                     self.queue.append(t["id"])
-                    requeued += 1
+                    n += 1
+            return n
+
+    def restore(self, snap: dict, requeue: bool = True) -> dict:
+        """Load a snapshot (requeue=False for a standby that only follows the active hub)."""
+        with self._lock:
+            self.tasks = {int(t["id"]): t for t in snap["tasks"]}
+            self.queue = deque(int(i) for i in snap["queue"])
+            self.epoch = max(self.epoch, int(snap.get("epoch", 1)))
+            requeued = self.requeue_running() if requeue else 0
             self.usage, self.weights, self.affinity = dict(snap["usage"]), dict(snap["weights"]), dict(snap["affinity"])
             self.gangs = {int(g["id"]): {**g, "started": [], "reserved": {}} for g in snap["gangs"]}
             self._ids = itertools.count(int(snap["next_id"]))
@@ -284,11 +303,13 @@ class Hub:
         def loop():
             while not stop.wait(every_s):
                 try:
-                    self.save(path)
+                    if self.role == "active":                # a standby holds a copy, never the master file
+                        self.save(path)
                 except OSError:
                     pass
             try:
-                self.save(path)
+                if self.role == "active":
+                    self.save(path)
             except OSError:
                 pass
         threading.Thread(target=loop, daemon=True).start()
@@ -393,6 +414,13 @@ def make_handler(hub: Hub):
         op = h.get("op")
         if op == "ping":
             return {"pong": True}, b""
+        if op == "role":
+            return {"role": hub.role, "epoch": hub.epoch, "name": hub.name}, b""
+        if hub.role != "active":
+            raise RuntimeError(f"standby: {hub.name} is not the active hub")
+        if op == "snapshot":
+            require("fleet:replicate")
+            return {"epoch": hub.epoch}, json.dumps(hub.snapshot()).encode()
         if op == "report":
             require("fleet:report")
             hub.report(Hub._who(h), h["metrics"], h.get("inventory"), h.get("usd_per_hour"), h.get("labels"))
@@ -410,6 +438,9 @@ def make_handler(hub: Hub):
         if op == "submit_gang":
             require("fleet:submit")
             return hub.submit_gang(h["workload"], h["params_list"], h.get("needs"), h.get("priority", 10), _tenant(h)), b""
+        if op == "queue":
+            require("fleet:read")
+            return hub.queue_view(int(h.get("recent", 12))), b""
         if op == "tenants":
             require("fleet:read")
             return {"tenants": hub.tenants()}, b""
@@ -442,6 +473,10 @@ def main():
     ap.add_argument("--allow-remote", action="store_true")
     ap.add_argument("--decision-log", default=str(Path.home() / ".spatial" / "fleet-decisions.jsonl"))
     ap.add_argument("--state-file", help="save tasks, queue, tenant usage here every 5 s and reload it at start")
+    ap.add_argument("--peer", action="append", default=[], help="host:port of another hub (repeatable): active/standby with automatic promotion")
+    ap.add_argument("--peer-token-file", help="token this hub presents to its peers (scope fleet:replicate); default: --token-file")
+    ap.add_argument("--name", default="hub", help="this hub's name (HA tie-break: the smaller name stays active)")
+    ap.add_argument("--fail-after", type=float, default=6.0, help="seconds without an active peer before a standby promotes itself")
     a = ap.parse_args()
     if bool(a.token_file) == bool(a.master_key_file):
         raise SystemExit("give exactly one of --token-file or --master-key-file")
@@ -450,6 +485,13 @@ def main():
                          ledger=Ledger(a.decision_log))
     if a.state_file:
         print("restored", hub.load(a.state_file), flush=True)
+    if a.peer:
+        from .ha import HAController
+        ptf = a.peer_token_file or a.token_file
+        if ptf is None:
+            raise SystemExit("--peer needs --peer-token-file (a scoped token with fleet:replicate) or --token-file")
+        HAController(hub, Path(ptf).read_bytes(), a.peer, a.name, fail_after_s=a.fail_after).start()
+    if a.state_file:
         hub.autosave(a.state_file)
     print(f"PORT {srv.port}", flush=True)
     srv.serve_forever()

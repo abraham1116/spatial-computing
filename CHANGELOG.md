@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0
+- Hub high availability: `--peer` / `--name` start an active/standby pair; the standby copies the state, promotes itself after 6 s of silence (epoch + 1), and agents and CLI accept `h1:p,h2:p`. A returning old active hub steps down. Measured about 6.7 s from `kill -9` to a task finishing on the survivor. No consensus: see `docs/HA.md`.
+- Dashboard: `spatial dashboard` (read-only, 127.0.0.1 only, random key, Host check) and alerts: `spatial watch`, edge-triggered, optional webhook.
+- Hub ops: `role`, `snapshot` (scope `fleet:replicate`), `queue`.
+
 ## 0.12.2
 - Planner: when the two reduced probes cannot separate a fixed start-up cost from the per-unit speed (a flat or negative slope), it now probes once more at half size instead of scaling proportionally from the larger probe, which could overestimate a GPU's cost by up to the scale ratio. Seen as a flaky CPU-instead-of-GPU choice on a shared CI Mac; decision quality on the reference Mac unchanged (fabric 7 of 7).
 

@@ -35,7 +35,7 @@ def landing():
     p.append(f'''<main>
 <div class="hero grid-bg"><div class="wrap">
 <div>
-<p class="eyebrow">Un seul objectif · v0.12.2 · open source</p>
+<p class="eyebrow">Un seul objectif · v0.13.0 · open source</p>
 <h1>Mesurer.<br>Décider.<br><em>Prouver.</em></h1>
 <p class="sub">Un seul objectif pour toute l'infrastructure : réaliser chaque travail correctement au moindre coût, et le prouver. Un planificateur chiffre chaque façon d'exécuter un travail à travers le calcul, la mémoire, le runtime, le quantique, l'IA, la science et une flotte de machines ; un agent par machine et un hub gardent les mesures honnêtes.</p>
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copier</button>{E(INSTALL)}</pre>
@@ -130,7 +130,7 @@ def landing():
 </div>
 </div></section>
 </main>
-<footer><div class="wrap"><span>Spatial Computing · v0.12.2 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
+<footer><div class="wrap"><span>Spatial Computing · v0.13.0 · Apache-2.0</span><span>Mesures du 14 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)</span></div></footer>
 <script src="{S.CFG["prefix"]}assets/app.js"></script></body></html>''')
     CFG["out"].mkdir(parents=True, exist_ok=True)
     (CFG["out"] / "index.html").write_text("".join(p))
@@ -147,7 +147,7 @@ def docs():
 <a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.12.2. Quatre moteurs sont opérationnels et testés (153 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.13.0. Quatre moteurs sont opérationnels et testés (160 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -205,11 +205,14 @@ shasum -a 256 -c SHA256SUMS</code></pre>
         [("Exemple : calcul", f'<span class="d">{E(PLAN_HEAT)}</span>'), ("Exemple : données", f'<span class="d">{E(PLAN_DATA)}</span>')])
 
     doc("fleet", "Flotte", "Un agent sur chaque machine, un hub qui voit toute la flotte : mesurer, placer, recommander, auditer.",
-        f'''<div class="callout warn"><b>Périmètre</b>Validé avec au plus 3 agents sur <b>une seule</b> machine. Les trois rapportent la même charge CPU : cela prouve la chaîne (identité, portées, placement, résultats, audit), pas le passage à l'échelle.</div>
+        f'''<div class="callout warn"><b>Périmètre</b>Validé sur <b>une seule</b> machine : jusqu'à 3 vrais agents, et 1 000 agents simulés (fils d'exécution) contre un hub. Cela prouve la chaîne (identité, portées, placement, résultats, audit) et les limites du hub sur une machine, pas le comportement sur un vrai réseau.</div>
 <h2>Les pièces</h2>
 <ul><li><b>Agent</b> (<code>spatial agent</code>) : mesure CPU, RAM, pression mémoire et GPU Nvidia toutes les quelques secondes, rapporte au hub, demande du travail et l'exécute. Connexions sortantes uniquement. Garde les mesures pendant une panne du hub et les livre avec leur heure d'origine.</li>
 <li><b>Hub</b> (<code>spatial serve hub</code>) : conserve les mesures de chaque nœud, met en file et place les tâches, calcule l'utilisation et les recommandations. Il ne modifie jamais une machine de lui-même.</li>
-<li><b>CLI opérateur</b> (<code>spatial fleet</code>) : état, recommandations, soumission, résultat.</li></ul>
+<li><b>CLI opérateur</b> (<code>spatial fleet</code>) : état, recommandations, soumission, résultat.</li>
+<li><b>Tableau de bord</b> (<code>spatial dashboard</code>) : une page en lecture seule dans votre navigateur, servie sur 127.0.0.1 uniquement, derrière une clé aléatoire affichée au démarrage ; nœuds, alertes, recommandations, locataires, file.</li>
+<li><b>Alertes</b> (<code>spatial watch</code>, bandeau du tableau de bord) : une alerte quand une condition apparaît, une quand elle disparaît. Un webhook ne les reçoit que si vous passez <code>--webhook</code> ; cela envoie des données de la flotte hors de la machine.</li>
+<li><b>Haute disponibilité</b> (<code>--peer</code>) : un hub actif et un hub de secours qui copie son état ; le secours se promeut après 6 s de silence et les agents suivent. Mesuré : environ 6,7 s entre <code>kill -9</code> et la fin d'une tâche sur le survivant. <b>Ce n'est pas un consensus</b> : en cas de partition, deux hubs peuvent être actifs jusqu'à ce qu'ils se revoient ; celui dont l'époque est la plus basse s'efface et perd son état divergent. Détails : <code>docs/HA.md</code>.</li></ul>
 <h2>Lancer</h2>
 <pre><code>{E(RUN_FLEET)}</code></pre>
 <h2>Placement</h2>
@@ -351,7 +354,9 @@ main {
 <tr><td><code>spatial devices</code></td><td>Périphériques de calcul que le planificateur peut utiliser sur cette machine</td></tr>
 <tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Lance un agent de flotte : mesure cette machine, rapporte à un hub, exécute des tâches autorisées</td></tr>
 <tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>Voir la flotte, obtenir des recommandations avec leurs preuves, soumettre et lire des tâches</td></tr>
-<tr><td><code>spatial serve hub --master-key-file F</code></td><td>Lance le hub de la flotte</td></tr>
+<tr><td><code>spatial serve hub --master-key-file F [--state-file S] [--peer H:P --name N]</code></td><td>Lance le hub de la flotte ; avec un fichier d'état il survit aux redémarrages ; avec un pair il rejoint une paire actif/secours</td></tr>
+<tr><td><code>spatial dashboard --hub H:P --token-file F</code></td><td>Tableau de bord en lecture seule sur 127.0.0.1, derrière une clé aléatoire</td></tr>
+<tr><td><code>spatial watch --hub H:P --token-file F [--webhook URL]</code></td><td>Affiche les alertes quand elles apparaissent et disparaissent</td></tr>
 <tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Crée une clé maître ; délivre un identifiant à portée, durée et quotas limités</td></tr></tbody></table>
 <p>Une erreur affiche une seule ligne <code>spatial: Type: message</code> et renvoie le code 1.</p>''',
         [("Erreur propre", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),

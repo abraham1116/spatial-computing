@@ -1,0 +1,53 @@
+{
+ "context": {
+  "date": "2026-11-15 20:52:43 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'Battery Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t93%; discharging; 5:23 remaining present: true",
+  "energy_measurable": true,
+  "system_before": {
+   "ts": 1794772364.000297,
+   "cpu_percent": 55.0,
+   "load1": 4.9716796875,
+   "ram_total": 17179869184,
+   "ram_available": 7728300032,
+   "ram_used_percent": 55.0,
+   "swap_used": 3990355968,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 8401772544,
+   "compressor_physical_bytes": 1218428928,
+   "compressor_ratio": 6.9,
+   "compressor_saved_bytes": 7183343616,
+   "swapins": 1996820,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "trials": [
+  {
+   "startup_until_one_active_s": 6.864167928695679,
+   "kill_to_new_active_s": 5.651293992996216,
+   "kill_to_task_done_s": 6.692768096923828
+  },
+  {
+   "startup_until_one_active_s": 6.815351963043213,
+   "kill_to_new_active_s": 5.643640756607056,
+   "kill_to_task_done_s": 6.699557781219482
+  },
+  {
+   "startup_until_one_active_s": 6.920105934143066,
+   "kill_to_new_active_s": 5.409770965576172,
+   "kill_to_task_done_s": 6.707357883453369
+  }
+ ],
+ "settings": {
+  "poll_s": 1.0,
+  "fail_after_s": 6.0
+ },
+ "succeeded": 3,
+ "median_kill_to_new_active_s": 5.643640756607056,
+ "median_kill_to_task_done_s": 6.699557781219482
+}

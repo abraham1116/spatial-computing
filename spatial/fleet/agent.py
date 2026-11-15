@@ -18,13 +18,16 @@ from ..compute import workloads
 from ..compute.detect import _nvidia_gpus, detect_node
 from ..compute.monitor import snapshot
 from ..core.protocol import RpcClient
+from .ha import connect_active, parse_addrs
 
 
 class Agent:
-    def __init__(self, host: str, port: int, token: bytes, name: str | None = None, interval_s: float = 5.0,
+    def __init__(self, host: "str | list", port: int | None, token: bytes, name: str | None = None, interval_s: float = 5.0,
                  usd_per_hour: float | None = None, labels: list | None = None, run_tasks: bool = True,
                  poll_s: float = 1.0, buffer: int = 720):
-        self.host, self.port, self.token = host, port, token
+        # one hub, or several (host as a list or "h1:p,h2:p"): the agent talks to whichever reports itself active
+        self.hubs = parse_addrs(host) if port is None else [(host, port)]
+        self.host, self.port, self.token = self.hubs[0][0], self.hubs[0][1], token
         self.name = name or socket.gethostname()
         self.interval_s, self.poll_s = interval_s, poll_s
         self.usd_per_hour, self.labels, self.run_tasks = usd_per_hour, labels or [], run_tasks
@@ -46,7 +49,9 @@ class Agent:
 
     # ---------------------------------------------------------------- loops
     def _connect(self) -> RpcClient:
-        return RpcClient(self.host, self.port, self.token, timeout=30)
+        if len(self.hubs) == 1:
+            return RpcClient(self.host, self.port, self.token, timeout=30)
+        return connect_active(self.hubs, self.token, timeout=30)
 
     def _report_loop(self):
         cli = None

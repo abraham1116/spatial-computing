@@ -43,7 +43,7 @@ ENGINES: list[Engine] = [
            "estimates come from probes and measured constants on one machine; calibration is a median of past ratios; no learned model; fleet and QPU pricing need the caller's prices"),
     Engine("fleet", "Spatial Fleet (agent + hub)", "spatial.fleet", Status.OPERATIONAL_PROTOTYPE,
            "tests/test_fleet.py, benchmarks/bench_fleet.py",
-           "validated on one machine (agents on loopback); no dashboard UI; recommendations are estimates; never applies changes by itself"),
+           "validated on one machine (agents on loopback); HA is active/standby without consensus, tested with two hubs and a clean kill only; dashboard is read-only and local; recommendations are estimates; never applies changes by itself"),
     Engine("runtime", "Spatial Runtime Engine", "spatial.runtime", Status.OPERATIONAL_PROTOTYPE,
            "tests/test_runtime.py, benchmarks/bench_runtime.py",
            "Windows apps not demonstrated (no Wine / Windows image); no containers; no GUI streaming"),
