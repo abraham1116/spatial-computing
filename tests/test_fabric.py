@@ -53,7 +53,7 @@ def test_same_job_on_cpu_and_gpu_agrees_and_the_planner_picks_the_really_faster_
             # machine-independent property: whatever device wins HERE, the planner's choice must be near the real best
             if real[plan.chosen.name] <= 1.5 * min(real.values()):
                 break
-        assert real[plan.chosen.name] <= 1.5 * min(real.values()), (n, real, plan.chosen.name)
+        assert real[plan.chosen.name] <= 1.5 * min(real.values()), (n, real, plan.chosen.name, plan.explain())
     ex = planner.execute(plan)
     assert abs(ex.result - workloads.mandel_f32_cpu(2048, 200)) / ex.result < 1e-3
     assert abs(ex.time_error_pct) < 400                # one run: process start-up jitter; accuracy is measured in bench_unified.py
