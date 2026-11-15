@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import json
+import os
 import math
 import threading
 import time
@@ -218,6 +220,8 @@ class Hub:
             t = self.tasks.get(task_id)
             if t is None or t.get("node") != node:
                 raise PermissionError("task is not assigned to this node")
+            if t["state"] == "queued":                       # requeued after a hub restart, but its agent finished it anyway
+                self.queue.remove(task_id)
             t.update(state="done" if ok else "failed", finished=self.clock(), result=value, error=error, wall_s=wall_s)
             self.usage[t["tenant"]] = self.usage.get(t["tenant"], 0.0) + (wall_s if wall_s is not None else self.clock() - t.get("started", self.clock()))
             if ok and t["needs"].get("affinity"):
@@ -229,6 +233,66 @@ class Hub:
             if t is None:
                 raise KeyError(f"unknown task {task_id}")
             return {k: v for k, v in t.items()}
+
+
+    # ------------------------------------------------------------------ persistence
+    def snapshot(self) -> dict:
+        """Durable state: tasks, queue order, tenant usage and weights, gangs, cache owners. Node
+        measurements are not saved: agents rebuild them within one report interval."""
+        with self._lock:
+            return {"version": 1, "next_id": next(self._ids), "tasks": list(self.tasks.values()), "queue": list(self.queue),
+                    "usage": self.usage, "weights": self.weights, "affinity": self.affinity,
+                    "gangs": [{**g, "reserved": {}} for g in self.gangs.values()]}
+
+    def restore(self, snap: dict) -> dict:
+        """Load a snapshot. A task that was running is put back in the queue (at-least-once: the
+        allow-listed workloads are pure functions); if its agent still finishes it, that result is accepted."""
+        with self._lock:
+            self.tasks = {int(t["id"]): t for t in snap["tasks"]}
+            self.queue = deque(int(i) for i in snap["queue"])
+            requeued = 0
+            for t in self.tasks.values():
+                if t["state"] == "running":
+                    t["state"] = "queued"
+                    t["requeued_after_restart"] = True
+                    self.queue.append(t["id"])
+                    requeued += 1
+            self.usage, self.weights, self.affinity = dict(snap["usage"]), dict(snap["weights"]), dict(snap["affinity"])
+            self.gangs = {int(g["id"]): {**g, "started": [], "reserved": {}} for g in snap["gangs"]}
+            self._ids = itertools.count(int(snap["next_id"]))
+            return {"tasks": len(self.tasks), "queued": len(self.queue), "requeued_running": requeued}
+
+    def save(self, path: str | Path) -> None:
+        tmp = f"{path}.tmp"
+        with open(tmp, "w") as f:
+            json.dump(self.snapshot(), f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)                                # atomic: a crash leaves the old or the new file, never half
+
+    def load(self, path: str | Path) -> dict | None:
+        try:
+            snap = json.loads(Path(path).read_text())
+        except FileNotFoundError:
+            return None
+        return self.restore(snap)
+
+    def autosave(self, path: str | Path, every_s: float = 5.0) -> threading.Event:
+        """Save every `every_s` seconds in a daemon thread; set the returned event to stop (one last save is made)."""
+        stop = threading.Event()
+
+        def loop():
+            while not stop.wait(every_s):
+                try:
+                    self.save(path)
+                except OSError:
+                    pass
+            try:
+                self.save(path)
+            except OSError:
+                pass
+        threading.Thread(target=loop, daemon=True).start()
+        return stop
 
     # ------------------------------------------------------------------ views
     def _window(self, node: str, window_s: float, now: float) -> list:
@@ -363,9 +427,9 @@ def make_handler(hub: Hub):
 
 
 def serve_hub(token: bytes | None = None, host: str = "127.0.0.1", port: int = 0, allow_remote: bool = False,
-              authorizer=None, hub: Hub | None = None, ledger: Ledger | None = None) -> tuple[RpcServer, Hub]:
+              authorizer=None, hub: Hub | None = None, ledger: Ledger | None = None, **server_kw) -> tuple[RpcServer, Hub]:
     hub = hub or Hub(ledger=ledger)
-    return RpcServer(make_handler(hub), token, host=host, port=port, allow_remote=allow_remote, authorizer=authorizer), hub
+    return RpcServer(make_handler(hub), token, host=host, port=port, allow_remote=allow_remote, authorizer=authorizer, **server_kw), hub
 
 
 def main():
@@ -377,12 +441,16 @@ def main():
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--allow-remote", action="store_true")
     ap.add_argument("--decision-log", default=str(Path.home() / ".spatial" / "fleet-decisions.jsonl"))
+    ap.add_argument("--state-file", help="save tasks, queue, tenant usage here every 5 s and reload it at start")
     a = ap.parse_args()
     if bool(a.token_file) == bool(a.master_key_file):
         raise SystemExit("give exactly one of --token-file or --master-key-file")
-    srv, _ = serve_hub(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
-                       authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None,
-                       ledger=Ledger(a.decision_log))
+    srv, hub = serve_hub(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
+                         authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None,
+                         ledger=Ledger(a.decision_log))
+    if a.state_file:
+        print("restored", hub.load(a.state_file), flush=True)
+        hub.autosave(a.state_file)
     print(f"PORT {srv.port}", flush=True)
     srv.serve_forever()
 

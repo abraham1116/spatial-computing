@@ -86,6 +86,8 @@ class SecureChannel:
         if _HDR.size + hl + bl != len(plain):
             raise ValueError("malformed record")
         header = json.loads(plain[_HDR.size:_HDR.size + hl]) if hl else {}
+        if not isinstance(header, dict):
+            raise ValueError("header must be a JSON object")
         return header, plain[_HDR.size + hl:]
 
 
@@ -104,7 +106,8 @@ class RpcServer:
     """
 
     def __init__(self, handler: Handler, token: bytes | None = None, host: str = "127.0.0.1",
-                 port: int = 0, allow_remote: bool = False, authorizer: "auth.Authorizer | None" = None):
+                 port: int = 0, allow_remote: bool = False, authorizer: "auth.Authorizer | None" = None,
+                 handshake_timeout_s: float = 10.0, max_connections: int = 512):
         if host not in ("127.0.0.1", "localhost", "::1") and not allow_remote:
             raise PermissionError(
                 "refusing to bind a non-loopback address without allow_remote=True "
@@ -112,11 +115,21 @@ class RpcServer:
         if token is None and authorizer is None:
             raise ValueError("RpcServer needs a token or an authorizer")
         outer = self
+        slots = threading.BoundedSemaphore(max_connections)       # one thread per connection: cap them
 
         class _H(socketserver.BaseRequestHandler):
             def handle(self):
+                if not slots.acquire(blocking=False):
+                    return                                        # over the cap: drop before any work
+                try:
+                    self._serve()
+                finally:
+                    slots.release()
+
+            def _serve(self):
                 s = self.request
                 s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                s.settimeout(handshake_timeout_s)                 # a silent peer must not hold a thread forever
                 eph = X25519PrivateKey.generate()
                 pub_s = eph.public_key().public_bytes(**_RAW)
                 nonce_s = os.urandom(16)
@@ -142,10 +155,11 @@ class RpcServer:
                     return                                        # silent drop on bad auth
                 shared = eph.exchange(X25519PublicKey.from_public_bytes(pub_c))
                 ch = SecureChannel(s, shared + secret, nonce_s, nonce_c, is_server=True)
+                s.settimeout(None)                                # authenticated peers may stay idle (agents poll)
                 while True:
                     try:
                         header, blob = ch.recv()
-                    except (ConnectionError, OSError, ValueError):
+                    except (ConnectionError, OSError, ValueError, struct.error):
                         return
                     op = str(header.get("op"))
                     try:
@@ -167,6 +181,7 @@ class RpcServer:
         class _S(socketserver.ThreadingTCPServer):
             allow_reuse_address = True
             daemon_threads = True
+            request_queue_size = 1024              # the default backlog of 5 refused simultaneous reconnects (found by the scale test)
 
         self.handler = handler
         self._srv = _S((host, port), _H)

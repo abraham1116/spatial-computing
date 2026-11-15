@@ -8,7 +8,7 @@ import json
 
 from common import save
 from spatial.interconnect import launch, tasks
-from spatial.interconnect.model import choose, choose_calibrated, fit_algo
+from spatial.interconnect.model import is_pow2, choose, choose_calibrated, fit_algo
 
 NVLINK5_BYTES_PER_S = 900e9
 SIZES = [256, 4096, 1 << 16, 1 << 18, 1 << 20, 1 << 22]          # float32 elements: 1 KiB .. 16 MiB
@@ -16,8 +16,8 @@ SIZES = [256, 4096, 1 << 16, 1 << 18, 1 << 20, 1 << 22]          # float32 eleme
 
 def main():
     out = {"nvlink5_per_direction_Bps": NVLINK5_BYTES_PER_S, "runs": []}
-    for n in (4, 8):
-        algos = ("ring", "halving_doubling", "tree")
+    for n in (4, 8, 6, 16):                                   # 6 is not a power of two: halving-doubling does not apply
+        algos = ("ring", "halving_doubling", "tree") if is_pow2(n) else ("ring", "tree")
         res = launch(n, tasks.bench_all, SIZES, algos, 5, timeout_s=900)[0]
         right = 0
         for row in res["rows"]:
@@ -55,6 +55,18 @@ def main():
                                                "mean_regret": sum(x["regret"] for x in loso) / len(loso)}
     for name, h in (("calibrated N=4 -> N=8", held), ("calibrated leave-one-size-out N=8", out["calibrated_leave_one_size_out_N8"])):
         print(f"{name}: right {h['correct']}/{len(h['rows'])}, mean regret {h['mean_regret']:.2f}x", flush=True)
+    extra = {}
+    for run in out["runs"][2:]:
+        n, rows = run["ranks"], run["rows"]
+        al = tuple(rows[0]["measured_s"])
+        f = {a: fit_algo(a, 4, [(r["bytes"], r["measured_s"][a]) for r in r4]) for a in al}
+        picks = []
+        for r in rows:
+            pick, _ = choose_calibrated(n, r["bytes"], f)
+            picks.append({"bytes": r["bytes"], "pick": pick, "best": r["measured_best"], "regret": r["measured_s"][pick] / r["measured_s"][r["measured_best"]]})
+        extra[f"N={n}"] = {"correct": sum(x["pick"] == x["best"] for x in picks), "rows": picks, "mean_regret": sum(x["regret"] for x in picks) / len(picks)}
+        print(f"calibrated on N=4, judged on N={n}: right {extra[f'N={n}']['correct']}/{len(picks)}, mean regret {extra[f'N={n}']['mean_regret']:.2f}x", flush=True)
+    out["calibrated_on_N4_judged_elsewhere"] = extra
     peak = max(max(r["bus_bandwidth_Bps"].values()) for run in out["runs"] for r in run["rows"])
     out["peak_bus_bandwidth_Bps"] = peak
     out["ratio_to_nvlink5"] = NVLINK5_BYTES_PER_S / peak

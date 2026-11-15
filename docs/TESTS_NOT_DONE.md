@@ -88,13 +88,13 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | Id | Test | State |
 |---|---|---|
 | G-1 | Agents on several **real machines** reporting to one hub (today: up to 3 agents on one machine, so every agent reports the same CPU) | ready: `spatial serve hub`, `spatial agent` on each machine, see [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
-| G-2 | Scale: 100 then 1,000 simulated agents against one hub (reports per second, memory, latency of `status`/`advise`) | design |
-| G-3 | Hub failure and restart (state is in memory: what is lost, how fast agents reconnect), then persistence and high availability | design |
+| G-2 | Scale: 100 then 1,000 simulated agents against one hub (reports per second, memory, latency of `status`/`advise`) | **done in v0.12.1** on one machine: 1,000 agents reporting every 2 s, 477 reports/s achieved, p50 0.8 ms, p99 15 ms, `status` 36 ms, `advise` 35 ms, hub RSS 109 MiB; 31 connection resets at the 1,000-agent burst (see FLEET numbers in INFRASTRUCTURE.md). Client threads shared the CPU with the hub |
+| G-3 | Hub failure and restart (state is in memory: what is lost, how fast agents reconnect), then persistence and high availability | **persistence done in v0.12.1** (`--state-file`: atomic JSON snapshot every 5 s; tasks, queue, tenant usage survive; running tasks are requeued, at-least-once); a hub restarted on the same port is rejoined by its agents and finishes the queued work (test). Measurements are not saved (rebuilt within one report interval). **High availability not built**: one hub process, a crash loses up to 5 s of state |
 | G-4 | Recommendation quality: apply each kind of recommendation on a real fleet and re-measure; count how often the predicted saving appears | design, needs a real fleet and operators |
 | G-5 | GPU nodes: agent reading real `nvidia-smi` and the GPU-aware placement (`needs: {gpu: true}`) | design, needs an NVIDIA machine |
 | G-6 | Dashboard UI and alerting | not built |
 | G-7 | Network faults: packet loss, high latency, partitions between agents and hub | design |
-| G-8 | Security: stolen agent token, replayed handshake, hostile agent flooding the hub (quotas exist, never stress-tested) | design, external review |
+| G-8 | Security: stolen agent token, replayed handshake, hostile agent flooding the hub (quotas exist, never stress-tested) | **partly done in v0.12.1**: replayed handshake rejected, silent peers dropped after 10 s (they held a thread forever before), connection cap of 512, oversized frames refused. Stolen token and flooding by an authenticated agent beyond quotas: not tested; external review still needed |
 
 | G-9 | Fair share, gang and affinity on a real fleet with real tenants (today: unit tests with injected clocks); preemption is not possible with synchronous agents | design |
 
@@ -104,7 +104,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 |---|---|---|
 | I-1 | All-reduce between **real machines** over Ethernet (today: processes on one machine over loopback); fit alpha and beta on a real link | ready: `launch` takes any importable function; needs a multi-host launcher |
 | I-2 | RDMA / RoCE / InfiniBand transport and GPU-memory buffers (NCCL-style); comparison with NCCL or MPI on the same hardware | design, needs hardware |
-| I-3 | Per-algorithm calibration on more rank counts (N=16, 32, non power of two) and message sizes; today N=4 and 8 only | design |
+| I-3 | Per-algorithm calibration on more rank counts (N=16, 32, non power of two) and message sizes; today N=4 and 8 only | **partly done in v0.12.1**: N=6 (not a power of two) and N=16 added; N=32 and other message-size grids not run. 16 processes on 2 cores measure CPU contention more than a network |
 | I-4 | Generated CUDA C compiled with NVRTC and run on an NVIDIA GPU; compare with the CPU result | needs an NVIDIA GPU (same machine as A2) |
 | I-5 | Kernels with shared memory, reductions and tensor-core ops; larger kernel library | not built |
 | I-6 | ZLUDA as an optional external runtime on an AMD GPU, with a legal opinion on running CUDA binaries | external, needs AMD hardware and counsel |
@@ -125,9 +125,9 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 |---|---|---|
 | D1 | Dataset larger than RAM through the tiered store | **done in v0.8**: 24 GiB logical on a 16 GiB machine with a 512 MiB local budget; 2,648 pages (600 random, 2,048 sequential) verified byte for byte, 0 corrupt; process RSS peaked at 578 MiB; 11.4 GiB on disk; load 305 MB/s; 5 ms mean random access. Disk-backed, not extra RAM. See `benchmarks/results/bigdata.json` |
 | D2 | Soak test: hours of continuous use, memory growth, connection leaks | design |
-| D3 | Many concurrent clients on the servers (hundreds) | design; the servers are one thread per connection |
+| D3 | Many concurrent clients on the servers (hundreds) | **partly done in v0.12.1**: 100, 300 and 1,000 simulated agents against one hub ([scale.json](../benchmarks/results/scale.json)); found and fixed a listen backlog of 5 that refused simultaneous reconnects. Agents were threads of one process on the same 2-core Mac; one thread per connection remains |
 | D4 | Independent security review of SWP/2 (forward secrecy was added in v0.8, not reviewed by anyone else) | external |
-| D5 | Fuzzing the wire format and the SPATIAL Q parser | design |
+| D5 | Fuzzing the wire format and the SPATIAL Q parser | **partly done in v0.12.1**: random bytes and tampered records against the server, malformed authenticated plaintext, random requests to the hub handler, 1,500 mutated SPATIAL Q programs; no crash. Seeded random tests, not coverage-guided fuzzing |
 | D6 | Verifying every benchmark again after each release | design: add a scheduled job |
 
 ## E. Other engines

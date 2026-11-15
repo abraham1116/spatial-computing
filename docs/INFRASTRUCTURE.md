@@ -44,6 +44,18 @@ Every decision in this infrastructure answers the same question: **get the job d
 4. **Recommendations** come from the window: node down, memory pressure, underused GPUs, rebalance (a busy node next to an idle one), consolidation (the fleet's busy cores would fit on fewer nodes at a 60 % target, with RAM checked). Each recommendation shows its evidence and its assumptions. Cost estimates appear only if the operator gave prices.
 5. **Proof**: a recommendation is an estimate. It becomes a result only when it is applied by the operator and the fleet is measured again (`spatial fleet status` before and after).
 
+## Scale and restart (v0.12.1, one 2017 MacBook Pro, `benchmarks/bench_scale.py`)
+Simulated agents are threads of one process, so they compete with the hub for two cores: latencies are upper bounds.
+
+| Agents | Reports/s achieved (offered) | Report p50 / p99 | `status` / `advise` | Hub RSS |
+|---|---|---|---|---|
+| 100 | 50 (50) | 0.7 / 4 ms | 2 / 1 ms | 69 MiB |
+| 300 | 149 (150) | 0.8 / 2 ms | 9 / 5 ms | 78 MiB |
+| 1,000 | 477 (500) | 0.8 / 15 ms | 36 / 35 ms | 109 MiB |
+
+At 1,000 simultaneous connection attempts, 31 were reset (a real agent retries). The first run of this test refused up to 65 of 100 simultaneous agents: the server's listen backlog was the socketserver default of 5. It is now 1,024 (macOS caps it at 128 by default).
+`spatial serve hub --state-file hub.json` saves tasks, queue, tenant usage and weights every 5 s (atomic write) and reloads them at start. A task that was running is requeued (workloads are pure, so a second execution is safe); if its old agent still reports a result, it is accepted. Not saved: node measurements, which agents rebuild within a report interval. No high availability.
+
 ## Security model
 
 - Encrypted, authenticated, forward-secret transport (SWP/2). Nothing travels in clear.

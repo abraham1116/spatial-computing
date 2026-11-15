@@ -1,27 +1,27 @@
 {
  "context": {
-  "date": "2026-11-15 19:58:47 +0100",
+  "date": "2026-11-15 20:29:08 +0100",
   "model": "MacBookPro14,1",
   "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
   "os": "macOS 13.7.8",
   "arch": "x86_64",
-  "power_source": "Now drawing from 'AC Power'",
-  "battery": "-InternalBattery-0 (id=6815843)\t100%; charged; 0:00 remaining present: true",
-  "energy_measurable": false,
+  "power_source": "Now drawing from 'Battery Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t100%; discharging; 5:54 remaining present: true",
+  "energy_measurable": true,
   "system_before": {
-   "ts": 1794769127.562433,
-   "cpu_percent": 13.6,
-   "load1": 4.49853515625,
+   "ts": 1794770948.244818,
+   "cpu_percent": 10.7,
+   "load1": 32.72021484375,
    "ram_total": 17179869184,
-   "ram_available": 7676866560,
-   "ram_used_percent": 55.3,
+   "ram_available": 8427601920,
+   "ram_used_percent": 50.9,
    "swap_used": 3990355968,
    "swap_total": 5368709120,
-   "compressor_logical_bytes": 7460691968,
-   "compressor_physical_bytes": 1063485440,
-   "compressor_ratio": 7.02,
-   "compressor_saved_bytes": 6397206528,
-   "swapins": 1994779,
+   "compressor_logical_bytes": 8456065024,
+   "compressor_physical_bytes": 1231843328,
+   "compressor_ratio": 6.86,
+   "compressor_saved_bytes": 7224221696,
+   "swapins": 1996250,
    "swapouts": 2968865,
    "memory_pressure": "normal"
   }
@@ -29,288 +29,554 @@
  "nvlink5_per_direction_Bps": 900000000000.0,
  "runs": [
   {
-   "alpha_s": 0.00015206825628411025,
-   "beta_Bps": 731338816.0,
+   "alpha_s": 0.000206566764973104,
+   "beta_Bps": 748260864.0,
    "rows": [
     {
      "elems": 256,
      "bytes": 1024,
      "measured_s": {
-      "ring": 0.002405847000773065,
-      "halving_doubling": 0.0013979039940750226,
-      "tree": 0.0011316040036035702
+      "ring": 0.002277806997881271,
+      "halving_doubling": 0.0013858919992344454,
+      "tree": 0.0010214490030193701
      },
      "predicted_s": {
-      "ring": 0.000914509795432538,
-      "halving_doubling": 0.0006103732828643175,
-      "tree": 0.0006138737124107782
+      "ring": 0.0012414533498771338,
+      "halving_doubling": 0.0008283198199309258,
+      "tree": 0.0008317410866617754
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 1.2353296644616187,
+     "choice_regret": 1.3567902020930986,
      "bus_bandwidth_Bps": {
-      "ring": 638444.5891639997,
-      "halving_doubling": 1098787.9042554377,
-      "tree": 1357365.293078355
+      "ring": 674332.8128453062,
+      "halving_doubling": 1108311.4707700694,
+      "tree": 1503746.1444082218
      }
     },
     {
      "elems": 4096,
      "bytes": 16384,
      "measured_s": {
-      "ring": 0.0023264030023710802,
-      "halving_doubling": 0.0016500579949934036,
-      "tree": 0.0013049180124653503
+      "ring": 0.0028889819950563833,
+      "halving_doubling": 0.0016324960015481338,
+      "tree": 0.0013040630001341924
      },
      "predicted_s": {
-      "ring": 0.0009460136613506844,
-      "halving_doubling": 0.0006418771487824639,
-      "tree": 0.0006978840215258354
+      "ring": 0.0012722447504547804,
+      "halving_doubling": 0.0008591112205085724,
+      "tree": 0.0009138514882021665
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 1.2644916992723463,
+     "choice_regret": 1.2518536308292962,
      "bus_bandwidth_Bps": {
-      "ring": 10563947.852092708,
-      "halving_doubling": 14894021.952300075,
-      "tree": 18833367.12746355
+      "ring": 8506802.756837659,
+      "halving_doubling": 15054248.204402344,
+      "tree": 18845715.274086487
      }
     },
     {
      "elems": 65536,
      "bytes": 262144,
      "measured_s": {
-      "ring": 0.0033702420041663572,
-      "halving_doubling": 0.002784717013128102,
-      "tree": 0.0025409840018255636
+      "ring": 0.003614102999563329,
+      "halving_doubling": 0.002616594996652566,
+      "tree": 0.0025809220096562058
      },
      "predicted_s": {
-      "ring": 0.001450075516041028,
-      "halving_doubling": 0.0011459390034728074,
-      "tree": 0.002042048967366752
+      "ring": 0.0017649071596971273,
+      "halving_doubling": 0.0013517736297509193,
+      "tree": 0.0022276179128484248
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 1.0959207185591995,
+     "choice_regret": 1.0138217996758112,
      "bus_bandwidth_Bps": {
-      "ring": 116672927.20044997,
-      "halving_doubling": 141205012.2674032,
-      "tree": 154749498.50825307
+      "ring": 108800440.95243274,
+      "halving_doubling": 150277746.65282357,
+      "tree": 152354855.5627912
      }
     },
     {
      "elems": 262144,
      "bytes": 1048576,
      "measured_s": {
-      "ring": 0.006084483000449836,
-      "halving_doubling": 0.005679830996086821,
-      "tree": 0.007021651996183209
+      "ring": 0.006336927996017039,
+      "halving_doubling": 0.005794220996904187,
+      "tree": 0.007175441991421394
      },
      "predicted_s": {
-      "ring": 0.0030630734510501277,
-      "halving_doubling": 0.0027589369384819072,
-      "tree": 0.006343376794057685
+      "ring": 0.003341426869272637,
+      "halving_doubling": 0.002928293339326429,
+      "tree": 0.006431670471716451
      },
      "model_choice": "halving_doubling",
      "measured_best": "halving_doubling",
      "choice_regret": 1.0,
      "bus_bandwidth_Bps": {
-      "ring": 258504132.54235658,
-      "halving_doubling": 276920915.6194332,
-      "tree": 224001987.11855397
+      "ring": 248206070.98401546,
+      "halving_doubling": 271453919.4898452,
+      "tree": 219200991.6435028
      }
     },
     {
      "elems": 1048576,
      "bytes": 4194304,
      "measured_s": {
-      "ring": 0.022075118002248928,
-      "halving_doubling": 0.024801965002552606,
-      "tree": 0.036690371998702176
+      "ring": 0.022220705999643542,
+      "halving_doubling": 0.024566537991631776,
+      "tree": 0.03834798600291833
      },
      "predicted_s": {
-      "ring": 0.009515065191086526,
-      "halving_doubling": 0.009210928678518306,
-      "tree": 0.023548688100821415
+      "ring": 0.009647505707574677,
+      "halving_doubling": 0.009234372177628469,
+      "tree": 0.023247880707188556
      },
      "model_choice": "halving_doubling",
      "measured_best": "ring",
-     "choice_regret": 1.1235258176208107,
+     "choice_regret": 1.1055696426578825,
      "bus_bandwidth_Bps": {
-      "ring": 285002145.82585925,
-      "halving_doubling": 253667642.84009296,
-      "tree": 171474303.94607455
+      "ring": 283134838.29455847,
+      "halving_doubling": 256098600.54937696,
+      "tree": 164062227.4014915
      }
     },
     {
      "elems": 4194304,
      "bytes": 16777216,
      "measured_s": {
-      "ring": 0.11213135599973612,
-      "halving_doubling": 0.11885398899903521,
-      "tree": 0.17011504899710417
+      "ring": 0.12911442598851863,
+      "halving_doubling": 0.13357713900040835,
+      "tree": 0.17414994600403588
      },
      "predicted_s": {
-      "ring": 0.03532303215123212,
-      "halving_doubling": 0.0350188956386639,
-      "tree": 0.09236993332787634
+      "ring": 0.034871821060782834,
+      "halving_doubling": 0.034458687530836626,
+      "tree": 0.09051272164907698
      },
      "model_choice": "halving_doubling",
      "measured_best": "ring",
-     "choice_regret": 1.059953194531197,
+     "choice_regret": 1.03456401542835,
      "bus_bandwidth_Bps": {
-      "ring": 224431638.9080252,
-      "halving_doubling": 211737310.72841218,
-      "tree": 147934143.08941233
+      "ring": 194911016.38973978,
+      "halving_doubling": 188399184.08435944,
+      "tree": 144506642.5654636
      }
     }
    ],
    "ranks": 4,
    "model_choice_correct": 1,
    "cases": 6,
-   "mean_regret": 1.1298701824075288
+   "mean_regret": 1.1270998817807396
   },
   {
-   "alpha_s": 0.00018952696700580418,
-   "beta_Bps": 722180544.0,
+   "alpha_s": 0.0001561677927384153,
+   "beta_Bps": 697403136.0,
    "rows": [
     {
      "elems": 256,
      "bytes": 1024,
      "measured_s": {
-      "ring": 0.01034821399662178,
-      "halving_doubling": 0.004220333008561283,
-      "tree": 0.0019954440067522228
+      "ring": 0.010879048000788316,
+      "halving_doubling": 0.00558753999939654,
+      "tree": 0.0022468060051323846
      },
      "predicted_s": {
-      "ring": 0.0026558589120463817,
-      "halving_doubling": 0.0011396431759999482,
-      "tree": 0.001145669369915247
+      "ring": 0.0021889186308040403,
+      "halving_doubling": 0.0009395762888967181,
+      "tree": 0.0009458165820289818
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 2.1149844316755755,
+     "choice_regret": 2.4868813714370126,
      "bus_bandwidth_Bps": {
-      "ring": 173169.97895337362,
-      "halving_doubling": 424611.042864339,
-      "tree": 898045.7451756076
+      "ring": 164720.29536685089,
+      "halving_doubling": 320713.58776734263,
+      "tree": 797576.6469853338
      }
     },
     {
      "elems": 4096,
      "bytes": 16384,
      "measured_s": {
-      "ring": 0.010398029000498354,
-      "halving_doubling": 0.004667141998652369,
-      "tree": 0.002237223001429811
+      "ring": 0.010367887996835634,
+      "halving_doubling": 0.0044409319962142035,
+      "tree": 0.0018670529971132055
      },
      "predicted_s": {
-      "ring": 0.0026930795215232275,
-      "halving_doubling": 0.0011768637854767938,
-      "tree": 0.0012732828881215751
+      "ring": 0.0022274616177974343,
+      "halving_doubling": 0.0009781192758901117,
+      "tree": 0.0010779639660063317
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 2.0861317784009885,
+     "choice_regret": 2.3785784351492274,
      "bus_bandwidth_Bps": {
-      "ring": 2757445.6657724087,
-      "halving_doubling": 6143374.255224933,
-      "tree": 12815888.260435237
+      "ring": 2765461.973427079,
+      "halving_doubling": 6456302.421303062,
+      "tree": 15356821.710113205
      }
     },
     {
      "elems": 65536,
      "bytes": 262144,
      "measured_s": {
-      "ring": 0.011696266999933869,
-      "halving_doubling": 0.007624253994436003,
-      "tree": 0.005014907990698703
+      "ring": 0.011860063998028636,
+      "halving_doubling": 0.007176875995355658,
+      "tree": 0.00575082800060045
      },
      "predicted_s": {
-      "ring": 0.0032886092731527587,
-      "halving_doubling": 0.0017723935371063253,
-      "tree": 0.0033150991794228266
+      "ring": 0.002844149409691734,
+      "halving_doubling": 0.0015948070677844115,
+      "tree": 0.003192322109643931
      },
      "model_choice": "halving_doubling",
      "measured_best": "tree",
-     "choice_regret": 1.5203178220970217,
+     "choice_regret": 1.2479726388280632,
      "bus_bandwidth_Bps": {
-      "ring": 39222086.842117555,
-      "halving_doubling": 60170083.569459535,
-      "tree": 91477650.40771651
+      "ring": 38680398.35841132,
+      "halving_doubling": 63920848.05378695,
+      "tree": 79771469.42181218
      }
     },
     {
      "elems": 262144,
      "bytes": 1048576,
      "measured_s": {
-      "ring": 0.0228618139954051,
-      "halving_doubling": 0.013777480999124236,
-      "tree": 0.015497945001698099
+      "ring": 0.023733487003482878,
+      "halving_doubling": 0.020835350005654618,
+      "tree": 0.01591418699536007
      },
      "predicted_s": {
-      "ring": 0.005194304478367259,
-      "halving_doubling": 0.0036780887423208263,
-      "tree": 0.009848911311586831
+      "ring": 0.004817550343753493,
+      "halving_doubling": 0.0035682080018461706,
+      "tree": 0.009958268169284247
      },
      "model_choice": "halving_doubling",
-     "measured_best": "halving_doubling",
-     "choice_regret": 1.0,
+     "measured_best": "tree",
+     "choice_regret": 1.3092311917491832,
      "bus_bandwidth_Bps": {
-      "ring": 80265196.81985037,
-      "halving_doubling": 133188933.45718582,
-      "tree": 118403310.87759954
+      "ring": 77317252.19015282,
+      "halving_doubling": 88071858.62018095,
+      "tree": 115306424.4208651
      }
     },
     {
      "elems": 1048576,
      "bytes": 4194304,
      "measured_s": {
-      "ring": 0.04664919400238432,
-      "halving_doubling": 0.052786724001634866,
-      "tree": 0.053021984989754856
+      "ring": 0.04963713200413622,
+      "halving_doubling": 0.05790158500894904,
+      "tree": 0.05866635299753398
      },
      "predicted_s": {
-      "ring": 0.012817085299225263,
-      "halving_doubling": 0.01130086956317883,
-      "tree": 0.03598415984024285
+      "ring": 0.01271115408000053,
+      "halving_doubling": 0.011461811738093207,
+      "tree": 0.037022052407845514
      },
      "model_choice": "halving_doubling",
      "measured_best": "ring",
-     "choice_regret": 1.131567760826411,
+     "choice_regret": 1.1664973915923296,
      "bus_bandwidth_Bps": {
-      "ring": 157345312.32468536,
-      "halving_doubling": 139050720.4003164,
-      "tree": 138433745.95308483
+      "ring": 147873813.4868139,
+      "halving_doubling": 126767376.03755672,
+      "tree": 125114850.76136462
      }
     },
     {
      "elems": 4194304,
      "bytes": 16777216,
      "measured_s": {
-      "ring": 0.2281122620042879,
-      "halving_doubling": 0.2889184160012519,
-      "tree": 0.36904139700345695
+      "ring": 0.23886802399647422,
+      "halving_doubling": 0.31260995799675584,
+      "tree": 0.3761837199999718
      },
      "predicted_s": {
-      "ring": 0.04330820858265728,
-      "halving_doubling": 0.041791992846610844,
-      "tree": 0.14052515395486692
+      "ring": 0.044285569024988675,
+      "halving_doubling": 0.04303622668308135,
+      "tree": 0.14527718936209058
      },
      "model_choice": "halving_doubling",
      "measured_best": "ring",
-     "choice_regret": 1.266562408625894,
+     "choice_regret": 1.308714129109931,
      "bus_bandwidth_Bps": {
-      "ring": 128709117.79152015,
-      "halving_doubling": 101620825.72082487,
-      "tree": 79557817.19448936
+      "ring": 122913596.84221847,
+      "halving_doubling": 93919362.6080993,
+      "tree": 78047311.56362163
      }
     }
    ],
    "ranks": 8,
+   "model_choice_correct": 0,
+   "cases": 6,
+   "mean_regret": 1.6496458596442911
+  },
+  {
+   "alpha_s": 0.00020414142636582255,
+   "beta_Bps": 741916288.0,
+   "rows": [
+    {
+     "elems": 256,
+     "bytes": 1024,
+     "measured_s": {
+      "ring": 0.006777569011319429,
+      "tree": 0.002242393995402381
+     },
+     "predicted_s": {
+      "ring": 0.002043714613029537,
+      "tree": 0.0012331298159316572
+     },
+     "model_choice": "tree",
+     "measured_best": "tree",
+     "choice_regret": 1.0,
+     "bus_bandwidth_Bps": {
+      "ring": 251811.03487346417,
+      "tree": 761091.3470897063
+     }
+    },
+    {
+     "elems": 4096,
+     "bytes": 16384,
+     "measured_s": {
+      "ring": 0.006465753001975827,
+      "tree": 0.002392723996308632
+     },
+     "predicted_s": {
+      "ring": 0.002078219853599212,
+      "tree": 0.0013573486819824859
+     },
+     "model_choice": "tree",
+     "measured_best": "tree",
+     "choice_regret": 1.0,
+     "bus_bandwidth_Bps": {
+      "ring": 4223277.11224388,
+      "tree": 11412376.316196078
+     }
+    },
+    {
+     "elems": 65536,
+     "bytes": 262144,
+     "measured_s": {
+      "ring": 0.008145002007950097,
+      "tree": 0.004247254997608252
+     },
+     "predicted_s": {
+      "ring": 0.0026303037027140055,
+      "tree": 0.0033448505387957436
+     },
+     "model_choice": "ring",
+     "measured_best": "tree",
+     "choice_regret": 1.917709676611547,
+     "bus_bandwidth_Bps": {
+      "ring": 53641075.37852231,
+      "tree": 102868009.31724162
+     }
+    },
+    {
+     "elems": 262144,
+     "bytes": 1048576,
+     "measured_s": {
+      "ring": 0.014021759008755907,
+      "tree": 0.009726106989546679
+     },
+     "predicted_s": {
+      "ring": 0.004396972019881346,
+      "tree": 0.00970485648059817
+     },
+     "model_choice": "ring",
+     "measured_best": "tree",
+     "choice_regret": 1.4416620158328572,
+     "bus_bandwidth_Bps": {
+      "ring": 124636763.8735881,
+      "tree": 179684088.25288084
+     }
+    },
+    {
+     "elems": 1048576,
+     "bytes": 4194304,
+     "measured_s": {
+      "ring": 0.03547485799936112,
+      "tree": 0.05617200299457181
+     },
+     "predicted_s": {
+      "ring": 0.011463645288550709,
+      "tree": 0.035144880247807875
+     },
+     "model_choice": "ring",
+     "measured_best": "ring",
+     "choice_regret": 1.0,
+     "bus_bandwidth_Bps": {
+      "ring": 197055240.27164707,
+      "tree": 124448235.66897188
+     }
+    },
+    {
+     "elems": 4194304,
+     "bytes": 16777216,
+     "measured_s": {
+      "ring": 0.1812495190097252,
+      "tree": 0.42044014600105584
+     },
+     "predicted_s": {
+      "ring": 0.03973033836322816,
+      "tree": 0.1369049753166467
+     },
+     "model_choice": "ring",
+     "measured_best": "ring",
+     "choice_regret": 1.0,
+     "bus_bandwidth_Bps": {
+      "ring": 154273659.9768098,
+      "tree": 66506557.3129081
+     }
+    }
+   ],
+   "ranks": 6,
+   "model_choice_correct": 4,
+   "cases": 6,
+   "mean_regret": 1.226561948740734
+  },
+  {
+   "alpha_s": 0.00016907451208680868,
+   "beta_Bps": 653479936.0,
+   "rows": [
+    {
+     "elems": 256,
+     "bytes": 1024,
+     "measured_s": {
+      "ring": 0.04996686498634517,
+      "halving_doubling": 0.012613291997695342,
+      "tree": 0.00471633899724111
+     },
+     "predicted_s": {
+      "ring": 0.005075173478825169,
+      "halving_doubling": 0.0013555342129153783,
+      "tree": 0.0013651320592370133
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "tree",
+     "choice_regret": 2.674381974042508,
+     "bus_bandwidth_Bps": {
+      "ring": 38425.46456586166,
+      "halving_doubling": 152220.37199731966,
+      "tree": 407095.41895167663
+     }
+    },
+    {
+     "elems": 4096,
+     "bytes": 16384,
+     "measured_s": {
+      "ring": 0.04717347500263713,
+      "halving_doubling": 0.01509008600260131,
+      "tree": 0.006143302001873963
+     },
+     "predicted_s": {
+      "ring": 0.0051192452221388,
+      "halving_doubling": 0.0013996059562290091,
+      "tree": 0.0015531714973751722
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "tree",
+     "choice_regret": 2.4563477423050677,
+     "bus_bandwidth_Bps": {
+      "ring": 651213.4202172442,
+      "halving_doubling": 2035773.6857632436,
+      "tree": 5000568.096868609
+     }
+    },
+    {
+     "elems": 65536,
+     "bytes": 262144,
+     "measured_s": {
+      "ring": 0.05500218000088353,
+      "halving_doubling": 0.01779008100857027,
+      "tree": 0.011031950998585671
+     },
+     "predicted_s": {
+      "ring": 0.005824393115156896,
+      "halving_doubling": 0.002104753849247105,
+      "tree": 0.004561802507585713
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "tree",
+     "choice_regret": 1.6125960866623692,
+     "bus_bandwidth_Bps": {
+      "ring": 8936373.067251233,
+      "halving_doubling": 27628879.248116583,
+      "tree": 44554222.55437994
+     }
+    },
+    {
+     "elems": 262144,
+     "bytes": 1048576,
+     "measured_s": {
+      "ring": 0.08224934600002598,
+      "halving_doubling": 0.03684471099404618,
+      "tree": 0.019389926994335838
+     },
+     "predicted_s": {
+      "ring": 0.008080866372814802,
+      "halving_doubling": 0.004361227106905011,
+      "tree": 0.014189421740259446
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "tree",
+     "choice_regret": 1.9001985414802858,
+     "bus_bandwidth_Bps": {
+      "ring": 23903898.27536597,
+      "halving_doubling": 53361254.490982525,
+      "tree": 101396977.95532335
+     }
+    },
+    {
+     "elems": 1048576,
+     "bytes": 4194304,
+     "measured_s": {
+      "ring": 0.13028559100348502,
+      "halving_doubling": 0.11663086598855443,
+      "tree": 0.10686070899828337
+     },
+     "predicted_s": {
+      "ring": 0.017106759403446428,
+      "halving_doubling": 0.013387120137536635,
+      "tree": 0.05269989867095438
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "tree",
+     "choice_regret": 1.0914288991890182,
+     "bus_bandwidth_Bps": {
+      "ring": 60362162.38056315,
+      "halving_doubling": 67429148.65068193,
+      "tree": 73594121.48506644
+     }
+    },
+    {
+     "elems": 4194304,
+     "bytes": 16777216,
+     "measured_s": {
+      "ring": 0.696032538995496,
+      "halving_doubling": 0.6141487520071678,
+      "tree": 0.630351485000574
+     },
+     "predicted_s": {
+      "ring": 0.053210331525972925,
+      "halving_doubling": 0.049490692260063134,
+      "tree": 0.2067418063937341
+     },
+     "model_choice": "halving_doubling",
+     "measured_best": "halving_doubling",
+     "choice_regret": 1.0,
+     "bus_bandwidth_Bps": {
+      "ring": 45195128.4424126,
+      "halving_doubling": 51220945.898189925,
+      "tree": 49904348.20657455
+     }
+    }
+   ],
+   "ranks": 16,
    "model_choice_correct": 1,
    "cases": 6,
-   "mean_regret": 1.5199273669376485
+   "mean_regret": 1.7891588739465414
   }
  ],
  "calibrated_heldout_other_N": {
@@ -333,19 +599,19 @@
     "bytes": 262144,
     "pick": "halving_doubling",
     "best": "tree",
-    "regret": 1.5203178220970217
+    "regret": 1.2479726388280632
    },
    {
     "bytes": 1048576,
     "pick": "halving_doubling",
-    "best": "halving_doubling",
-    "regret": 1.0
+    "best": "tree",
+    "regret": 1.3092311917491832
    },
    {
     "bytes": 4194304,
     "pick": "halving_doubling",
     "best": "ring",
-    "regret": 1.131567760826411
+    "regret": 1.1664973915923296
    },
    {
     "bytes": 16777216,
@@ -354,8 +620,8 @@
     "regret": 1.0
    }
   ],
-  "correct": 4,
-  "mean_regret": 1.1086475971539054
+  "correct": 3,
+  "mean_regret": 1.120616870361596
  },
  "calibrated_leave_one_size_out_N8": {
   "rows": [
@@ -380,14 +646,14 @@
    {
     "bytes": 1048576,
     "pick": "tree",
-    "best": "halving_doubling",
-    "regret": 1.1248750771409681
+    "best": "tree",
+    "regret": 1.0
    },
    {
     "bytes": 4194304,
-    "pick": "halving_doubling",
+    "pick": "ring",
     "best": "ring",
-    "regret": 1.131567760826411
+    "regret": 1.0
    },
    {
     "bytes": 16777216,
@@ -396,9 +662,95 @@
     "regret": 1.0
    }
   ],
-  "correct": 4,
-  "mean_regret": 1.042740472994563
+  "correct": 6,
+  "mean_regret": 1.0
  },
- "peak_bus_bandwidth_Bps": 285002145.82585925,
- "ratio_to_nvlink5": 3157.8709605573076
+ "calibrated_on_N4_judged_elsewhere": {
+  "N=6": {
+   "correct": 5,
+   "rows": [
+    {
+     "bytes": 1024,
+     "pick": "tree",
+     "best": "tree",
+     "regret": 1.0
+    },
+    {
+     "bytes": 16384,
+     "pick": "tree",
+     "best": "tree",
+     "regret": 1.0
+    },
+    {
+     "bytes": 262144,
+     "pick": "tree",
+     "best": "tree",
+     "regret": 1.0
+    },
+    {
+     "bytes": 1048576,
+     "pick": "ring",
+     "best": "tree",
+     "regret": 1.4416620158328572
+    },
+    {
+     "bytes": 4194304,
+     "pick": "ring",
+     "best": "ring",
+     "regret": 1.0
+    },
+    {
+     "bytes": 16777216,
+     "pick": "ring",
+     "best": "ring",
+     "regret": 1.0
+    }
+   ],
+   "mean_regret": 1.073610335972143
+  },
+  "N=16": {
+   "correct": 3,
+   "rows": [
+    {
+     "bytes": 1024,
+     "pick": "tree",
+     "best": "tree",
+     "regret": 1.0
+    },
+    {
+     "bytes": 16384,
+     "pick": "tree",
+     "best": "tree",
+     "regret": 1.0
+    },
+    {
+     "bytes": 262144,
+     "pick": "halving_doubling",
+     "best": "tree",
+     "regret": 1.6125960866623692
+    },
+    {
+     "bytes": 1048576,
+     "pick": "halving_doubling",
+     "best": "tree",
+     "regret": 1.9001985414802858
+    },
+    {
+     "bytes": 4194304,
+     "pick": "halving_doubling",
+     "best": "tree",
+     "regret": 1.0914288991890182
+    },
+    {
+     "bytes": 16777216,
+     "pick": "halving_doubling",
+     "best": "halving_doubling",
+     "regret": 1.0
+    }
+   ],
+   "mean_regret": 1.2673705878886121
+  }
+ },
+ "peak_bus_bandwidth_Bps": 283134838.29455847,
+ "ratio_to_nvlink5": 3178.6974906411474
 }

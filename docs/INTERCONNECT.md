@@ -35,8 +35,15 @@ N ranks are N processes on this machine over encrypted loopback: the numbers des
 | 1 MiB | 22.9 ms | **13.8 ms** | 15.5 ms |
 | 16 MiB | **228 ms** | 289 ms | 369 ms |
 
+### More rank counts (second run, v0.12.1)
+| N | uncalibrated model right | calibrated on N=4 only, judged here |
+|---|---|---|
+| 6 (not a power of two: ring and tree only) | 4 of 6 | 5 of 6, mean regret 1.07x |
+| 16 | 1 of 6 | 3 of 6, mean regret 1.27x |
+Run to run the same benchmark moved: N=4 to N=8 calibrated was 4 of 6 in one run and 3 of 6 in the next; leave-one-size-out on N=8 was 4 of 6 then 6 of 6. Treat "calibrated beats uncalibrated, with regret 1.0x to 1.3x" as the finding, not any single count. Sixteen processes on two cores measure CPU contention more than a link.
+
 ## Limits
-- One machine, loopback, N = 4 and 8, a single benchmark session per figure. No real network, no RDMA, no GPU memory (all data are NumPy arrays in host RAM).
+- One machine, loopback, N = 4, 6, 8 and 16, a single benchmark session per figure. No real network, no RDMA, no GPU memory (all data are NumPy arrays in host RAM).
 - Python and encryption dominate: this is not competitive with NCCL or MPI on speed, and does not try to be.
 - Halving-doubling needs N a power of two; other N use ring or tree.
 - No fault tolerance: a dead rank stops the collective with a timeout.

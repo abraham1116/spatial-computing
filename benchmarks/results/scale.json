@@ -1,0 +1,78 @@
+{
+ "context": {
+  "date": "2026-11-15 20:27:08 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'Battery Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t100%; discharging; 5:54 remaining present: true",
+  "energy_measurable": true,
+  "system_before": {
+   "ts": 1794770828.5588322,
+   "cpu_percent": 16.7,
+   "load1": 3.32861328125,
+   "ram_total": 17179869184,
+   "ram_available": 7154122752,
+   "ram_used_percent": 58.4,
+   "swap_used": 3990355968,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 7374663680,
+   "compressor_physical_bytes": 1041334272,
+   "compressor_ratio": 7.08,
+   "compressor_saved_bytes": 6333329408,
+   "swapins": 1996122,
+   "swapouts": 2968865,
+   "memory_pressure": "normal"
+  }
+ },
+ "runs": [
+  {
+   "agents": 100,
+   "interval_s": 2.0,
+   "offered_reports_per_s": 50.0,
+   "reports": 1000,
+   "achieved_reports_per_s": 49.87706563072589,
+   "errors": 0,
+   "report_latency_p50_s": 0.0007413900020765141,
+   "report_latency_p99_s": 0.004429091000929475,
+   "report_latency_max_s": 0.027373389006243087,
+   "error_kinds": {},
+   "status_latency_s": 0.0024691120052011684,
+   "advise_latency_s": 0.0011205799964955077,
+   "hub_rss_MiB": 69.0703125
+  },
+  {
+   "agents": 300,
+   "interval_s": 2.0,
+   "offered_reports_per_s": 150.0,
+   "reports": 3021,
+   "achieved_reports_per_s": 149.452146670073,
+   "errors": 0,
+   "report_latency_p50_s": 0.0007707500044489279,
+   "report_latency_p99_s": 0.0022013690031599253,
+   "report_latency_max_s": 0.009112006009672768,
+   "error_kinds": {},
+   "status_latency_s": 0.009415104010258801,
+   "advise_latency_s": 0.005232195006101392,
+   "hub_rss_MiB": 78.203125
+  },
+  {
+   "agents": 1000,
+   "interval_s": 2.0,
+   "offered_reports_per_s": 500.0,
+   "reports": 9961,
+   "achieved_reports_per_s": 477.4504019611602,
+   "errors": 31,
+   "report_latency_p50_s": 0.0008238309965236112,
+   "report_latency_p99_s": 0.014532016997691244,
+   "report_latency_max_s": 0.04095808799320366,
+   "error_kinds": {
+    "connect ConnectionResetError": 31
+   },
+   "status_latency_s": 0.03581074999237899,
+   "advise_latency_s": 0.0345212529937271,
+   "hub_rss_MiB": 109.47265625
+  }
+ ]
+}

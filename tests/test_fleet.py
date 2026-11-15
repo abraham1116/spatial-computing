@@ -225,3 +225,49 @@ def test_cache_affinity_prefers_the_node_that_holds_the_cache_then_gives_up_wait
     t3 = hub.submit("montecarlo_pi", {"samples": 1}, needs={"affinity": "prompt-42"})
     clk.t += 6; feed(hub, "n1", 10, clk=clk); feed(hub, "n2", 10, clk=clk)
     assert hub.poll("n2")["id"] == t3                                 # after the wait, anyone may take it
+
+
+def test_snapshot_restore_requeues_running_tasks_and_accepts_a_late_result(tmp_path):
+    clk = Clock(); hub = Hub(clock=clk)
+    feed(hub, "n1", 10, clk=clk)
+    hub.set_weight("B", 2)
+    done = hub.submit("montecarlo_pi", {"samples": 1}, tenant="A")
+    t = hub.poll("n1"); hub.result("n1", t["id"], True, 3.14, wall_s=2.0)
+    running = hub.submit("montecarlo_pi", {"samples": 1}, tenant="B"); hub.poll("n1")
+    queued = hub.submit("montecarlo_pi", {"samples": 1}, tenant="A")
+    path = tmp_path / "hub.json"
+    hub.save(path)
+    assert not (tmp_path / "hub.json.tmp").exists()
+    new = Hub(clock=clk)
+    info = new.load(path)
+    assert info == {"tasks": 3, "queued": 2, "requeued_running": 1}
+    assert new.task(done)["state"] == "done" and new.task(done)["result"] == 3.14
+    assert new.usage["A"] == 2.0 and new.weights["B"] == 2.0              # fair-share history survives
+    assert new.submit("montecarlo_pi", {"samples": 1}) > queued              # ids never repeat
+    feed(new, "n1", 10, clk=clk)
+    new.result("n1", running, True, 1.0, wall_s=1.0)                         # the old agent finished it after all
+    assert new.task(running)["state"] == "done" and running not in new.queue
+    assert Hub().load(tmp_path / "missing.json") is None
+
+
+def test_hub_restart_on_the_same_port_agents_reconnect_and_queued_work_survives(tmp_path):
+    port = _free_port()
+    path = tmp_path / "state.json"
+    srv, hub = serve_hub(b"tok", port=port); srv.start()
+    ids = [hub.submit("montecarlo_pi", {"samples": 2000, "seed": i}) for i in range(4)]
+    hub.save(path)
+    srv.stop()                                                               # the hub dies with 4 tasks queued
+    agent = Agent("127.0.0.1", port, b"tok", name="a1", interval_s=0.3).start()
+    try:
+        assert wait(lambda: agent.last_error is not None, 10)                # the agent notices
+        t0 = time.time()
+        srv2, hub2 = serve_hub(b"tok", port=port)
+        assert hub2.load(path)["queued"] == 4
+        srv2.start()
+        try:
+            assert wait(lambda: all(hub2.task(i)["state"] == "done" for i in ids), 40)
+            assert time.time() - t0 < 30                                      # reconnect plus four tasks
+        finally:
+            srv2.stop()
+    finally:
+        agent.stop()

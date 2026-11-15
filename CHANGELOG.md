@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1
+- Protocol: handshake timeout (a silent peer used to hold a thread forever), 512-connection cap, listen backlog 1,024 (the default of 5 refused simultaneous reconnects), malformed authenticated records no longer kill the handler thread.
+- Hub: `--state-file` persistence with atomic snapshots; running tasks requeued after a restart; late results accepted.
+- New tests and benchmarks: `tests/test_hardening.py`, `benchmarks/bench_scale.py` (100, 300, 1,000 simulated agents), interconnect at N=6 and N=16.
+
 ## 0.12.0
 - New: virtual interconnect (`spatial.interconnect`): ring, halving-doubling and tree all-reduce plus broadcast between processes over SWP/2, with an alpha-beta cost model. Measured: the shared-link model picked the fastest algorithm in 1 of 6 sizes; calibrated per algorithm, 4 of 6 on an unseen rank count. About 3,000x below NVLink 5 on bandwidth (vendor figure).
 - New: portable kernels (`spatial.kernel`): one kernel source, Numba CPU, generated Metal and generated CUDA C (CUDA never run). Integer kernel bit-identical on CPU and Metal; planner families `pk_mandel` and `pk_collatz` (4 of 6 device choices right).
