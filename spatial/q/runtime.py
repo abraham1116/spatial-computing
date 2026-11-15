@@ -212,7 +212,12 @@ class Runtime:
             else:
                 raise SQRuntimeError(f"line {s[-1]}: statement '{k}' not allowed here")
 
-    def run(self) -> dict:
+    def run(self, compiled: bool = False) -> dict:
+        """compiled=True runs the classical part through generated Python (see codegen.py)
+        instead of the tree-walking interpreter; results are identical."""
+        if compiled:
+            from .codegen import run_compiled
+            return run_compiled(self)
         env: dict = {}
         try:
             self._block(self.p.main, env)
@@ -221,9 +226,9 @@ class Runtime:
         return env
 
 
-def run_source(src: str, **kw) -> tuple[dict, Runtime]:
+def run_source(src: str, compiled: bool = False, **kw) -> tuple[dict, Runtime]:
     rt = Runtime(parse(src), **kw)
-    return rt.run(), rt
+    return rt.run(compiled=compiled), rt
 
 
 def main():
@@ -236,6 +241,7 @@ def main():
     ap.add_argument("--args", default="[]", help="JSON list of kernel arguments")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--trace", action="store_true")
+    ap.add_argument("--compiled", action="store_true", help="compile the classical part to Python bytecode")
     ap.add_argument("--noise", type=float, default=0.0, help="depolarising error probability per gate and qubit")
     a = ap.parse_args()
     src = open(a.file).read()
@@ -255,7 +261,7 @@ def main():
             print(c.to_qasm3() if a.cmd == "qasm" else c.to_json())
         return
     rt = Runtime(prog, seed=a.seed, noise=a.noise)
-    rt.run()
+    rt.run(compiled=a.compiled)
     if a.trace:
         for t in rt.trace:
             print("TRACE", json.dumps(t, default=str))

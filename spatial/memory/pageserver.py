@@ -13,15 +13,22 @@ import os
 import secrets
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 from ..core.protocol import RpcClient, RpcServer
 
 
+class VersionConflict(Exception):
+    pass
+
+
 class PageStore:
     def __init__(self, delay_ms: float = 0.0, mbps: float = 0.0, max_bytes: int = 4 << 30):
         self.pages: dict[int, bytes] = {}
+        self.versions: dict[int, int] = {}
+        self._vlock = threading.Lock()
         self.bytes = 0
         self.delay = delay_ms / 1000.0
         self.bps = mbps * 1e6 / 8
@@ -58,6 +65,22 @@ class PageStore:
             if b is not None:
                 self.bytes -= len(b)
             return {}, b""
+        if op == "vget":
+            with self._vlock:
+                b = self.pages.get(h["key"])
+                return {"exists": b is not None, "version": self.versions.get(h["key"], 0)}, b or b""
+        if op == "vput":
+            with self._vlock:                       # compare-and-swap on the page version
+                cur = self.versions.get(h["key"], 0)
+                if h["expected"] != cur:
+                    raise VersionConflict(f"page {h['key']} is at version {cur}, writer expected {h['expected']}")
+                old = self.pages.get(h["key"])
+                if self.bytes - (len(old) if old else 0) + len(blob) > self.max_bytes:
+                    raise MemoryError("page server quota exceeded")
+                self.bytes += len(blob) - (len(old) if old else 0)
+                self.pages[h["key"]] = blob
+                self.versions[h["key"]] = cur + 1
+                return {"version": cur + 1}, b""
         if op == "stat":
             return {"pages": len(self.pages), "bytes": self.bytes}, b""
         raise ValueError(op)

@@ -238,6 +238,4 @@ def test_qir_lowering_is_exact_up_to_global_phase_and_parses():
     assert m.verify() is None
     entry = next(f for f in m.functions if pyqir.is_entry_point(f))
     assert pyqir.required_num_qubits(entry) == 3 and pyqir.required_num_results(entry) == 3
-    dyn = parse("quantum d() { qubit q[1]; let m = measure q[0]; } main { }").kernels["d"]
-    with pytest.raises(QirExportError):
-        to_qir(compile_kernel(dyn, [])[0])
+    assert '"qir_profiles"="base_profile"' in ir

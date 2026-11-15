@@ -124,7 +124,9 @@ def main(argv=None):
     a = ap.parse_args(argv)
     try:
         return a.fn(a)
-    except Exception as e:  # user-facing tool: one clean line, no traceback
+    except (Exception, SystemExit) as e:  # user-facing tool: one clean line, no traceback
+        if isinstance(e, SystemExit) and not isinstance(e.code, str):
+            raise
         print(f"spatial: {type(e).__name__}: {e}", file=sys.stderr)
         return 1
 
