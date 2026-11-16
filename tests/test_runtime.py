@@ -145,7 +145,7 @@ def test_remote_desktop_serves_a_vnc_session_on_loopback_only_and_refuses_unknow
             rest += s.recv(4096)
         assert rest[2:2 + (rest[1] & 0x7f)].startswith(b"RFB 003.")                      # a real VNC server answers behind the websocket
         s.close()
-        out = subprocess.run(["lsof", "-nP", f"-iTCP:{d.port}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout
-        assert "127.0.0.1" in out and "*:" not in out                                  # published on loopback only
+        out = subprocess.run([d.exe, "port", d.container, "6080/tcp"], capture_output=True, text=True, env=d.env).stdout
+        assert out.strip() and all(line.startswith("127.0.0.1:") for line in out.strip().splitlines())      # published on loopback only (the runtime's own report)
     finally:
         d.stop()
