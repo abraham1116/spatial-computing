@@ -8,3 +8,5 @@ vendor/vmlinuz-virt
 vendor/busybox-x86_64
 benchmarks/build/
 .vercel/
+dist/
+build/
