@@ -237,12 +237,12 @@ def test_remote_desktop_view_only_password_and_clipboard_policy_are_enforced():
         while time.time() < deadline and "xterm" not in run("exec", d.container, "ps", "-o", "args"):                 # the application must be up before anyone types
             time.sleep(0.5)
         time.sleep(3)                                                                                           # and its window mapped (slow runners)
-        view.click(500, 300); view.type("touch /tmp/by-viewer"); time.sleep(1.0)                                # the watcher clicks and types...
+        view.click(300, 200); view.type("touch /tmp/by-viewer"); time.sleep(1.0)                                # the watcher clicks and types...
         listing = run("exec", d.container, "ls", "-a", "/tmp")
         assert ".X11-unix" in listing, "the container stopped answering: " + run("logs", "--tail", "20", d.container)
         assert "by-viewer" not in listing                                                                       # ...and nothing happens
-        for attempt in range(4):                                                                                # the owner types (retried: a window may take a moment to take focus)
-            full.click(500, 300); full.type("touch /tmp/by-owner")
+        for attempt in range(6):                                                                                # the owner types (retried: a window may take a moment to take focus)
+            full.click(300, 200); full.type("touch /tmp/by-owner")
             end = time.time() + 8
             while time.time() < end and "by-owner" not in run("exec", d.container, "ls", "/tmp"):
                 time.sleep(0.5)

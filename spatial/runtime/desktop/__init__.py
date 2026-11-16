@@ -25,7 +25,7 @@ from ..planner import find_oci
 
 HERE = Path(__file__).parent
 IMAGE = "spatial-desktop:1"
-APPS = {"xterm": ["xterm"], "xclock": ["xclock"], "mousepad": ["mousepad"], "xcalc": ["xcalc"]}      # an allow-list: no arbitrary command from the caller
+APPS = {"xterm": ["xterm", "-geometry", "90x28+20+20"], "xclock": ["xclock"], "mousepad": ["mousepad"], "xcalc": ["xcalc"]}      # an allow-list: no arbitrary command from the caller
 
 
 class DesktopError(Exception):
