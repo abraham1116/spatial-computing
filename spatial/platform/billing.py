@@ -18,16 +18,48 @@ from dataclasses import dataclass, field
 
 DEFAULT_PRICING = {
     "currency": "usd",
-    "note": "Example price list: set your own with --pricing-file before charging anyone.",
+    "note": "Example price list: the operator has not set real prices yet.",
     "free_compute_hours_per_month": 1.0,
     "compute_usd_per_hour": 0.10,                  # per hour of task wall time on the fleet
-    "min_invoice_usd": 0.50,                       # below this the period carries over (no tiny charges)
+    "min_invoice_usd": 0.50,                       # below this the period is waived (no tiny charges)
+    "tax_label": "VAT",
+    "tax_rate_percent": 0.0,                       # default rate added to every invoice
+    "tax_by_country": {},                          # {"FR": 20, "DE": 19}: overrides the default rate by the customer's billing country
+    "no_tax_with_vat_id_abroad": False,            # simplified B2B reverse charge: a customer with a VAT id outside the seller's country pays no tax
 }
+
+PRICING_KEYS = {"currency": str, "note": str, "free_compute_hours_per_month": (int, float), "compute_usd_per_hour": (int, float), "min_invoice_usd": (int, float),
+                "tax_label": str, "tax_rate_percent": (int, float), "tax_by_country": dict, "no_tax_with_vat_id_abroad": bool}
+
+
+def validate_pricing(d: dict) -> dict:
+    """Return a clean pricing dict or raise ValueError. Bounds keep a typo from charging 1000x."""
+    out = dict(DEFAULT_PRICING)
+    for k, v in d.items():
+        if k not in PRICING_KEYS:
+            raise ValueError(f"unknown pricing field '{k}'")
+        if isinstance(v, bool) != (PRICING_KEYS[k] is bool) or not isinstance(v, PRICING_KEYS[k]):
+            raise ValueError(f"'{k}' has the wrong type")
+        out[k] = v
+    if not (isinstance(out["currency"], str) and len(out["currency"]) == 3 and out["currency"].isalpha()):
+        raise ValueError("currency must be a 3-letter code")
+    for k, lo, hi in (("free_compute_hours_per_month", 0, 100000), ("compute_usd_per_hour", 0, 1000), ("min_invoice_usd", 0, 1000), ("tax_rate_percent", 0, 50)):
+        if not lo <= out[k] <= hi:
+            raise ValueError(f"'{k}' must be between {lo} and {hi}")
+    for c, r in out["tax_by_country"].items():
+        if not (isinstance(c, str) and len(c) == 2 and c.isalpha() and isinstance(r, (int, float)) and not isinstance(r, bool) and 0 <= r <= 50):
+            raise ValueError("tax_by_country must map 2-letter country codes to rates between 0 and 50")
+    out["tax_by_country"] = {c.upper(): r for c, r in out["tax_by_country"].items()}
+    out["currency"] = out["currency"].lower()
+    return out
 
 
 @dataclass
 class Pricing:
     data: dict = field(default_factory=lambda: dict(DEFAULT_PRICING))
+
+    def __post_init__(self):
+        self.data = {**DEFAULT_PRICING, **self.data}          # fields added in later versions keep their defaults
 
     @classmethod
     def load(cls, path: str | None) -> "Pricing":

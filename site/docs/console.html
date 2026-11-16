@@ -12,10 +12,18 @@
 <tr><td><b>Jobs</b></td><td>Submit one of the hub's allow-listed workloads with its parameters, follow queued, running and finished jobs</td></tr>
 <tr><td><b>Fleet</b></td><td>The machines that joined with your node keys (status, cores, CPU, RAM), queue counts, how to add a machine</td></tr>
 <tr><td><b>API keys</b></td><td>Every hub credential of your apps; create, copy once, revoke</td></tr>
-<tr><td><b>Usage &amp; billing</b></td><td>This month by app, free allowance, price per compute hour, invoices, payment</td></tr>
-<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (password, active sessions), <i>Account tokens</i> for the REST API, <i>Activity</i>, <i>Data</i> (export, delete account)</td></tr>
-<tr><td><b>Admin</b></td><td>First account only: users, platform totals, hub status, configuration</td></tr></tbody></table>
-<p><img src="../assets/console-overview.png" alt="Console overview with the get-started checklist" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-jobs.png" alt="Jobs page: submit a job and follow recent jobs" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-fleet.png" alt="Fleet page: nodes that joined with node keys, queue counts, recent jobs" style="max-width:100%;border:1px solid var(--line)"></p>
+<tr><td><b>Team</b></td><td>Members, roles, invitations and the organization's name; the switcher at the top of the sidebar changes organization</td></tr>
+<tr><td><b>Usage &amp; billing</b></td><td>This month by app, free allowance, price per compute hour, tax, numbered invoices with PDF, payment, billing details (admins and owners)</td></tr>
+<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (two-factor sign-in, password, active sessions), <i>Account tokens</i> for the REST API, <i>Activity</i>, <i>Data</i> (export, delete account)</td></tr>
+<tr><td><b>Admin</b></td><td>First account only: users, platform totals, hub status, <b>prices and tax</b>, company details for invoices, e-mail status and test, mail queue</td></tr></tbody></table>
+<h2>Teams and roles</h2>
+<p>Everything (apps, keys, jobs, usage, invoices) belongs to an <b>organization</b>. Every account has a personal workspace with one member; create an organization to work with others and invite them by e-mail (the invitation is for one address, single use, valid seven days).</p>
+<table><thead><tr><th>Role</th><th>Can</th></tr></thead><tbody>
+<tr><td><b>viewer</b></td><td>See apps, usage, fleet and jobs</td></tr>
+<tr><td><b>member</b></td><td>+ create apps, API keys and jobs; rename apps</td></tr>
+<tr><td><b>admin</b></td><td>+ invite and remove members, set budgets, delete apps, see billing, pay, edit billing details</td></tr>
+<tr><td><b>owner</b></td><td>+ appoint owners, delete the organization. At least one owner always remains</td></tr></tbody></table>
+<p><img src="../assets/console-overview.png" alt="Console overview with the get-started checklist" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-jobs.png" alt="Jobs page: submit a job and follow recent jobs" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-fleet.png" alt="Fleet page: nodes that joined with node keys, queue counts, recent jobs" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-team.png" alt="Team page: members, roles, invitations" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-admin.png" alt="Admin page: prices and tax, company details, e-mail" style="max-width:100%;border:1px solid var(--line)"></p>
 <h2>API keys and account tokens: two different things</h2>
 <table><thead><tr><th></th><th>API key</th><th>Account token</th></tr></thead><tbody>
 <tr><td>Used with</td><td>The <b>hub</b> (SWP/2): <code>spatial agent</code>, <code>spatial fleet</code>, any client</td><td>The <b>console REST API</b> (<a href="api.html">reference</a>): scripts that create apps, keys, read usage</td></tr>
@@ -30,17 +38,21 @@
 <tr><td>A machine in Fleet</td><td>A node whose identity is its node key</td></tr>
 <tr><td>A job</td><td>A task submitted with a short-lived client credential of the app</td></tr>
 <tr><td>Usage</td><td>One line per finished task in the hub's usage file, read incrementally</td></tr></tbody></table>
-<h2>Security</h2>
-<ul><li>Passwords hashed with scrypt; the same message and the same work for unknown and known accounts; five wrong passwords lock the account for 15 minutes; sign-ups, logins and resets are rate-limited.</li>
-<li>Session cookie <code>HttpOnly</code>, <code>SameSite=Strict</code> (<code>Secure</code> behind TLS), CSRF token and same-origin check on every change. Tokens are bearer credentials without cookies, so no CSRF; a token cannot create tokens, change the password or delete the account.</li>
-<li>Reset links are single-use and expire in an hour and never reveal whether an address has an account; changing the password signs out every other session; you can list and end sessions.</li>
-<li>One user cannot see or change another's app (same answer as for an app that does not exist). Strict content security policy: no inline script or style.</li>
+<h2>Account security</h2>
+<ul><li><b>Passwords</b> hashed with scrypt; same message and same work for unknown and known accounts; five wrong passwords lock the account for 15 minutes; sign-ups, logins, resets and API calls are rate-limited (600 requests a minute per user, 120 per token).</li>
+<li><b>Two-factor sign-in</b> (Settings, Security): a code from any authenticator app (TOTP, RFC 6238) after the password; eight single-use recovery codes shown once; a code works once; five tries per sign-in attempt; turning it off needs the password and a code and ends every session.</li>
+<li><b>E-mail verification</b>: new accounts get a link; when the server can send e-mail, API keys, jobs and organizations need a verified address (the operator account is exempt). Without SMTP it is not enforced, because nobody could verify.</li>
+<li><b>Sessions</b>: HttpOnly, SameSite=Strict (Secure behind TLS) cookie, CSRF token and same-origin check on every change; list and end sessions; changing the password ends the others. Tokens are bearer credentials without cookies, so no CSRF; a token cannot create tokens, change the password or delete the account.</li>
+<li><b>Isolation</b>: a user sees only organizations they belong to; asking for another organization's data gives the same answer as for something that does not exist. Strict content security policy: no inline script or style.</li>
 <li>Binds to 127.0.0.1 unless you explicitly allow remote access: put TLS in front (the compose file uses Caddy).</li></ul>
-<h2>Billing</h2>
-<p>Price per compute hour and the monthly free allowance are configuration (<code>--pricing-file</code>); the defaults are an example price list. Invoices are created when a month with usage ends; tiny amounts are waived. Payment goes through Stripe Checkout when <code>STRIPE_SECRET_KEY</code> is set, and an invoice is marked paid only by Stripe's signed webhook. Without Stripe the console shows invoices and refuses to charge.</p>
+<h2>Billing, tax and invoices</h2>
+<p>The operator sets prices in Admin (price per compute hour, free monthly allowance, minimum invoice, currency) and tax (a default rate, rates by customer country, optional simplified reverse charge for a customer with a VAT id abroad). Prices apply from then on; <b>invoices already issued keep the prices they were issued with</b>. Organizations enter their billing details (name, address, country, VAT id). At the end of a month with usage an invoice is created with a <b>gap-free number</b> (<code>INV-2026-00001</code>), subtotal, tax and total, and can be downloaded as <b>PDF</b>; amounts under the minimum are waived and get no number. Payment goes through Stripe Checkout when <code>STRIPE_SECRET_KEY</code> is set, and an invoice is marked paid only by Stripe's signed webhook; without Stripe the console shows invoices and refuses to charge.</p>
+<p>Until the operator saves real prices, the console says plainly that it is using example prices.</p>
+<h2>E-mail</h2>
+<p>Messages (verification, invitations, password reset) go through a queue: delivered over SMTP (<code>--smtp-host</code>, STARTTLS or implicit TLS) and retried with growing delays when the server is down; without SMTP they stay visible in Admin. Admin has a test-message button.</p>
 <h2>Run and deploy</h2>
 <p>Locally: <code>spatial platform serve</code> (see the panel). On a server: <code>docker compose --env-file deploy/.env up -d --build</code> starts the hub, the console and automatic HTTPS (<code>docs/DEPLOY.md</code>).</p>
-<div class="callout warn"><b>Limits</b>One service process with SQLite. No teams or roles, no two-factor sign-in, no e-mail verification of new accounts, no taxes or PDF invoices. E-mails are sent only with SMTP configured, otherwise they stay in an outbox table. Tested end to end with a real hub and agents and in a driven browser session; payments only against a fake Stripe API, never with real money.</div><div class="pager"><a href="quickstart.html">← Quickstart</a><a href="api.html">REST API →</a></div></main><aside class="rail" aria-label="Examples"><h5>Run it locally</h5><pre><span class="k">$ spatial token init --master-key-file hub.key
+<div class="callout warn"><b>Limits</b>One service process with SQLite. The tax handling is a rate table and a simplified reverse-charge switch: it is not a tax-compliance engine (no VAT validation, no country-specific invoice rules, no credit notes): have an accountant check it before you invoice. Two-factor setup shows the key and an otpauth link, not a QR code. Roles are fixed (four), with no custom permissions. E-mail is tested against a local SMTP stand-in, not a real provider; payments only against a fake Stripe API, never with real money.</div><div class="pager"><a href="quickstart.html">← Quickstart</a><a href="api.html">REST API →</a></div></main><aside class="rail" aria-label="Examples"><h5>Run it locally</h5><pre><span class="k">$ spatial token init --master-key-file hub.key
 $ spatial serve hub \
     --master-key-file hub.key \
     --usage-file usage.jsonl \

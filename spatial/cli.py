@@ -103,6 +103,23 @@ def cmd_agent(a):
     return 0
 
 
+def cmd_desktop(a):
+    from .runtime.desktop import DesktopError, start
+    try:
+        d = start(a.app)
+    except DesktopError as e:
+        print(f"spatial: {e}", file=sys.stderr)
+        return 1
+    print(f"desktop ({a.app}, {d.runtime}), loopback only: {d.url}", flush=True)
+    print("Ctrl+C removes it", flush=True)
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        d.stop()
+    return 0
+
+
 def cmd_platform(a):
     from .platform import server
     rest = [x for x in a.rest if x != "serve"] if a.rest[:1] == ["serve"] else a.rest
@@ -321,6 +338,9 @@ def main(argv=None):
     p.add_argument("--workload"); p.add_argument("--params", default="{}"); p.add_argument("--needs", default="{}")
     p.add_argument("--task-id", type=int)
     p.set_defaults(fn=cmd_fleet)
+    p = sub.add_parser("desktop", help="run a graphical Linux app (xterm, xclock, mousepad) in a container and open it in your browser (noVNC, loopback only)")
+    p.add_argument("app", nargs="?", default="xterm", choices=["xterm", "xclock", "mousepad"])
+    p.set_defaults(fn=cmd_desktop)
     p = sub.add_parser("platform", help="account service: sign up, sign in, apps, API keys, usage, billing (`spatial platform serve --help`)")
     p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(fn=cmd_platform)

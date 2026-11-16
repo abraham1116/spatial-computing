@@ -120,3 +120,32 @@ def test_container_can_be_given_a_shared_folder_copied_in_and_back_and_network_o
     assert "rc=" in net.stdout                                                             # allowed: the call is attempted (success depends on connectivity)
     bad = execute(str(bb), ["true"], route="container", share_dir="/does/not/exist")
     assert not bad.ok and "not a directory" in bad.extra["not_runnable"]
+
+
+# ---- remote desktop (needs a reachable container daemon; skipped otherwise)
+@pytest.mark.skipif(_oci is None, reason="no reachable container daemon")
+def test_remote_desktop_serves_a_vnc_session_on_loopback_only_and_refuses_unknown_apps():
+    import base64, os, socket, subprocess
+    from spatial.runtime.desktop import DesktopError, start
+    with pytest.raises(DesktopError):
+        start("rm -rf /")                                                              # an allow-list, never a free command
+    d = start("xterm", wait_s=120)
+    try:
+        assert d.url.startswith("http://127.0.0.1:") and len(d.password) >= 12
+        s = socket.create_connection(("127.0.0.1", d.port), timeout=30)
+        key = base64.b64encode(os.urandom(16)).decode()
+        s.sendall((f"GET /websockify HTTP/1.1\r\nHost: 127.0.0.1:{d.port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\n"
+                   f"Sec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: binary\r\n\r\n").encode())
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            buf += s.recv(4096)
+        head, _, rest = buf.partition(b"\r\n\r\n")
+        assert b"101" in head.splitlines()[0]
+        while len(rest) < 14:
+            rest += s.recv(4096)
+        assert rest[2:2 + (rest[1] & 0x7f)].startswith(b"RFB 003.")                      # a real VNC server answers behind the websocket
+        s.close()
+        out = subprocess.run(["lsof", "-nP", f"-iTCP:{d.port}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout
+        assert "127.0.0.1" in out and "*:" not in out                                  # published on loopback only
+    finally:
+        d.stop()

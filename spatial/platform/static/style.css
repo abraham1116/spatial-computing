@@ -73,3 +73,8 @@ dialog.modal::backdrop{background:#12233f99}
 .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.mhead h2{margin:0}
 .pfield{display:inline-block;margin-right:14px;min-width:150px}.pfield input{width:150px}
 @media (max-width:860px){.grid3{grid-template-columns:1fr}}
+.orgsel{width:100%;margin:0 0 12px;padding:7px 8px;font:400 12px var(--mono);border:1px solid var(--ink)}
+.check{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font:400 13px var(--sans);color:var(--ink)}.check input{width:auto}
+table.mini td{border-bottom:0;padding:3px 12px 3px 0}
+tfoot td{border-bottom:0;padding-top:10px}
+textarea{resize:vertical}

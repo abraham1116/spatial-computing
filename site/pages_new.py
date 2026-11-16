@@ -101,7 +101,7 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
     doc("roadmap", "Roadmap and open tests",
         "What is built, what needs hardware, and what needs people. Every item not yet tested is listed with how to run it.",
         '''<h2>Built and measured on one machine</h2>
-<p>Planner (one objective, estimate against reality), fleet (agent, hub, fair share, gangs, affinity, persistence, failover, dashboard, alerts), accelerator fabric (CPU, Metal), portable kernels, virtual interconnect, compute, tiered memory, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulator, compiler, IBM hardware run), security hardening.</p>
+<p>Planner (one objective, estimate against reality), console (accounts, organizations and roles, two-factor sign-in, API keys, jobs, usage, tax, numbered invoices with PDF, REST API), remote desktop for three Linux apps, fleet (agent, hub, fair share, gangs, affinity, persistence, failover, dashboard, alerts), accelerator fabric (CPU, Metal), portable kernels, virtual interconnect, compute, tiered memory, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulator, compiler, IBM hardware run), security hardening.</p>
 <h2>Needs hardware</h2>
 <table><thead><tr><th>Item</th><th>Why it matters</th></tr></thead><tbody>
 <tr><td>An NVIDIA GPU</td><td>Run the generated CUDA C and the <code>numba.cuda</code> path; price a GPU as a planner option. <b>Decides whether the commercial thesis holds.</b></td></tr>
@@ -115,7 +115,7 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
 <li>Conversations with GPU cloud and inference operators, then a design-partner pilot with a measured saving.</li>
 <li>Patent, trademark and export-control checks.</li></ul>
 <h2>Not built</h2>
-<ul><li>Remote desktop and application streaming; a Windows VM route (no licence); comparisons with Docker Desktop, UTM, Parallels, CrossOver.</li>
+<ul><li>A Windows VM route (no licence); remote desktop beyond three Linux apps (audio, clipboard policy, several users); comparisons with Docker Desktop, UTM, Parallels, CrossOver.</li>
 <li>Model routing, vLLM or llm-d, and GPU inference (a real small model was measured on the CPU: prefix reuse saved at least ×41 on a 946-token prompt, identical answers).</li>
 <li>A replicated log for the hub, tiling and tensor cores in kernels, coverage-guided fuzzing.</li></ul>
 <p>The full list with identifiers and procedures: <code>docs/TESTS_NOT_DONE.md</code> and <code>ROADMAP.md</code> in the repository. A weekly workflow (<code>verify.yml</code>) re-checks the properties behind the published results.</p>''',
@@ -235,7 +235,7 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
     doc("roadmap", "Feuille de route et tests ouverts",
         "Ce qui est construit, ce qui demande du matériel, ce qui demande des gens. Chaque test non fait est listé avec la façon de le lancer.",
         '''<h2>Construit et mesuré sur une machine</h2>
-<p>Planificateur (un objectif, estimation contre réalité), flotte (agent, hub, équité, groupes, affinité, persistance, bascule, tableau de bord, alertes), fabric d'accélérateurs (CPU, Metal), noyaux portables, interconnexion virtuelle, calcul, mémoire hiérarchisée, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulateur, compilateur, exécution sur matériel IBM), durcissement de la sécurité.</p>
+<p>Planificateur (un objectif, estimation contre réalité), console (comptes, organisations et rôles, double authentification, clés d'API, jobs, usage, taxe, factures numérotées avec PDF, API REST), bureau distant pour trois applications Linux, flotte (agent, hub, équité, groupes, affinité, persistance, bascule, tableau de bord, alertes), fabric d'accélérateurs (CPU, Metal), noyaux portables, interconnexion virtuelle, calcul, mémoire hiérarchisée, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulateur, compilateur, exécution sur matériel IBM), durcissement de la sécurité.</p>
 <h2>Demande du matériel</h2>
 <table><thead><tr><th>Élément</th><th>Pourquoi c'est important</th></tr></thead><tbody>
 <tr><td>Un GPU NVIDIA</td><td>Exécuter le C CUDA généré et le chemin <code>numba.cuda</code> ; chiffrer un GPU comme option du planificateur. <b>Décide si la thèse commerciale tient.</b></td></tr>
@@ -249,7 +249,7 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
 <li>Des conversations avec des opérateurs de cloud GPU et d'inférence, puis un pilote avec un partenaire et une économie mesurée.</li>
 <li>Vérifications de brevets, de marque et de contrôle des exportations.</li></ul>
 <h2>Pas construit</h2>
-<ul><li>Bureau distant et diffusion d'applications ; une route VM Windows (pas de licence) ; comparaisons avec Docker Desktop, UTM, Parallels, CrossOver.</li>
+<ul><li>Une route VM Windows (pas de licence) ; bureau distant au-delà de trois applications Linux (audio, politique de presse-papiers, plusieurs utilisateurs) ; comparaisons avec Docker Desktop, UTM, Parallels, CrossOver.</li>
 <li>Routage de modèles, vLLM ou llm-d, et inférence sur GPU (un vrai petit modèle a été mesuré sur CPU : la réutilisation du préfixe a fait gagner au moins ×41 sur un prompt de 946 jetons, réponses identiques).</li>
 <li>Un journal répliqué pour le hub, tuilage et cœurs tenseurs dans les noyaux, fuzzing guidé par la couverture.</li></ul>
 <p>La liste complète avec identifiants et procédures : <code>docs/TESTS_NOT_DONE.md</code> et <code>ROADMAP.md</code> dans le dépôt. Un workflow hebdomadaire (<code>verify.yml</code>) revérifie les propriétés derrière les résultats publiés.</p>''',

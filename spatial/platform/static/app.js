@@ -1,6 +1,8 @@
 "use strict";
 /* Spatial Computing console. One file, no framework. Everything user-supplied is inserted with textContent. */
-const S = {me: null, csrf: "", hub: null, payments: false, docs: "#", newKey: null, jobMsg: {}, timer: null};
+const S = {me: null, csrf: "", hub: null, payments: false, docs: "#", newKey: null, jobMsg: {}, timer: null, org: null, orgs: [], role: "owner", requireVerified: false, invite: null, ticket: null};
+const RANK = {viewer: 0, member: 1, admin: 2, owner: 3};
+const can = r => RANK[S.role] >= RANK[r];
 const root = document.getElementById("root");
 const NS = "http://www.w3.org/2000/svg";
 
@@ -18,7 +20,7 @@ function h(tag, attrs, ...kids) {
 }
 const svg = (tag, attrs, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); kids.forEach(k => e.append(k.nodeType ? k : document.createTextNode(k))); return e; };
 async function api(method, path, body) {
-  const r = await fetch(path, {method, credentials: "same-origin", headers: {"Content-Type": "application/json", "X-CSRF-Token": S.csrf}, body: body ? JSON.stringify(body) : undefined});
+  const r = await fetch(path, {method, credentials: "same-origin", headers: {"Content-Type": "application/json", "X-CSRF-Token": S.csrf, ...(S.org ? {"X-Org": String(S.org)} : {})}, body: body ? JSON.stringify(body) : undefined});
   let data = {};
   try { data = await r.json(); } catch (e) { /* empty body */ }
   if (r.status === 401 && S.me) { S.me = null; location.hash = "#/login"; }
@@ -121,11 +123,15 @@ function authScreen(title, lead, form, alt) {
 }
 const loginView = () => authScreen("Sign in", "Welcome back.", {
   fields: [...field("E-mail", "email", "email", {autocomplete: "username"}), ...field("Password", "password", "password", {autocomplete: "current-password"})], button: "Sign in",
-  submit: ev => guarded(ev, async () => { const d = await api("POST", "/api/login", {email: val("email"), password: val("password")}); S.me = d.user; S.csrf = d.csrf; location.hash = "#/"; })},
+  submit: ev => guarded(ev, async () => { const d = await api("POST", "/api/login", {email: val("email"), password: val("password")}); if (d.needs_2fa) { S.ticket = d.ticket; location.hash = "#/2fa"; route(); return; } await afterAuth(); })},
   [h("a", {href: "#/forgot"}, "Forgot your password?"), "  ·  ", h("a", {href: "#/signup"}, "Create an account")]);
+const twofaView = () => authScreen("Two-factor code", "Enter the 6-digit code from your authenticator app, or one of your recovery codes.", {
+  fields: field("Code", "code", "text", {autocomplete: "one-time-code", inputmode: "numeric", maxlength: 24}), button: "Verify",
+  submit: ev => guarded(ev, async () => { try { await api("POST", "/api/login/2fa", {ticket: S.ticket, code: val("code")}); S.ticket = null; await afterAuth(); } catch (e) { if (/expired/.test(e.message)) { S.ticket = null; location.hash = "#/login"; } throw e; } })},
+  [h("a", {href: "#/login"}, "Start again")]);
 const signupView = () => authScreen("Create your account", "A free monthly allowance is included. No card needed.", {
   fields: [...field("Name", "name", "text", {autocomplete: "name", maxlength: 80}), ...field("E-mail", "email", "email", {autocomplete: "username"}), ...field("Password (10 characters or more)", "password", "password", {autocomplete: "new-password", minlength: 10})], button: "Create account",
-  submit: ev => guarded(ev, async () => { const d = await api("POST", "/api/signup", {name: val("name"), email: val("email"), password: val("password")}); S.me = d.user; S.csrf = d.csrf; location.hash = "#/"; })},
+  submit: ev => guarded(ev, async () => { await api("POST", "/api/signup", {name: val("name"), email: val("email"), password: val("password")}); await afterAuth(); })},
   ["Already have an account? ", h("a", {href: "#/login"}, "Sign in")]);
 const forgotView = () => authScreen("Reset your password", "We will send you a link, valid for one hour.", {
   fields: field("E-mail", "email", "email", {autocomplete: "username"}), button: "Send the link",
@@ -135,17 +141,27 @@ const resetView = token => authScreen("Choose a new password", "Use at least 10 
   submit: ev => guarded(ev, async () => { await api("POST", "/api/password/reset", {token, password: val("password")}); toast("Password changed: sign in"); location.hash = "#/login"; })}, [h("a", {href: "#/login"}, "Back to sign in")]);
 
 /* ---------------------------------------------------------------- shell */
+function orgSwitcher() {
+  const sel = h("select", {class: "orgsel", "aria-label": "Organization", onchange: async ev => {
+    if (ev.target.value === "new") { ev.target.value = String(S.org); const name = prompt("Name of the new organization"); if (!name) return;
+      try { const r = await api("POST", "/api/orgs", {name}); localStorage.setItem("sp_org", r.org.id); loadSession(await api("GET", "/api/me")); location.hash = "#/team"; route(); } catch (e) { toast(e.message); } return; }
+    localStorage.setItem("sp_org", ev.target.value); loadSession(await api("GET", "/api/me")); location.hash = "#/"; route(); }},
+    S.orgs.map(o => h("option", {value: o.id, selected: o.id === S.org}, (o.personal ? "Personal: " : "") + o.name)), h("option", {value: "new"}, "+ New organization"));
+  return sel;
+}
 function shell(active, ...content) {
   const link = (href, label, key) => h("a", {class: "nav" + (active === key ? " on" : ""), href}, label);
+  const unverified = S.requireVerified && !S.me.email_verified && !S.me.is_admin;
   return h("div", {class: "shell"},
-    h("aside", {class: "side"}, h("div", {class: "logo"}, h("img", {src: "/logo.svg", alt: ""}), "Console"),
+    h("aside", {class: "side"}, h("div", {class: "logo"}, h("img", {src: "/logo.svg", alt: ""}), "Console"), orgSwitcher(),
       link("#/", "Overview", "overview"), link("#/apps", "Apps", "apps"), link("#/jobs", "Jobs", "jobs"), link("#/fleet", "Fleet", "fleet"),
-      link("#/keys", "API keys", "keys"), link("#/billing", "Usage & billing", "billing"), link("#/settings", "Settings", "settings"),
+      link("#/keys", "API keys", "keys"), link("#/team", "Team", "team"), can("admin") ? link("#/billing", "Usage & billing", "billing") : null, link("#/settings", "Settings", "settings"),
       S.me.is_admin ? link("#/admin", "Admin", "admin") : null,
       h("a", {class: "nav ext", href: S.docs, target: "_blank", rel: "noopener"}, "Documentation ↗"),
       h("div", {class: "grow"}), h("div", {class: "me"}, S.me.name, h("br"), S.me.email),
       h("a", {class: "nav", href: "#/", onclick: async ev => { ev.preventDefault(); await api("POST", "/api/logout"); S.me = null; location.hash = "#/login"; }}, "Sign out")),
-    h("main", {class: "main"}, ...content));
+    h("main", {class: "main"}, unverified ? h("div", {class: "notice"}, "Confirm your e-mail address to create API keys and run jobs: open the link we sent you. ",
+      h("button", {class: "btn ghost sm", onclick: async () => { try { await api("POST", "/api/verify/resend"); toast("Sent again"); } catch (e) { toast(e.message); } }}, "Send it again")) : null, ...content));
 }
 const pageTop = (title, lead, ...actions) => h("div", {class: "top"}, h("div", {}, h("h1", {}, title), lead ? h("p", {class: "mute"}, lead) : null), h("div", {class: "row"}, ...actions));
 const newAppBtn = () => h("button", {class: "btn", onclick: () => newAppDialog()}, "New app");
@@ -274,21 +290,78 @@ async function keysView() {
       h("p", {class: "small mute"}, "Keys are for the infrastructure (the hub). To call this console's REST API from a script, use an ", h("a", {href: "#/settings/tokens"}, "account token"), ". ", docLink("docs/console.html", "Documentation"))));
 }
 
+/* ---------------------------------------------------------------- team */
+async function teamView() {
+  const {org} = await api("GET", "/api/org");
+  const isAdmin = can("admin"), isOwner = can("owner");
+  const inviteForm = isAdmin && !org.personal ? h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/org/invites", {email: val("iv_email"), role: val("iv_role")}); toast("Invitation sent"); route(); }, "iv_err")},
+    h("div", {class: "row"}, h("div", {}, ...field("E-mail", "iv_email", "email", {placeholder: "colleague@example.com"})),
+      h("div", {}, h("label", {for: "iv_role"}, "Role"), h("select", {id: "iv_role"}, ["member", "viewer", "admin", ...(isOwner ? ["owner"] : [])].map(r => h("option", {value: r}, r)))),
+      h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Invite"))), h("p", {class: "err", id: "iv_err", role: "alert"})) : null;
+  const roleSel = m => isAdmin && m.user_id !== S.me.id ? h("select", {onchange: async ev => { try { await api("PATCH", "/api/org/members/" + m.user_id, {role: ev.target.value}); toast("Role changed"); route(); } catch (e) { toast(e.message); route(); } }},
+    ["viewer", "member", "admin", "owner"].map(r => h("option", {value: r, selected: r === m.role}, r))) : tag(m.role, m.role === "owner" ? "warn" : "mute");
+  const roles = h("table", {class: "mini"}, h("tbody", {}, [["viewer", "sees apps, usage, fleet and jobs"], ["member", "+ creates apps, keys and jobs"], ["admin", "+ members, budgets, billing, deletes apps"], ["owner", "+ owners, deletes the organization"]].map(([r, d]) => h("tr", {}, h("td", {}, tag(r)), h("td", {class: "mute small"}, d)))));
+  return shell("team", pageTop(org.name, org.personal ? "Your personal workspace: one member. Create an organization to work with others." : "Members, roles and invitations."),
+    h("div", {class: "card"}, h("div", {class: "cardhead"}, h("h2", {}, "Members (" + org.member_list.length + ")")),
+      h("table", {}, th(["Name", "E-mail", "Role", "Since", ""]), h("tbody", {}, org.member_list.map(m => h("tr", {}, h("td", {}, m.name), h("td", {class: "mono small"}, m.email), h("td", {}, roleSel(m)), h("td", {}, fmt.date(m.since)),
+        h("td", {}, (isAdmin && m.user_id !== S.me.id) || (m.user_id === S.me.id && !org.personal) ? h("button", {class: "btn danger sm", onclick: async () => { if (confirm(m.user_id === S.me.id ? "Leave this organization?" : "Remove " + m.name + "?")) { try { await api("DELETE", "/api/org/members/" + m.user_id); if (m.user_id === S.me.id) { localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; } route(); } catch (e) { toast(e.message); } } }}, m.user_id === S.me.id ? "Leave" : "Remove") : null))))),
+      h("p", {class: "small mute"}, docLink("docs/console.html", "Roles are explained in the documentation"))),
+    isAdmin && !org.personal ? h("div", {class: "card"}, h("h2", {}, "Invite someone"), inviteForm,
+      (org.invites || []).length ? h("table", {}, th(["Pending invitation", "Role", "Expires", ""]), h("tbody", {}, org.invites.map(i => h("tr", {}, h("td", {}, i.email), h("td", {}, tag(i.role)), h("td", {}, fmt.date(i.expires)), h("td", {}, h("button", {class: "btn ghost sm", onclick: async () => { await api("DELETE", "/api/org/invites/" + i.id); route(); }}, "Cancel")))))) : null) : null,
+    h("div", {class: "card"}, h("h2", {}, "What each role can do"), roles),
+    isAdmin ? h("div", {class: "card"}, h("h2", {}, "Organization"), h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {name: val("on_name")}); toast("Saved"); loadSession(await api("GET", "/api/me")); route(); }, "on_err")},
+        ...field("Name", "on_name", "text", {maxlength: 60, value: org.name}), h("p", {class: "err", id: "on_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save")),
+      isOwner && !org.personal ? h("p", {}, h("button", {class: "btn danger", onclick: async () => { if (confirm("Delete organization “" + org.name + "” with its apps, keys and usage?")) { try { await api("DELETE", "/api/org"); localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; route(); } catch (e) { toast(e.message); } } }}, "Delete organization")) : null) : null);
+}
+
 /* ---------------------------------------------------------------- billing */
 async function billingView() {
-  const b = await api("GET", "/api/billing"); const p = b.pricing;
-  const pay = inv => h("button", {class: "btn sm", disabled: !b.payments_enabled, title: b.payments_enabled ? "" : "Payments are not configured on this server", onclick: async () => { try { const r = await api("POST", "/api/billing/pay", {invoice_id: inv.id}); location.href = r.url; } catch (e) { toast(e.message); } }}, "Pay " + fmt.usd(inv.amount_usd));
+  const [b, od] = await Promise.all([api("GET", "/api/billing"), api("GET", "/api/org")]);
+  const p = b.pricing, e = b.estimate, bd = od.org.billing || {};
+  const pay = inv => h("button", {class: "btn sm", disabled: !b.payments_enabled, title: b.payments_enabled ? "" : "Payments are not configured on this server", onclick: async () => { try { const r = await api("POST", "/api/billing/pay", {invoice_id: inv.id}); location.href = r.url; } catch (er) { toast(er.message); } }}, "Pay " + fmt.usd(inv.amount_usd));
+  const details = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {billing: {name: val("bd_name"), address: val("bd_addr"), country: val("bd_country"), vat_id: val("bd_vat")}}); toast("Billing details saved"); route(); }, "bd_err")},
+    h("div", {class: "grid2"}, h("div", {}, ...field("Company or name on invoices", "bd_name", "text", {required: false, maxlength: 120, value: bd.name || ""}), ...field("VAT id (optional)", "bd_vat", "text", {required: false, maxlength: 40, value: bd.vat_id || ""})),
+      h("div", {}, ...field("Country (2 letters)", "bd_country", "text", {required: false, maxlength: 2, value: bd.country || "", placeholder: "FR"}), h("label", {for: "bd_addr"}, "Address"), h("textarea", {id: "bd_addr", rows: 3, maxlength: 400}, bd.address || ""))),
+    h("p", {class: "err", id: "bd_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save billing details"));
   return shell("billing", pageTop("Usage & billing", "Pay for what you use. Usage is metered per finished task."),
     b.payments_enabled ? null : h("div", {class: "notice"}, "Payments are not configured on this server: invoices are shown, but nothing can be charged."),
-    h("div", {class: "kpis"}, kpi(fmt.usd(b.estimate.total_usd), "estimated for " + b.period), kpi(p.free_compute_hours_per_month + " h", "free compute per month"), kpi(fmt.usd(p.compute_usd_per_hour), "per compute hour after that")),
-    h("div", {class: "card"}, h("h2", {}, "This month by app"), b.estimate.lines.length ? h("table", {}, th(["App", "Compute", "Billable", "Amount"]),
-      h("tbody", {}, b.estimate.lines.map(l => h("tr", {}, h("td", {}, l.app), h("td", {}, fmt.hours(l.seconds)), h("td", {}, fmt.hours(l.billable_seconds)), h("td", {}, fmt.usd(l.usd)))))) : h("p", {class: "mute"}, "No usage this month."), h("p", {class: "small mute"}, p.note || "")),
-    h("div", {class: "card"}, h("h2", {}, "Invoices"), b.invoices.length ? h("table", {}, th(["Period", "Amount", "Status", ""]),
-      h("tbody", {}, b.invoices.map(i => h("tr", {}, h("td", {}, i.period), h("td", {}, fmt.usd(i.amount_usd)), h("td", {}, tag(i.status, i.status === "paid" ? "ok" : i.status === "open" ? "warn" : "mute")), h("td", {}, i.status === "open" ? pay(i) : null))))) : h("p", {class: "mute"}, "No invoice yet. Invoices are created when a month with usage ends."),
-      h("p", {class: "small mute"}, docLink("docs/console.html", "How billing works"))));
+    b.pricing_is_default ? h("div", {class: "notice"}, "The operator has not set real prices yet: these are example prices.") : null,
+    h("div", {class: "kpis"}, kpi(fmt.usd(e.total_usd), "estimated for " + b.period + (e.tax_rate ? " (incl. " + e.tax_label + " " + e.tax_rate + "%)" : "")), kpi(p.free_compute_hours_per_month + " h", "free compute per month"), kpi(fmt.usd(p.compute_usd_per_hour), "per compute hour after that")),
+    h("div", {class: "card"}, h("h2", {}, "This month by app"), e.lines.length ? h("table", {}, th(["App", "Compute", "Billable", "Amount"]),
+      h("tbody", {}, e.lines.map(l => h("tr", {}, h("td", {}, l.app), h("td", {}, fmt.hours(l.seconds)), h("td", {}, fmt.hours(l.billable_seconds)), h("td", {}, fmt.usd(l.usd))))),
+      h("tfoot", {}, h("tr", {}, h("td", {colspan: 3, class: "mute"}, "Subtotal"), h("td", {}, fmt.usd(e.subtotal_usd))), e.tax_rate ? h("tr", {}, h("td", {colspan: 3, class: "mute"}, e.tax_label + " " + e.tax_rate + "%"), h("td", {}, fmt.usd(e.tax_usd))) : null,
+        h("tr", {}, h("td", {colspan: 3}, h("b", {}, "Total")), h("td", {}, h("b", {}, fmt.usd(e.total_usd)))))) : h("p", {class: "mute"}, "No usage this month."), e.tax_note ? h("p", {class: "small mute"}, e.tax_note) : null),
+    h("div", {class: "card"}, h("h2", {}, "Invoices"), b.invoices.length ? h("table", {}, th(["Number", "Period", "Amount", "Status", "", ""]),
+      h("tbody", {}, b.invoices.map(i => h("tr", {}, h("td", {class: "mono small"}, i.number || "-"), h("td", {}, i.period), h("td", {}, fmt.usd(i.amount_usd)), h("td", {}, tag(i.status, i.status === "paid" ? "ok" : i.status === "open" ? "warn" : "mute")),
+        h("td", {}, i.number ? h("a", {class: "btn ghost sm", href: "/api/invoices/" + i.id + "/pdf?org=" + S.org, download: i.number + ".pdf"}, "PDF") : null), h("td", {}, i.status === "open" ? pay(i) : null))))) : h("p", {class: "mute"}, "No invoice yet. Invoices are created when a month with usage ends."),
+      h("p", {class: "small mute"}, docLink("docs/console.html", "How billing works"))),
+    h("div", {class: "card"}, h("h2", {}, "Billing details"), h("p", {class: "mute small"}, "Printed on invoices; the country and VAT id decide the tax rate."), details));
 }
 
 /* ---------------------------------------------------------------- settings */
+function twofaCard() {
+  const box = h("div", {});
+  const render = async () => {
+    box.replaceChildren();
+    if (S.me.totp_enabled) {
+      box.append(h("p", {}, tag("on", "ok"), " Sign-in needs a code from your authenticator app, or a recovery code."),
+        h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/2fa/disable", {password: val("tf_pw"), code: val("tf_code")}); S.me.totp_enabled = false; S.me = null; toast("Two-factor sign-in turned off: sign in again"); location.hash = "#/login"; route(); }, "tf_err")},
+          h("div", {class: "row"}, h("div", {}, ...field("Password", "tf_pw", "password", {autocomplete: "current-password"})), h("div", {}, ...field("Code or recovery code", "tf_code", "text", {autocomplete: "one-time-code"})), h("div", {}, h("label", {}, " "), h("button", {class: "btn danger", type: "submit"}, "Turn off"))),
+          h("p", {class: "err", id: "tf_err", role: "alert"})));
+    } else if (S.tf && S.tf.secret) {
+      box.append(h("p", {class: "small mute"}, "1. In your authenticator app (Google Authenticator, 1Password, Aegis…) add an account with this key, or open the link on your phone:"),
+        h("pre", {class: "code"}, S.tf.secret), h("p", {class: "small"}, h("a", {href: S.tf.uri}, "otpauth link")), h("p", {class: "small mute"}, "2. Enter the 6-digit code it shows:"),
+        h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("POST", "/api/2fa/enable", {code: val("tf_code")}); S.me.totp_enabled = true; S.tf = null; S.recovery = r.recovery_codes; route(); }, "tf_err")},
+          h("div", {class: "row"}, h("div", {}, ...field("Code", "tf_code", "text", {inputmode: "numeric", maxlength: 6, autocomplete: "one-time-code"})), h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Turn on"))), h("p", {class: "err", id: "tf_err", role: "alert"})));
+    } else {
+      box.append(h("p", {class: "mute"}, "Off. Protect your account with a code from an authenticator app in addition to your password."),
+        h("button", {class: "btn", onclick: async () => { try { S.tf = await api("POST", "/api/2fa/setup"); render(); } catch (e) { toast(e.message); } }}, "Set up"));
+    }
+    if (S.recovery) box.prepend(h("div", {class: "reveal", role: "alert"}, h("b", {}, "Save your recovery codes now. They are shown only once; each works once."), h("code", {}, S.recovery.join("   ")),
+      h("div", {class: "row"}, h("button", {class: "btn sm", onclick: () => copy(S.recovery.join("\n"))}, "Copy"), h("button", {class: "btn ghost sm", onclick: () => { S.recovery = null; render(); }}, "I saved them"))));
+  };
+  render(); return h("div", {class: "card"}, h("h2", {}, "Two-factor sign-in"), box);
+}
 const SET_TABS = [["", "Profile"], ["security", "Security"], ["tokens", "Account tokens"], ["activity", "Activity"], ["data", "Data"]];
 async function settingsView(tab) {
   const tabs = h("nav", {class: "tabs"}, SET_TABS.map(([k, l]) => h("a", {href: "#/settings" + (k ? "/" + k : ""), class: (tab || "") === k ? "on" : ""}, l)));
@@ -298,7 +371,7 @@ async function settingsView(tab) {
       h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("PATCH", "/api/me", {name: val("pname")}); S.me = r.user; toast("Saved"); route(); })}, ...field("Name", "pname", "text", {maxlength: 80, value: S.me.name}), h("p", {class: "err", id: "err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save")))];
   } else if (tab === "security") {
     const ss = await api("GET", "/api/sessions");
-    body = [h("div", {class: "card"}, h("h2", {}, "Password"), h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/password/change", {current: val("cur"), new: val("new")}); toast("Password changed; other sessions were signed out"); route(); })},
+    body = [twofaCard(), h("div", {class: "card"}, h("h2", {}, "Password"), h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/password/change", {current: val("cur"), new: val("new")}); toast("Password changed; other sessions were signed out"); route(); })},
         ...field("Current password", "cur", "password", {autocomplete: "current-password"}), ...field("New password (10 characters or more)", "new", "password", {autocomplete: "new-password", minlength: 10}), h("p", {class: "err", id: "err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Change password"))),
       h("div", {class: "card"}, h("h2", {}, "Active sessions"), h("table", {}, th(["Signed in", "Browser", "Address", "", ""]), h("tbody", {}, ss.sessions.map(x => h("tr", {}, h("td", {}, fmt.time(x.created)), h("td", {class: "small"}, x.agent || "-"), h("td", {class: "mono small"}, x.ip || "-"),
         h("td", {}, x.current ? tag("this browser", "ok") : null), h("td", {}, x.current ? null : h("button", {class: "btn danger sm", onclick: async () => { await api("DELETE", "/api/sessions/" + x.id); route(); }}, "Sign out"))))))) ];
@@ -326,13 +399,33 @@ async function settingsView(tab) {
 
 /* ---------------------------------------------------------------- admin */
 async function adminView() {
-  const [o, u] = await Promise.all([api("GET", "/api/admin/overview"), api("GET", "/api/admin/users")]);
-  const hub = o.hub;
+  const [o, u, st, mail] = await Promise.all([api("GET", "/api/admin/overview"), api("GET", "/api/admin/users"), api("GET", "/api/admin/settings"), api("GET", "/api/admin/mail")]);
+  const hub = o.hub, p = st.pricing, co = st.company;
+  const pricing = h("form", {onsubmit: ev => guarded(ev, async () => {
+      let by = {}; try { by = val("pr_by").trim() ? JSON.parse(val("pr_by")) : {}; } catch (e) { throw new Error('Tax by country must be JSON, for example {"FR": 20, "DE": 19}'); }
+      await api("PUT", "/api/admin/pricing", {currency: val("pr_cur"), compute_usd_per_hour: Number(val("pr_rate")), free_compute_hours_per_month: Number(val("pr_free")), min_invoice_usd: Number(val("pr_min")),
+        tax_label: val("pr_label"), tax_rate_percent: Number(val("pr_tax")), tax_by_country: by, no_tax_with_vat_id_abroad: document.getElementById("pr_rc").checked}); toast("Prices saved (invoices already issued do not change)"); route(); }, "pr_err")},
+    h("div", {class: "grid3"}, h("div", {}, ...field("Price per compute hour", "pr_rate", "number", {step: "any", min: 0, max: 1000, value: p.compute_usd_per_hour})), h("div", {}, ...field("Free compute hours per month", "pr_free", "number", {step: "any", min: 0, value: p.free_compute_hours_per_month})),
+      h("div", {}, ...field("Minimum invoice", "pr_min", "number", {step: "any", min: 0, value: p.min_invoice_usd})), h("div", {}, ...field("Currency (3 letters)", "pr_cur", "text", {maxlength: 3, value: p.currency})),
+      h("div", {}, ...field("Tax name", "pr_label", "text", {maxlength: 20, value: p.tax_label})), h("div", {}, ...field("Default tax rate %", "pr_tax", "number", {step: "any", min: 0, max: 50, value: p.tax_rate_percent}))),
+    h("label", {for: "pr_by"}, "Tax rate by customer country (JSON)"), h("input", {id: "pr_by", value: JSON.stringify(p.tax_by_country || {})}),
+    h("label", {class: "check"}, h("input", {type: "checkbox", id: "pr_rc", checked: !!p.no_tax_with_vat_id_abroad}), " No tax for a customer with a VAT id in another country than yours (simplified reverse charge)"),
+    h("p", {class: "err", id: "pr_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save prices"));
+  const company = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PUT", "/api/admin/company", {name: val("co_name"), address: val("co_addr"), vat_id: val("co_vat"), country: val("co_cc"), email: val("co_mail")}); toast("Company details saved"); route(); }, "co_err")},
+    h("div", {class: "grid2"}, h("div", {}, ...field("Legal name", "co_name", "text", {required: false, value: co.name}), ...field("VAT id", "co_vat", "text", {required: false, value: co.vat_id}), ...field("Country (2 letters)", "co_cc", "text", {required: false, maxlength: 2, value: co.country})),
+      h("div", {}, ...field("Contact e-mail", "co_mail", "email", {required: false, value: co.email}), h("label", {for: "co_addr"}, "Address"), h("textarea", {id: "co_addr", rows: 4, maxlength: 400}, co.address))),
+    h("p", {class: "err", id: "co_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save company details"));
+  const testMail = h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("POST", "/api/admin/test-mail", {to: val("tm_to")}); toast(r.sent ? "Test message sent" : "Not sent: " + (r.error || "see the queue below")); route(); }, "tm_err")},
+    h("div", {class: "row"}, h("div", {}, ...field("Send a test message to", "tm_to", "email", {value: S.me.email})), h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit", disabled: !st.email.smtp_configured}, "Send test"))), h("p", {class: "err", id: "tm_err", role: "alert"}));
   return shell("admin", pageTop("Admin", "The platform as a whole. Visible to the first account only."),
+    st.pricing_is_default ? h("div", {class: "notice"}, "You are still on the example price list: customers would be charged example prices. Set yours below.") : null,
     h("div", {class: "kpis"}, kpi(o.users, "users"), kpi(o.apps, "apps"), kpi(o.active_keys, "active keys"), kpi(o.tasks_this_month, "tasks this month"), kpi(o.compute_hours_this_month.toFixed(2) + " h", "compute this month"), kpi(fmt.usd(o.open_invoices_usd), "open invoices")),
     h("div", {class: "grid2"}, h("div", {class: "card"}, h("h2", {}, "Hub"), hub.reachable ? h("table", {}, h("tbody", {}, [["Address", hub.address], ["Role", hub.role + " (epoch " + hub.epoch + ")"], ["Nodes up", hub.nodes_up + " / " + hub.nodes], ["Queue", Object.entries(hub.queue || {}).map(([k, v]) => k + " " + v).join(", ") || "empty"]].map(([k, v]) => h("tr", {}, h("td", {class: "mute"}, k), h("td", {}, v))))) : h("p", {class: "mute"}, "Hub not reachable from the console."), h("p", {class: "small mute"}, docLink("docs/operations.html", "Operations: failover, scale, dashboard"))),
-      h("div", {class: "card"}, h("h2", {}, "Configuration"), h("table", {}, h("tbody", {}, [["Payments", o.payments_enabled ? "Stripe configured" : "not configured"], ["E-mail", o.smtp_configured ? "SMTP configured" : "not configured (" + o.unsent_mails + " unsent in the outbox)"]].map(([k, v]) => h("tr", {}, h("td", {class: "mute"}, k), h("td", {}, v))))), h("p", {class: "small mute"}, docLink("docs/console.html", "Deploying the console")))),
-    h("div", {class: "card"}, h("h2", {}, "Users"), h("table", {}, th(["E-mail", "Name", "Apps", "Compute this month", "Joined", ""]), h("tbody", {}, u.users.map(x => h("tr", {}, h("td", {}, x.email), h("td", {}, x.name), h("td", {}, x.apps), h("td", {}, x.compute_hours_this_month.toFixed(3) + " h"), h("td", {}, fmt.date(x.created)), h("td", {}, x.is_admin ? tag("admin", "warn") : x.locked ? tag("locked", "bad") : null)))))));
+      h("div", {class: "card"}, h("h2", {}, "Services"), h("table", {}, h("tbody", {}, [["Payments", st.payments_enabled ? "Stripe configured" : "not configured (invoices cannot be charged)"], ["E-mail", st.email.smtp_configured ? "SMTP configured" : "not configured: messages stay in the queue"], ["E-mail verification", st.email.require_verified ? "required before keys and jobs" : "not required"], ["Unsent e-mails", st.email.unsent]].map(([k, v]) => h("tr", {}, h("td", {class: "mute"}, k), h("td", {}, v))))), h("p", {class: "small mute"}, docLink("docs/console.html", "Deploying the console")))),
+    h("div", {class: "card"}, h("h2", {}, "Prices and tax"), h("p", {class: "mute small"}, "Applies to usage from now on. Invoices already issued keep the prices they were issued with."), pricing),
+    h("div", {class: "card"}, h("h2", {}, "Company (printed on invoices)"), company),
+    h("div", {class: "card"}, h("h2", {}, "E-mail"), testMail, mail.mail.length ? h("table", {}, th(["When", "To", "Subject", "State"]), h("tbody", {}, mail.mail.map(m => h("tr", {}, h("td", {}, fmt.time(m.created)), h("td", {class: "mono small"}, m.to), h("td", {}, m.subject), h("td", {}, m.sent ? tag("sent", "ok") : m.attempts ? tag("retrying (" + m.attempts + ")", "warn") : tag("queued", "mute")))))) : h("p", {class: "mute"}, "No message yet.")),
+    h("div", {class: "card"}, h("h2", {}, "Users (" + u.total + ")"), h("table", {}, th(["E-mail", "Name", "Apps", "Compute this month", "Joined", ""]), h("tbody", {}, u.users.map(x => h("tr", {}, h("td", {}, x.email), h("td", {}, x.name), h("td", {}, x.apps), h("td", {}, x.compute_hours_this_month.toFixed(3) + " h"), h("td", {}, fmt.date(x.created)), h("td", {}, x.is_admin ? tag("admin", "warn") : x.locked ? tag("locked", "bad") : null)))))));
 }
 
 /* ---------------------------------------------------------------- router */
@@ -343,6 +436,9 @@ async function route() {
     if (hash === "/signup") view = authed ? (location.hash = "#/", null) : signupView();
     else if (hash === "/login") view = authed ? (location.hash = "#/", null) : loginView();
     else if (hash === "/forgot") view = forgotView();
+    else if (hash === "/2fa") view = S.ticket ? twofaView() : loginView();
+    else if (hash.startsWith("/verify/")) { try { const r = await api("POST", "/api/verify", {token: hash.slice(8)}); if (S.me) S.me = r.user; toast("E-mail confirmed"); } catch (e) { toast(e.message); } location.hash = authed ? "#/" : "#/login"; return; }
+    else if (hash.startsWith("/invite/")) { S.invite = hash.slice(8); location.hash = authed ? "#/" : "#/signup"; if (authed) await afterAuth(); else toast("Sign in or create an account with the address that was invited"); return; }
     else if (hash.startsWith("/reset/")) view = resetView(hash.slice(7));
     else if (!authed) { location.hash = "#/login"; return; }
     else if (hash === "/") view = await overviewView();
@@ -351,6 +447,7 @@ async function route() {
     else if (hash === "/jobs") view = await jobsView();
     else if (hash === "/fleet") view = await fleetView();
     else if (hash === "/keys") view = await keysView();
+    else if (hash === "/team") view = await teamView();
     else if (hash.startsWith("/billing")) view = await billingView();
     else if (/^\/settings(\/\w+)?$/.test(hash)) view = await settingsView(hash.split("/")[2]);
     else if (hash === "/admin") view = await adminView();
@@ -361,7 +458,17 @@ async function route() {
   if (view) { root.replaceChildren(view); const f = root.querySelector(".auth input"); if (f) f.focus(); }
 }
 window.addEventListener("hashchange", route);
+function loadSession(d) {
+  S.me = d.user; S.csrf = d.csrf || ""; S.hub = d.hub; S.payments = d.payments; S.docs = d.docs || "#";
+  if (d.user) { S.orgs = d.orgs || []; S.requireVerified = !!d.require_verified; const saved = Number(localStorage.getItem("sp_org") || 0);
+    S.org = (S.orgs.find(o => o.id === saved) || S.orgs[0] || {}).id || d.org; S.role = (S.orgs.find(o => o.id === S.org) || {}).role || d.role || "owner"; }
+}
+async function afterAuth() {
+  const d = await api("GET", "/api/me"); loadSession(d);
+  if (S.invite) { const t = S.invite; S.invite = null; try { const r = await api("POST", "/api/invites/accept", {token: t}); localStorage.setItem("sp_org", r.org.id); toast("You joined " + r.org.name); const d2 = await api("GET", "/api/me"); loadSession(d2); } catch (e) { toast(e.message); } }
+  location.hash = "#/"; route();
+}
 (async () => {
-  try { const d = await api("GET", "/api/me"); S.me = d.user; S.csrf = d.csrf || ""; S.hub = d.hub; S.payments = d.payments; S.docs = d.docs || "#"; } catch (e) { /* signed out */ }
+  try { loadSession(await api("GET", "/api/me")); } catch (e) { /* signed out */ }
   route();
 })();

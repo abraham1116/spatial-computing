@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0
+- Console: organizations with four roles and e-mailed invitations, an organization switcher, a Team page; two-factor sign-in (TOTP + recovery codes); e-mail verification; operator-set prices and tax in Admin (stored, validated, invoices keep issued prices); tax by customer country with a simplified reverse charge; gap-free numbered invoices with PDF; billing details; SMTP mail queue with retries; per-user and per-token rate limits; pagination; database migration of older versions.
+- Remote desktop: `spatial.runtime.desktop` runs xterm, xclock or mousepad in a container and serves it through noVNC (loopback only, one-time password, no capabilities, read-only root).
+- CLI: `spatial desktop`. 33 platform tests (was 18), plus a desktop test.
+
 ## 0.15.0
 - New: console and account service (`spatial platform serve`): sign up / sign in / reset, apps linked to the fleet (tenant `appN`), API keys as scoped hub credentials shown once and revocable on the running hub, usage metering from the hub's `--usage-file`, free allowance and invoices, Stripe Checkout with a signed webhook (never marked paid without it), single-page console. 14 tests plus a driven browser session. See `docs/PLATFORM.md`.
 - Console v2: Overview with a get-started checklist, Apps with tabs (Overview, Keys, Connect, Jobs, Settings), Jobs (curated workload catalogue with bounds), Fleet (your nodes and queue from the hub), API keys, Usage & billing, Settings (Profile, Security with sessions, Account tokens for a REST API, Activity, Data export and deletion), Admin. New app and new key open in place instead of redirecting. Docs and landing aligned: Console and REST API pages, "Get started" leads to sign-up when a console URL is configured.

@@ -21,10 +21,18 @@ SECTIONS = {
 <tr><td><b>Jobs</b></td><td>Submit one of the hub's allow-listed workloads with its parameters, follow queued, running and finished jobs</td></tr>
 <tr><td><b>Fleet</b></td><td>The machines that joined with your node keys (status, cores, CPU, RAM), queue counts, how to add a machine</td></tr>
 <tr><td><b>API keys</b></td><td>Every hub credential of your apps; create, copy once, revoke</td></tr>
-<tr><td><b>Usage &amp; billing</b></td><td>This month by app, free allowance, price per compute hour, invoices, payment</td></tr>
-<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (password, active sessions), <i>Account tokens</i> for the REST API, <i>Activity</i>, <i>Data</i> (export, delete account)</td></tr>
-<tr><td><b>Admin</b></td><td>First account only: users, platform totals, hub status, configuration</td></tr></tbody></table>
-''' + IMG("console-overview.png", "Console overview with the get-started checklist") + IMG("console-jobs.png", "Jobs page: submit a job and follow recent jobs") + IMG("console-fleet.png", "Fleet page: nodes that joined with node keys, queue counts, recent jobs") + '''
+<tr><td><b>Team</b></td><td>Members, roles, invitations and the organization's name; the switcher at the top of the sidebar changes organization</td></tr>
+<tr><td><b>Usage &amp; billing</b></td><td>This month by app, free allowance, price per compute hour, tax, numbered invoices with PDF, payment, billing details (admins and owners)</td></tr>
+<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (two-factor sign-in, password, active sessions), <i>Account tokens</i> for the REST API, <i>Activity</i>, <i>Data</i> (export, delete account)</td></tr>
+<tr><td><b>Admin</b></td><td>First account only: users, platform totals, hub status, <b>prices and tax</b>, company details for invoices, e-mail status and test, mail queue</td></tr></tbody></table>
+<h2>Teams and roles</h2>
+<p>Everything (apps, keys, jobs, usage, invoices) belongs to an <b>organization</b>. Every account has a personal workspace with one member; create an organization to work with others and invite them by e-mail (the invitation is for one address, single use, valid seven days).</p>
+<table><thead><tr><th>Role</th><th>Can</th></tr></thead><tbody>
+<tr><td><b>viewer</b></td><td>See apps, usage, fleet and jobs</td></tr>
+<tr><td><b>member</b></td><td>+ create apps, API keys and jobs; rename apps</td></tr>
+<tr><td><b>admin</b></td><td>+ invite and remove members, set budgets, delete apps, see billing, pay, edit billing details</td></tr>
+<tr><td><b>owner</b></td><td>+ appoint owners, delete the organization. At least one owner always remains</td></tr></tbody></table>
+''' + IMG("console-overview.png", "Console overview with the get-started checklist") + IMG("console-jobs.png", "Jobs page: submit a job and follow recent jobs") + IMG("console-fleet.png", "Fleet page: nodes that joined with node keys, queue counts, recent jobs") + IMG("console-team.png", "Team page: members, roles, invitations") + IMG("console-admin.png", "Admin page: prices and tax, company details, e-mail") + '''
 <h2>API keys and account tokens: two different things</h2>
 <table><thead><tr><th></th><th>API key</th><th>Account token</th></tr></thead><tbody>
 <tr><td>Used with</td><td>The <b>hub</b> (SWP/2): <code>spatial agent</code>, <code>spatial fleet</code>, any client</td><td>The <b>console REST API</b> (<a href="api.html">reference</a>): scripts that create apps, keys, read usage</td></tr>
@@ -39,17 +47,21 @@ SECTIONS = {
 <tr><td>A machine in Fleet</td><td>A node whose identity is its node key</td></tr>
 <tr><td>A job</td><td>A task submitted with a short-lived client credential of the app</td></tr>
 <tr><td>Usage</td><td>One line per finished task in the hub's usage file, read incrementally</td></tr></tbody></table>
-<h2>Security</h2>
-<ul><li>Passwords hashed with scrypt; the same message and the same work for unknown and known accounts; five wrong passwords lock the account for 15 minutes; sign-ups, logins and resets are rate-limited.</li>
-<li>Session cookie <code>HttpOnly</code>, <code>SameSite=Strict</code> (<code>Secure</code> behind TLS), CSRF token and same-origin check on every change. Tokens are bearer credentials without cookies, so no CSRF; a token cannot create tokens, change the password or delete the account.</li>
-<li>Reset links are single-use and expire in an hour and never reveal whether an address has an account; changing the password signs out every other session; you can list and end sessions.</li>
-<li>One user cannot see or change another's app (same answer as for an app that does not exist). Strict content security policy: no inline script or style.</li>
+<h2>Account security</h2>
+<ul><li><b>Passwords</b> hashed with scrypt; same message and same work for unknown and known accounts; five wrong passwords lock the account for 15 minutes; sign-ups, logins, resets and API calls are rate-limited (600 requests a minute per user, 120 per token).</li>
+<li><b>Two-factor sign-in</b> (Settings, Security): a code from any authenticator app (TOTP, RFC 6238) after the password; eight single-use recovery codes shown once; a code works once; five tries per sign-in attempt; turning it off needs the password and a code and ends every session.</li>
+<li><b>E-mail verification</b>: new accounts get a link; when the server can send e-mail, API keys, jobs and organizations need a verified address (the operator account is exempt). Without SMTP it is not enforced, because nobody could verify.</li>
+<li><b>Sessions</b>: HttpOnly, SameSite=Strict (Secure behind TLS) cookie, CSRF token and same-origin check on every change; list and end sessions; changing the password ends the others. Tokens are bearer credentials without cookies, so no CSRF; a token cannot create tokens, change the password or delete the account.</li>
+<li><b>Isolation</b>: a user sees only organizations they belong to; asking for another organization's data gives the same answer as for something that does not exist. Strict content security policy: no inline script or style.</li>
 <li>Binds to 127.0.0.1 unless you explicitly allow remote access: put TLS in front (the compose file uses Caddy).</li></ul>
-<h2>Billing</h2>
-<p>Price per compute hour and the monthly free allowance are configuration (<code>--pricing-file</code>); the defaults are an example price list. Invoices are created when a month with usage ends; tiny amounts are waived. Payment goes through Stripe Checkout when <code>STRIPE_SECRET_KEY</code> is set, and an invoice is marked paid only by Stripe's signed webhook. Without Stripe the console shows invoices and refuses to charge.</p>
+<h2>Billing, tax and invoices</h2>
+<p>The operator sets prices in Admin (price per compute hour, free monthly allowance, minimum invoice, currency) and tax (a default rate, rates by customer country, optional simplified reverse charge for a customer with a VAT id abroad). Prices apply from then on; <b>invoices already issued keep the prices they were issued with</b>. Organizations enter their billing details (name, address, country, VAT id). At the end of a month with usage an invoice is created with a <b>gap-free number</b> (<code>INV-2026-00001</code>), subtotal, tax and total, and can be downloaded as <b>PDF</b>; amounts under the minimum are waived and get no number. Payment goes through Stripe Checkout when <code>STRIPE_SECRET_KEY</code> is set, and an invoice is marked paid only by Stripe's signed webhook; without Stripe the console shows invoices and refuses to charge.</p>
+<p>Until the operator saves real prices, the console says plainly that it is using example prices.</p>
+<h2>E-mail</h2>
+<p>Messages (verification, invitations, password reset) go through a queue: delivered over SMTP (<code>--smtp-host</code>, STARTTLS or implicit TLS) and retried with growing delays when the server is down; without SMTP they stay visible in Admin. Admin has a test-message button.</p>
 <h2>Run and deploy</h2>
 <p>Locally: <code>spatial platform serve</code> (see the panel). On a server: <code>docker compose --env-file deploy/.env up -d --build</code> starts the hub, the console and automatic HTTPS (<code>docs/DEPLOY.md</code>).</p>
-<div class="callout warn"><b>Limits</b>One service process with SQLite. No teams or roles, no two-factor sign-in, no e-mail verification of new accounts, no taxes or PDF invoices. E-mails are sent only with SMTP configured, otherwise they stay in an outbox table. Tested end to end with a real hub and agents and in a driven browser session; payments only against a fake Stripe API, never with real money.</div>''',
+<div class="callout warn"><b>Limits</b>One service process with SQLite. The tax handling is a rate table and a simplified reverse-charge switch: it is not a tax-compliance engine (no VAT validation, no country-specific invoice rules, no credit notes): have an accountant check it before you invoice. Two-factor setup shows the key and an otpauth link, not a QR code. Roles are fixed (four), with no custom permissions. E-mail is tested against a local SMTP stand-in, not a real provider; payments only against a fake Stripe API, never with real money.</div>''',
   panels=[("Run it locally", '<span class="k">$ spatial token init --master-key-file hub.key\n$ spatial serve hub \\\n    --master-key-file hub.key \\\n    --usage-file usage.jsonl \\\n    --revoked-file revoked.txt\n$ spatial platform serve \\\n    --master-key-file hub.key \\\n    --hub 127.0.0.1:PORT \\\n    --usage-file usage.jsonl \\\n    --revoked-file revoked.txt</span>\n<span class="d">console on http://127.0.0.1:8090/</span>'),
           ("Production", '<span class="k">$ docker compose \\\n    --env-file deploy/.env \\\n    up -d --build</span>\n<span class="d">hub + console + HTTPS</span>')]),
  "fr": dict(
@@ -68,10 +80,18 @@ SECTIONS = {
 <tr><td><b>Jobs</b></td><td>Soumettre une des charges autorisées du hub avec ses paramètres, suivre les jobs en file, en cours et terminés</td></tr>
 <tr><td><b>Fleet</b></td><td>Les machines qui ont rejoint avec vos clés nœud (état, cœurs, CPU, RAM), compteurs de la file, comment ajouter une machine</td></tr>
 <tr><td><b>API keys</b></td><td>Tous les identifiants de hub de vos apps ; créer, copier une fois, révoquer</td></tr>
-<tr><td><b>Usage &amp; billing</b></td><td>Le mois par app, allocation gratuite, prix par heure de calcul, factures, paiement</td></tr>
-<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (mot de passe, sessions actives), <i>Account tokens</i> pour l'API REST, <i>Activity</i>, <i>Data</i> (export, suppression du compte)</td></tr>
-<tr><td><b>Admin</b></td><td>Premier compte seulement : utilisateurs, totaux de la plateforme, état du hub, configuration</td></tr></tbody></table>
-''' + IMG("console-overview.png", "Vue d'ensemble de la console avec la liste de démarrage") + IMG("console-jobs.png", "Page Jobs : soumettre un job et suivre les jobs récents") + IMG("console-fleet.png", "Page Fleet : nœuds ayant rejoint avec des clés nœud, compteurs de la file, jobs récents") + '''
+<tr><td><b>Team</b></td><td>Membres, rôles, invitations et nom de l'organisation ; le sélecteur en haut de la barre latérale change d'organisation</td></tr>
+<tr><td><b>Usage &amp; billing</b></td><td>Le mois par app, allocation gratuite, prix par heure de calcul, taxe, factures numérotées avec PDF, paiement, coordonnées de facturation (admins et propriétaires)</td></tr>
+<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (double authentification, mot de passe, sessions actives), <i>Account tokens</i> pour l'API REST, <i>Activity</i>, <i>Data</i> (export, suppression du compte)</td></tr>
+<tr><td><b>Admin</b></td><td>Premier compte seulement : utilisateurs, totaux de la plateforme, état du hub, <b>prix et taxe</b>, coordonnées de la société pour les factures, état et test de l'e-mail, file des messages</td></tr></tbody></table>
+<h2>Équipes et rôles</h2>
+<p>Tout (apps, clés, jobs, usage, factures) appartient à une <b>organisation</b>. Chaque compte a un espace personnel à un seul membre ; créez une organisation pour travailler à plusieurs et invitez par e-mail (l'invitation vaut pour une adresse, à usage unique, valable sept jours).</p>
+<table><thead><tr><th>Rôle</th><th>Peut</th></tr></thead><tbody>
+<tr><td><b>viewer</b></td><td>Voir apps, usage, flotte et jobs</td></tr>
+<tr><td><b>member</b></td><td>+ créer apps, clés d'API et jobs ; renommer les apps</td></tr>
+<tr><td><b>admin</b></td><td>+ inviter et retirer des membres, fixer les budgets, supprimer des apps, voir la facturation, payer, modifier les coordonnées</td></tr>
+<tr><td><b>owner</b></td><td>+ nommer des propriétaires, supprimer l'organisation. Il reste toujours au moins un propriétaire</td></tr></tbody></table>
+''' + IMG("console-overview.png", "Vue d'ensemble de la console avec la liste de démarrage") + IMG("console-jobs.png", "Page Jobs : soumettre un job et suivre les jobs récents") + IMG("console-fleet.png", "Page Fleet : nœuds ayant rejoint avec des clés nœud, compteurs de la file, jobs récents") + IMG("console-team.png", "Page Team : membres, rôles, invitations") + IMG("console-admin.png", "Page Admin : prix et taxe, coordonnées de la société, e-mail") + '''
 <h2>Clés d'API et jetons de compte : deux choses différentes</h2>
 <table><thead><tr><th></th><th>Clé d'API</th><th>Jeton de compte</th></tr></thead><tbody>
 <tr><td>Sert avec</td><td>Le <b>hub</b> (SWP/2) : <code>spatial agent</code>, <code>spatial fleet</code>, tout client</td><td>L'<b>API REST de la console</b> (<a href="api.html">référence</a>) : scripts qui créent apps et clés, lisent l'usage</td></tr>
@@ -86,17 +106,21 @@ SECTIONS = {
 <tr><td>Une machine dans Fleet</td><td>Un nœud dont l'identité est sa clé nœud</td></tr>
 <tr><td>Un job</td><td>Une tâche soumise avec un identifiant client de courte durée de l'app</td></tr>
 <tr><td>L'usage</td><td>Une ligne par tâche terminée dans le fichier d'usage du hub, lu au fil de l'eau</td></tr></tbody></table>
-<h2>Sécurité</h2>
-<ul><li>Mots de passe hachés avec scrypt ; même message et même travail pour un compte inconnu ou connu ; cinq mots de passe faux verrouillent le compte 15 minutes ; inscriptions, connexions et réinitialisations sont limitées en fréquence.</li>
-<li>Cookie de session <code>HttpOnly</code>, <code>SameSite=Strict</code> (<code>Secure</code> derrière TLS), jeton CSRF et contrôle de même origine à chaque changement. Les jetons sont des identifiants porteurs sans cookie, donc sans CSRF ; un jeton ne peut ni créer de jeton, ni changer le mot de passe, ni supprimer le compte.</li>
-<li>Les liens de réinitialisation sont à usage unique, expirent en une heure et ne révèlent jamais si une adresse a un compte ; changer le mot de passe déconnecte toutes les autres sessions ; vous pouvez lister et fermer vos sessions.</li>
-<li>Un utilisateur ne peut ni voir ni modifier l'app d'un autre (même réponse que pour une app inexistante). Politique de sécurité de contenu stricte : ni script ni style en ligne.</li>
+<h2>Sécurité du compte</h2>
+<ul><li><b>Mots de passe</b> hachés avec scrypt ; même message et même travail pour un compte inconnu ou connu ; cinq mots de passe faux verrouillent le compte 15 minutes ; inscriptions, connexions, réinitialisations et appels d'API sont limités en fréquence (600 requêtes par minute et par utilisateur, 120 par jeton).</li>
+<li><b>Double authentification</b> (Settings, Security) : un code d'une application d'authentification (TOTP, RFC 6238) après le mot de passe ; huit codes de secours à usage unique affichés une fois ; un code ne sert qu'une fois ; cinq essais par tentative de connexion ; la désactiver exige le mot de passe et un code et ferme toutes les sessions.</li>
+<li><b>Vérification de l'e-mail</b> : les nouveaux comptes reçoivent un lien ; quand le serveur peut envoyer des e-mails, clés d'API, jobs et organisations exigent une adresse vérifiée (le compte opérateur est exempté). Sans SMTP, ce n'est pas imposé, car personne ne pourrait vérifier.</li>
+<li><b>Sessions</b> : cookie HttpOnly, SameSite=Strict (Secure derrière TLS), jeton CSRF et contrôle de même origine à chaque changement ; lister et fermer des sessions ; changer le mot de passe ferme les autres. Les jetons sont des identifiants porteurs sans cookie, donc sans CSRF ; un jeton ne peut ni créer de jeton, ni changer le mot de passe, ni supprimer le compte.</li>
+<li><b>Isolation</b> : un utilisateur ne voit que les organisations dont il est membre ; demander les données d'une autre donne la même réponse que pour quelque chose d'inexistant. Politique de sécurité de contenu stricte : ni script ni style en ligne.</li>
 <li>Écoute sur 127.0.0.1 sauf autorisation explicite : mettez TLS devant (le fichier compose utilise Caddy).</li></ul>
-<h2>Facturation</h2>
-<p>Le prix par heure de calcul et l'allocation gratuite mensuelle sont de la configuration (<code>--pricing-file</code>) ; les valeurs par défaut sont une grille d'exemple. Les factures sont créées à la fin d'un mois avec usage ; les petits montants sont annulés. Le paiement passe par Stripe Checkout quand <code>STRIPE_SECRET_KEY</code> est défini, et une facture n'est marquée payée que par le webhook signé de Stripe. Sans Stripe, la console affiche les factures et refuse de débiter.</p>
+<h2>Facturation, taxe et factures</h2>
+<p>L'opérateur fixe les prix dans Admin (prix par heure de calcul, allocation gratuite mensuelle, facture minimale, devise) et la taxe (un taux par défaut, des taux par pays du client, une autoliquidation simplifiée facultative pour un client avec un numéro de TVA à l'étranger). Les prix s'appliquent à partir de là ; <b>les factures déjà émises gardent les prix avec lesquels elles ont été émises</b>. Les organisations saisissent leurs coordonnées de facturation (nom, adresse, pays, numéro de TVA). À la fin d'un mois avec usage, une facture est créée avec un <b>numéro sans trou</b> (<code>INV-2026-00001</code>), sous-total, taxe et total, téléchargeable en <b>PDF</b> ; les montants sous le minimum sont annulés et n'ont pas de numéro. Le paiement passe par Stripe Checkout quand <code>STRIPE_SECRET_KEY</code> est défini, et une facture n'est marquée payée que par le webhook signé de Stripe ; sans Stripe, la console affiche les factures et refuse de débiter.</p>
+<p>Tant que l'opérateur n'a pas enregistré de vrais prix, la console dit clairement qu'elle utilise des prix d'exemple.</p>
+<h2>E-mail</h2>
+<p>Les messages (vérification, invitations, réinitialisation) passent par une file : remis par SMTP (<code>--smtp-host</code>, STARTTLS ou TLS implicite) et réessayés avec des délais croissants quand le serveur est en panne ; sans SMTP ils restent visibles dans Admin. Admin a un bouton de message de test.</p>
 <h2>Lancer et déployer</h2>
 <p>En local : <code>spatial platform serve</code> (voir le panneau). Sur un serveur : <code>docker compose --env-file deploy/.env up -d --build</code> démarre le hub, la console et HTTPS automatique (<code>docs/DEPLOY.md</code>).</p>
-<div class="callout warn"><b>Limites</b>Un seul processus avec SQLite. Pas d'équipes ni de rôles, pas de double authentification, pas de vérification de l'e-mail à l'inscription, ni taxes ni factures PDF. Les e-mails ne partent qu'avec SMTP configuré, sinon ils restent dans une table. Testé de bout en bout avec un vrai hub et de vrais agents et dans une session de navigateur pilotée ; paiements seulement contre une fausse API Stripe, jamais avec de l'argent réel.</div>''',
+<div class="callout warn"><b>Limites</b>Un seul processus avec SQLite. La taxe est une table de taux et un interrupteur d'autoliquidation simplifiée : ce n'est pas un moteur de conformité fiscale (pas de validation du numéro de TVA, pas de règles de facturation par pays, pas d'avoirs) : faites relire par un comptable avant de facturer. La double authentification affiche la clé et un lien otpauth, pas de QR code. Quatre rôles fixes, sans permissions personnalisées. L'e-mail est testé contre un faux SMTP local, pas un vrai fournisseur ; paiements seulement contre une fausse API Stripe, jamais avec de l'argent réel.</div>''',
   panels=[("Lancer en local", '<span class="k">$ spatial token init --master-key-file hub.key\n$ spatial serve hub \\\n    --master-key-file hub.key \\\n    --usage-file usage.jsonl \\\n    --revoked-file revoked.txt\n$ spatial platform serve \\\n    --master-key-file hub.key \\\n    --hub 127.0.0.1:PORT \\\n    --usage-file usage.jsonl \\\n    --revoked-file revoked.txt</span>\n<span class="d">console sur http://127.0.0.1:8090/</span>'),
           ("Production", '<span class="k">$ docker compose \\\n    --env-file deploy/.env \\\n    up -d --build</span>\n<span class="d">hub + console + HTTPS</span>')]),
 }
@@ -108,11 +132,22 @@ API_EN = '''<p>The console's REST API is what the console itself uses. Base URL:
 <pre><code>curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8090/api/apps
 curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: application/json" \\
      -d '{"name":"batch"}' http://127.0.0.1:8090/api/apps</code></pre>
+<h2>Organizations, pagination, limits</h2>
+<ul><li>Everything acts in one organization: your personal workspace by default, or the one named by the <code>X-Org: &lt;id&gt;</code> header (or <code>?org=&lt;id&gt;</code> for plain links such as the PDF). Not a member: 404.</li>
+<li>List endpoints (apps, tokens, sessions, activity, admin users) take <code>limit</code> (default 100, max 500) and <code>offset</code> and answer <code>{"…": [...], "total": n, "limit": l, "offset": o}</code>.</li>
+<li>Rate limits: 600 requests a minute per signed-in user, 120 per token (<code>429</code> beyond).</li></ul>
 <h2>Endpoints</h2>
 <table><thead><tr><th>Method and path</th><th>What it does</th></tr></thead><tbody>
 <tr><td><code>POST /api/signup</code> · <code>/api/login</code> · <code>/api/logout</code></td><td>Create an account and sign in; sign in; sign out</td></tr>
 <tr><td><code>POST /api/password/reset-request</code> · <code>/api/password/reset</code> · <code>/api/password/change</code></td><td>Reset by e-mailed link (always answers the same); change (signs out other sessions)</td></tr>
 <tr><td><code>GET /api/me</code> · <code>PATCH /api/me</code> · <code>DELETE /api/me</code> · <code>GET /api/export</code></td><td>Profile; rename; delete the account (password required, no open invoice); export your data</td></tr>
+<tr><td><code>POST /api/login/2fa</code></td><td>Second step when two-factor sign-in is on: <code>ticket</code> and <code>code</code> (or a recovery code)</td></tr>
+<tr><td><code>POST /api/2fa/setup</code> · <code>/api/2fa/enable</code> · <code>/api/2fa/disable</code></td><td>Two-factor sign-in (browser session only); enable returns eight recovery codes once</td></tr>
+<tr><td><code>POST /api/verify</code> · <code>/api/verify/resend</code></td><td>Confirm an e-mail address with the emailed token; send the link again</td></tr>
+<tr><td><code>GET</code> · <code>POST /api/orgs</code>; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/org</code></td><td>Your organizations; create one; the current one (members, pending invitations, billing details); rename or set billing details (admin); delete (owner)</td></tr>
+<tr><td><code>POST /api/org/invites</code> · <code>DELETE /api/org/invites/{id}</code> · <code>POST /api/invites/accept</code></td><td>Invite by e-mail with a role; cancel; accept with the emailed token (browser session of the invited address)</td></tr>
+<tr><td><code>PATCH</code> · <code>DELETE /api/org/members/{user_id}</code></td><td>Change a role; remove a member (or leave, with your own id)</td></tr>
+<tr><td><code>GET /api/invoices/{id}/pdf</code></td><td>The invoice as a PDF (admin and owner; numbered invoices only)</td></tr>
 <tr><td><code>GET /api/overview</code></td><td>Checklist, counts, estimated charge</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/apps</code>; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/apps/{id}</code></td><td>List, create (<code>name</code>, <code>description</code>, <code>budget_usd</code>), read, update, delete (revokes its keys)</td></tr>
 <tr><td><code>POST /api/apps/{id}/keys</code> · <code>DELETE /api/apps/{id}/keys/{kid}</code></td><td>Create a hub key (<code>name</code>, <code>kind</code>: client or node, <code>ttl_days</code>; the token is in the answer, once); revoke</td></tr>
@@ -124,7 +159,8 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET /api/billing</code> · <code>POST /api/billing/pay</code></td><td>Estimate, price list, invoices; start a Stripe Checkout for an open invoice</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/tokens</code>; <code>DELETE /api/tokens/{id}</code></td><td>Account tokens (browser session only for create and revoke)</td></tr>
 <tr><td><code>GET /api/sessions</code> · <code>DELETE /api/sessions/{id}</code> · <code>GET /api/activity</code></td><td>Active sessions, sign one out; security activity</td></tr>
-<tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code></td><td>First account only</td></tr>
+<tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code> · <code>/api/admin/settings</code> · <code>/api/admin/mail</code></td><td>First account only: totals, users, prices and company, mail queue</td></tr>
+<tr><td><code>PUT /api/admin/pricing</code> · <code>/api/admin/company</code> · <code>POST /api/admin/test-mail</code></td><td>First account only: set prices and tax (validated, bounded), company details for invoices, send a test message</td></tr>
 <tr><td><code>POST /api/billing/webhook</code></td><td>Stripe's signed webhook (no session; the signature is the authentication)</td></tr>
 <tr><td><code>GET /api/health</code></td><td><code>{"ok": true}</code></td></tr></tbody></table>
 <h2>Example: from nothing to a result</h2>
@@ -142,11 +178,22 @@ API_FR = '''<p>L'API REST de la console est celle que la console utilise elle-m�
 <pre><code>curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8090/api/apps
 curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: application/json" \\
      -d '{"name":"batch"}' http://127.0.0.1:8090/api/apps</code></pre>
+<h2>Organisations, pagination, limites</h2>
+<ul><li>Tout agit dans une organisation : votre espace personnel par défaut, ou celle désignée par l'en-tête <code>X-Org: &lt;id&gt;</code> (ou <code>?org=&lt;id&gt;</code> pour les liens simples comme le PDF). Pas membre : 404.</li>
+<li>Les listes (apps, jetons, sessions, activité, utilisateurs admin) acceptent <code>limit</code> (100 par défaut, 500 au plus) et <code>offset</code> et répondent <code>{"…": [...], "total": n, "limit": l, "offset": o}</code>.</li>
+<li>Limites de débit : 600 requêtes par minute et par utilisateur connecté, 120 par jeton (<code>429</code> au-delà).</li></ul>
 <h2>Points d'entrée</h2>
 <table><thead><tr><th>Méthode et chemin</th><th>Ce que ça fait</th></tr></thead><tbody>
 <tr><td><code>POST /api/signup</code> · <code>/api/login</code> · <code>/api/logout</code></td><td>Créer un compte et se connecter ; se connecter ; se déconnecter</td></tr>
 <tr><td><code>POST /api/password/reset-request</code> · <code>/api/password/reset</code> · <code>/api/password/change</code></td><td>Réinitialiser par lien envoyé (répond toujours pareil) ; changer (déconnecte les autres sessions)</td></tr>
 <tr><td><code>GET /api/me</code> · <code>PATCH /api/me</code> · <code>DELETE /api/me</code> · <code>GET /api/export</code></td><td>Profil ; renommer ; supprimer le compte (mot de passe requis, aucune facture ouverte) ; exporter vos données</td></tr>
+<tr><td><code>POST /api/login/2fa</code></td><td>Seconde étape quand la double authentification est active : <code>ticket</code> et <code>code</code> (ou un code de secours)</td></tr>
+<tr><td><code>POST /api/2fa/setup</code> · <code>/api/2fa/enable</code> · <code>/api/2fa/disable</code></td><td>Double authentification (session de navigateur seulement) ; enable renvoie huit codes de secours, une fois</td></tr>
+<tr><td><code>POST /api/verify</code> · <code>/api/verify/resend</code></td><td>Confirmer une adresse e-mail avec le jeton reçu ; renvoyer le lien</td></tr>
+<tr><td><code>GET</code> · <code>POST /api/orgs</code> ; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/org</code></td><td>Vos organisations ; en créer une ; l'organisation courante (membres, invitations en attente, coordonnées de facturation) ; renommer ou fixer les coordonnées (admin) ; supprimer (propriétaire)</td></tr>
+<tr><td><code>POST /api/org/invites</code> · <code>DELETE /api/org/invites/{id}</code> · <code>POST /api/invites/accept</code></td><td>Inviter par e-mail avec un rôle ; annuler ; accepter avec le jeton reçu (session de navigateur de l'adresse invitée)</td></tr>
+<tr><td><code>PATCH</code> · <code>DELETE /api/org/members/{user_id}</code></td><td>Changer un rôle ; retirer un membre (ou partir, avec votre propre id)</td></tr>
+<tr><td><code>GET /api/invoices/{id}/pdf</code></td><td>La facture en PDF (admin et propriétaire ; factures numérotées seulement)</td></tr>
 <tr><td><code>GET /api/overview</code></td><td>Liste de contrôle, compteurs, charge estimée</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/apps</code> ; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/apps/{id}</code></td><td>Lister, créer (<code>name</code>, <code>description</code>, <code>budget_usd</code>), lire, modifier, supprimer (révoque ses clés)</td></tr>
 <tr><td><code>POST /api/apps/{id}/keys</code> · <code>DELETE /api/apps/{id}/keys/{kid}</code></td><td>Créer une clé de hub (<code>name</code>, <code>kind</code> : client ou node, <code>ttl_days</code> ; le jeton est dans la réponse, une fois) ; révoquer</td></tr>
@@ -158,7 +205,8 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET /api/billing</code> · <code>POST /api/billing/pay</code></td><td>Estimation, grille de prix, factures ; démarrer un Stripe Checkout pour une facture ouverte</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/tokens</code> ; <code>DELETE /api/tokens/{id}</code></td><td>Jetons de compte (session de navigateur seulement pour créer et révoquer)</td></tr>
 <tr><td><code>GET /api/sessions</code> · <code>DELETE /api/sessions/{id}</code> · <code>GET /api/activity</code></td><td>Sessions actives, en fermer une ; activité de sécurité</td></tr>
-<tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code></td><td>Premier compte seulement</td></tr>
+<tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code> · <code>/api/admin/settings</code> · <code>/api/admin/mail</code></td><td>Premier compte seulement : totaux, utilisateurs, prix et société, file des messages</td></tr>
+<tr><td><code>PUT /api/admin/pricing</code> · <code>/api/admin/company</code> · <code>POST /api/admin/test-mail</code></td><td>Premier compte seulement : fixer prix et taxe (validés, bornés), coordonnées de la société pour les factures, envoyer un message de test</td></tr>
 <tr><td><code>POST /api/billing/webhook</code></td><td>Webhook signé de Stripe (pas de session ; la signature authentifie)</td></tr>
 <tr><td><code>GET /api/health</code></td><td><code>{"ok": true}</code></td></tr></tbody></table>
 <h2>Exemple : de rien à un résultat</h2>

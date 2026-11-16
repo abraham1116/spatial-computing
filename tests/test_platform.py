@@ -471,7 +471,9 @@ def test_fleet_view_jobs_checklist_and_admin_against_a_real_hub(tmp_path):
     ag1 = Agent("127.0.0.1", srv.port, n1.encode(), name="x", interval_s=0.3, poll_s=0.2).start()
     ag2 = Agent("127.0.0.1", srv.port, n2.encode(), name="x", interval_s=0.3, poll_s=0.2).start()
     try:
-        time.sleep(1.5)
+        deadline = time.time() + 20
+        while time.time() < deadline and not (pf.fleet(u1)["nodes"] and pf.fleet(u2)["nodes"]):          # wait for both agents to report
+            time.sleep(0.3)
         f1 = pf.fleet(u1)
         assert f1["reachable"] and [n["app"] for n in f1["nodes"]] == ["one"] and f1["nodes"][0]["alive"]       # only my node, not the other tenant's
         assert [n["app"] for n in pf.fleet(u2)["nodes"]] == ["two"]

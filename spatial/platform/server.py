@@ -18,12 +18,12 @@ import threading
 import time
 from http import cookies
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from ..core.auth import Authorizer, authorizer_from_file
 from .billing import Pricing, Stripe
 from .db import DB
-from .service import ApiError, Platform
+from .service import ApiError, Platform, TwoFactorRequired
 
 STATIC = Path(__file__).parent / "static"
 MAX_BODY = 64 * 1024
@@ -62,6 +62,28 @@ def make_handler(pf: Platform, secure_cookies: bool):
     route("GET", r"/api/apps/(\d+)/jobs/(\d+)", "jobs_status")
     route("GET", "/api/admin/overview", "admin_overview")
     route("GET", "/api/admin/users", "admin_users")
+    route("GET", "/api/admin/settings", "admin_settings")
+    route("PUT", "/api/admin/pricing", "admin_pricing")
+    route("PUT", "/api/admin/company", "admin_company")
+    route("POST", "/api/admin/test-mail", "admin_test_mail")
+    route("GET", "/api/admin/mail", "admin_mail")
+    route("POST", "/api/login/2fa", "login_2fa", auth=False, csrf=False)
+    route("POST", "/api/2fa/setup", "totp_setup", cookie_only=True)
+    route("POST", "/api/2fa/enable", "totp_enable", cookie_only=True)
+    route("POST", "/api/2fa/disable", "totp_disable", cookie_only=True)
+    route("POST", "/api/verify", "verify", auth=False, csrf=False)
+    route("POST", "/api/verify/resend", "verify_resend")
+    route("GET", "/api/orgs", "orgs_list")
+    route("POST", "/api/orgs", "orgs_create", cookie_only=True)
+    route("GET", "/api/org", "org_get")
+    route("PATCH", "/api/org", "org_update")
+    route("DELETE", "/api/org", "org_delete", cookie_only=True)
+    route("POST", "/api/org/invites", "invites_create")
+    route("DELETE", r"/api/org/invites/(\d+)", "invites_revoke")
+    route("PATCH", r"/api/org/members/(\d+)", "members_role")
+    route("DELETE", r"/api/org/members/(\d+)", "members_remove")
+    route("POST", "/api/invites/accept", "invites_accept", cookie_only=True)
+    route("GET", r"/api/invoices/(\d+)/pdf", "invoice_pdf")
     route("GET", "/api/overview", "overview")
     route("GET", "/api/apps", "apps_list")
     route("POST", "/api/apps", "apps_create")
@@ -155,7 +177,9 @@ def make_handler(pf: Platform, secure_cookies: bool):
                     raise ApiError(403, "this action needs a signed-in browser session, not a token")
                 if method != "GET" and b[1] != "write":
                     raise ApiError(403, "this token is read-only")
-                return (b[0], None),
+                if not pf.token_limit.allow(authz[7:].strip()):
+                    raise ApiError(429, "rate limit: 120 requests per minute per token")
+                return (self._org(b[0]), None),
             if needs_csrf and not self._same_origin():
                 raise ApiError(403, "cross-origin request refused")
             s = pf.session(self._cookie())
@@ -163,7 +187,17 @@ def make_handler(pf: Platform, secure_cookies: bool):
                 raise ApiError(401, "sign in required")
             if needs_csrf and s is not None and not secrets.compare_digest(self.headers.get("X-CSRF-Token") or "", s[1]):
                 raise ApiError(403, "missing or wrong CSRF token")
-            return s if s else (None, None),
+            if s is not None and not pf.user_limit.allow(f"u{s[0]['id']}"):
+                raise ApiError(429, "rate limit: 600 requests per minute")
+            return ((self._org(s[0]), s[1]) if s else (None, None)),
+
+        def _org(self, user):
+            """The organisation the request acts in: header X-Org, else the user's personal workspace."""
+            o = self.headers.get("X-Org") or (parse_qs(urlparse(self.path).query).get("org") or [None])[0]      # ?org= lets a plain link (PDF) pick the organisation
+            try:
+                return pf._c(user, int(o) if o else None)
+            except ValueError:
+                raise ApiError(400, "bad X-Org header")
 
         def _data(self) -> dict:
             raw = self._body()
@@ -172,6 +206,13 @@ def make_handler(pf: Platform, secure_cookies: bool):
                 raise ValueError("object expected")
             return d
 
+        def _page(self, u, items: list, key: str) -> dict:
+            q = parse_qs(u.query)
+            lim = max(1, min(int((q.get("limit") or [100])[0]), 500))
+            off = max(0, int((q.get("offset") or [0])[0]))
+            return {key: items[off:off + lim], "total": len(items), "limit": lim, "offset": off}
+
+        def do_PUT(self): self._handle("PUT")
         def do_GET(self): self._handle("GET")
         def do_POST(self): self._handle("POST")
         def do_PATCH(self): self._handle("PATCH")
@@ -192,8 +233,10 @@ def make_handler(pf: Platform, secure_cookies: bool):
 
         def h_me(self, g, u, s):
             user, csrf = s
-            self._json(200, {"user": pf.user_view(user) if user else None, "csrf": csrf,
-                             "hub": pf.hub_public, "payments": pf.stripe.configured, "docs": pf.docs_url})
+            out = {"user": pf.user_view(user) if user else None, "csrf": csrf, "hub": pf.hub_public, "payments": pf.stripe.configured, "docs": pf.docs_url}
+            if user:
+                out.update(orgs=pf.list_orgs(user), org=user.org_id, role=user["role"], require_verified=pf.require_verified)
+            self._json(200, out)
 
         def h_signup(self, g, u, s):
             d = self._data()
@@ -203,8 +246,89 @@ def make_handler(pf: Platform, secure_cookies: bool):
 
         def h_login(self, g, u, s):
             d = self._data()
-            token, csrf, user = pf.login(d.get("email"), d.get("password"), self._ip(), self.headers.get("User-Agent", ""))
+            try:
+                token, csrf, user = pf.login(d.get("email"), d.get("password"), self._ip(), self.headers.get("User-Agent", ""))
+            except TwoFactorRequired as e:
+                return self._json(200, {"needs_2fa": True, "ticket": e.ticket})
             self._json(200, {"user": user, "csrf": csrf}, self._set_cookie(token))
+
+        def h_login_2fa(self, g, u, s):
+            d = self._data()
+            token, csrf, user = pf.login_2fa(d.get("ticket"), d.get("code"), self._ip(), self.headers.get("User-Agent", ""))
+            self._json(200, {"user": user, "csrf": csrf}, self._set_cookie(token))
+
+        def h_totp_setup(self, g, u, s):
+            self._json(200, pf.totp_setup(s[0]))
+
+        def h_totp_enable(self, g, u, s):
+            self._json(200, pf.totp_enable(s[0], self._data().get("code")))
+
+        def h_totp_disable(self, g, u, s):
+            d = self._data()
+            pf.totp_disable(s[0], d.get("password"), d.get("code"))
+            self._json(200, {"ok": True}, self._set_cookie(None))
+
+        def h_verify(self, g, u, s):
+            self._json(200, {"user": pf.verify_email(self._data().get("token"))})
+
+        def h_verify_resend(self, g, u, s):
+            pf.resend_verification(s[0])
+            self._json(200, {"ok": True})
+
+        def h_orgs_list(self, g, u, s):
+            self._json(200, {"orgs": pf.list_orgs(s[0])})
+
+        def h_orgs_create(self, g, u, s):
+            self._json(201, {"org": pf.create_org(s[0], self._data().get("name"))})
+
+        def h_org_get(self, g, u, s):
+            self._json(200, {"org": pf.org_detail(s[0])})
+
+        def h_org_update(self, g, u, s):
+            d = self._data()
+            self._json(200, {"org": pf.update_org(s[0], d.get("name"), d.get("billing"))})
+
+        def h_org_delete(self, g, u, s):
+            pf.delete_org(s[0])
+            self._json(200, {"ok": True})
+
+        def h_invites_create(self, g, u, s):
+            d = self._data()
+            self._json(201, {"invite": pf.invite(s[0], d.get("email"), d.get("role", "member"))})
+
+        def h_invites_revoke(self, g, u, s):
+            pf.revoke_invite(s[0], int(g[0]))
+            self._json(200, {"ok": True})
+
+        def h_invites_accept(self, g, u, s):
+            self._json(200, {"org": pf.accept_invite(s[0], self._data().get("token"))})
+
+        def h_members_role(self, g, u, s):
+            pf.set_member_role(s[0], int(g[0]), self._data().get("role"))
+            self._json(200, {"ok": True})
+
+        def h_members_remove(self, g, u, s):
+            pf.remove_member(s[0], int(g[0]))
+            self._json(200, {"ok": True})
+
+        def h_invoice_pdf(self, g, u, s):
+            pdf, name = pf.invoice_pdf(s[0], int(g[0]))
+            self._send(200, pdf, "application/pdf", {"Content-Disposition": f'attachment; filename="{name}"'})
+
+        def h_admin_settings(self, g, u, s):
+            self._json(200, pf.admin_settings(s[0]))
+
+        def h_admin_pricing(self, g, u, s):
+            self._json(200, pf.admin_set_pricing(s[0], self._data()))
+
+        def h_admin_company(self, g, u, s):
+            self._json(200, pf.admin_set_company(s[0], self._data()))
+
+        def h_admin_test_mail(self, g, u, s):
+            self._json(200, pf.admin_test_mail(s[0], self._data().get("to")))
+
+        def h_admin_mail(self, g, u, s):
+            self._json(200, {"mail": pf.admin_mail(s[0])})
 
         def h_logout(self, g, u, s):
             pf.logout(self._cookie())
@@ -235,7 +359,7 @@ def make_handler(pf: Platform, secure_cookies: bool):
             self._json(200, pf.export_data(s[0]), {"Content-Disposition": 'attachment; filename="spatial-account-export.json"'})
 
         def h_tokens_list(self, g, u, s):
-            self._json(200, {"tokens": pf.list_tokens(s[0])})
+            self._json(200, self._page(u, pf.list_tokens(s[0]), "tokens"))
 
         def h_tokens_create(self, g, u, s):
             d = self._data()
@@ -246,14 +370,14 @@ def make_handler(pf: Platform, secure_cookies: bool):
             self._json(200, {"ok": True})
 
         def h_sessions_list(self, g, u, s):
-            self._json(200, {"sessions": pf.list_sessions(s[0], self._cookie())})
+            self._json(200, self._page(u, pf.list_sessions(s[0], self._cookie()), "sessions"))
 
         def h_sessions_revoke(self, g, u, s):
             pf.revoke_session(s[0], g[0])
             self._json(200, {"ok": True})
 
         def h_activity(self, g, u, s):
-            self._json(200, {"activity": pf.activity(s[0])})
+            self._json(200, self._page(u, pf.activity(s[0], 200), "activity"))
 
         def h_fleet(self, g, u, s):
             self._json(200, pf.fleet(s[0]))
@@ -272,13 +396,13 @@ def make_handler(pf: Platform, secure_cookies: bool):
             self._json(200, pf.admin_overview(s[0]))
 
         def h_admin_users(self, g, u, s):
-            self._json(200, {"users": pf.admin_users(s[0])})
+            self._json(200, self._page(u, pf.admin_users(s[0]), "users"))
 
         def h_overview(self, g, u, s):
             self._json(200, pf.overview(s[0]))
 
         def h_apps_list(self, g, u, s):
-            self._json(200, {"apps": pf.list_apps(s[0])})
+            self._json(200, self._page(u, pf.list_apps(s[0]), "apps"))
 
         def h_apps_create(self, g, u, s):
             d = self._data()
@@ -355,17 +479,27 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--allow-remote", action="store_true")
     ap.add_argument("--secure-cookies", action="store_true", help="mark the session cookie Secure (use behind TLS)")
+    ap.add_argument("--smtp-host", help="SMTP server for outgoing e-mail (password in the SMTP_PASSWORD environment variable)")
+    ap.add_argument("--smtp-port", type=int, default=587)
+    ap.add_argument("--smtp-user")
+    ap.add_argument("--smtp-from", default="no-reply@localhost")
+    ap.add_argument("--smtp-ssl", action="store_true", help="implicit TLS (port 465) instead of STARTTLS")
+    ap.add_argument("--smtp-no-starttls", action="store_true", help="plain SMTP, for a local relay only")
+    ap.add_argument("--require-verified", choices=["auto", "yes", "no"], default="auto", help="e-mail verification before keys and jobs (auto: only when SMTP is configured)")
     ap.add_argument("--dev-outbox", action="store_true", help="expose /api/dev/outbox (reset links) for local development")
     a = ap.parse_args(argv)
     Path(a.db).parent.mkdir(parents=True, exist_ok=True)
     auth = authorizer_from_file(a.master_key_file, revoked_file=a.revoked_file) if a.master_key_file else None
     smtp = None
-    if os.environ.get("SMTP_HOST"):
-        smtp = {"host": os.environ["SMTP_HOST"], "port": int(os.environ.get("SMTP_PORT", "587")), "user": os.environ.get("SMTP_USER"),
-                "password": os.environ.get("SMTP_PASSWORD"), "from": os.environ.get("SMTP_FROM", "no-reply@localhost")}
+    host = a.smtp_host or os.environ.get("SMTP_HOST")
+    if host:
+        smtp = {"host": host, "port": a.smtp_port if a.smtp_host else int(os.environ.get("SMTP_PORT", "587")), "user": a.smtp_user or os.environ.get("SMTP_USER"),
+                "password": os.environ.get("SMTP_PASSWORD"), "from": a.smtp_from if a.smtp_host else os.environ.get("SMTP_FROM", "no-reply@localhost"),
+                "ssl": a.smtp_ssl, "starttls": not a.smtp_no_starttls}
     pf = Platform(DB(a.db), auth, a.hub, a.hub_public, a.usage_file, a.revoked_file, Pricing.load(a.pricing_file),
                   Stripe(os.environ.get("STRIPE_SECRET_KEY"), os.environ.get("STRIPE_WEBHOOK_SECRET")),
-                  a.public_url or f"http://{a.host}:{a.port}", smtp=smtp, docs_url=a.docs_url)
+                  a.public_url or f"http://{a.host}:{a.port}", smtp=smtp, docs_url=a.docs_url,
+                  require_verified={"auto": None, "yes": True, "no": False}[a.require_verified])
     pf.dev_outbox = a.dev_outbox
     srv = serve(pf, a.host, a.port, a.allow_remote, a.secure_cookies)
 
@@ -373,8 +507,9 @@ def main(argv=None):
         while True:
             try:
                 pf.ingest_usage()
+                pf.mailer.flush()
             except Exception as e:
-                sys.stderr.write(f"usage ingest failed: {type(e).__name__}: {e}\n")
+                sys.stderr.write(f"background task failed: {type(e).__name__}: {e}\n")
             time.sleep(10)
     threading.Thread(target=ingest_loop, daemon=True).start()
     print(f"platform on http://{a.host}:{srv.server_address[1]}/ (payments: {'Stripe' if pf.stripe.configured else 'not configured'}; "
