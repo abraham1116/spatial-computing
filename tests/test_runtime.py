@@ -233,13 +233,23 @@ def test_remote_desktop_view_only_password_and_clipboard_policy_are_enforced():
         assert not _Rfb(d.port).login("wrong-password")                                                         # a wrong password is refused
         full, view = _Rfb(d.port), _Rfb(d.port)
         assert full.login(d.password) and view.login(d.view_password)                                           # both connect to the same shared session
-        view.click(500, 300); view.type("touch /tmp/by-viewer"); time.sleep(1.0)                                # the watcher clicks and types...
-        assert "by-viewer" not in run("exec", d.container, "ls", "/tmp")                                       # ...and nothing happens
-        full.click(500, 300); full.type("touch /tmp/by-owner")                                                  # the owner types...
-        deadline = time.time() + 20
-        while time.time() < deadline and "by-owner" not in run("exec", d.container, "ls", "/tmp"):
+        deadline = time.time() + 60
+        while time.time() < deadline and "xterm" not in run("exec", d.container, "ps", "-o", "args"):                 # the application must be up before anyone types
             time.sleep(0.5)
-        assert "by-owner" in run("exec", d.container, "ls", "/tmp") and "by-viewer" not in run("exec", d.container, "ls", "/tmp")      # ...and it runs
+        time.sleep(3)                                                                                           # and its window mapped (slow runners)
+        view.click(500, 300); view.type("touch /tmp/by-viewer"); time.sleep(1.0)                                # the watcher clicks and types...
+        listing = run("exec", d.container, "ls", "/tmp")
+        assert listing.strip(), "the container stopped answering: " + run("logs", "--tail", "20", d.container)
+        assert "by-viewer" not in listing                                                                       # ...and nothing happens
+        for attempt in range(4):                                                                                # the owner types (retried: a window may take a moment to take focus)
+            full.click(500, 300); full.type("touch /tmp/by-owner")
+            end = time.time() + 8
+            while time.time() < end and "by-owner" not in run("exec", d.container, "ls", "/tmp"):
+                time.sleep(0.5)
+            if "by-owner" in run("exec", d.container, "ls", "/tmp"):
+                break
+        final = run("exec", d.container, "ls", "/tmp")
+        assert "by-owner" in final and "by-viewer" not in final, final                                         # the owner's command ran, the watcher's never did
         full.s.close(); view.s.close()
     finally:
         d.stop()
