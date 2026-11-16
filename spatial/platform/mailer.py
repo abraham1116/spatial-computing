@@ -19,16 +19,20 @@ class Mailer:
         self.deliver(mid)
         return mid
 
+    def _tls(self) -> ssl.SSLContext:
+        """Verified TLS: system CAs, or the operator's own CA file (a private relay with an internal certificate). Never unverified."""
+        return ssl.create_default_context(cafile=self.smtp.get("ca_file") or None)
+
     def _send(self, to: str, subject: str, body: str) -> None:
         c = self.smtp
         m = EmailMessage(); m["From"], m["To"], m["Subject"] = c["from"], to, subject; m.set_content(body)
         if c.get("ssl"):
-            s = smtplib.SMTP_SSL(c["host"], c.get("port", 465), timeout=15, context=ssl.create_default_context())
+            s = smtplib.SMTP_SSL(c["host"], c.get("port", 465), timeout=15, context=self._tls())
         else:
             s = smtplib.SMTP(c["host"], c.get("port", 587), timeout=15)
         with s:
             if c.get("starttls", True) and not c.get("ssl"):
-                s.starttls(context=ssl.create_default_context())
+                s.starttls(context=self._tls())
             if c.get("user"):
                 s.login(c["user"], c["password"])
             s.send_message(m)

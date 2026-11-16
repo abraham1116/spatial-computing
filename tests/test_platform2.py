@@ -5,6 +5,7 @@ import socketserver
 import sqlite3
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -576,8 +577,12 @@ def test_operator_warnings_name_what_is_missing_before_invoicing(tmp_path):
     pf.admin_set_pricing(admin, {"compute_usd_per_hour": 1, "tax_rate_percent": 20})
     assert any("VAT id is empty" in x for x in pf.admin_settings(admin)["warnings"]) and any("country" in x for x in pf.admin_settings(admin)["warnings"])
     pf.admin_set_company(admin, {"name": "Acme", "address": "1 rue X", "vat_id": "FR40303265045", "country": "FR"})
+    w = pf.admin_settings(admin)["warnings"]
+    assert len(w) == 1 and "city" in w[0] and "registration number" in w[0]                 # the French checklist names what is still missing
+    full = {"name": "Acme", "address": "1 rue X", "city": "Paris", "postal_code": "75001", "vat_id": "FR40303265045", "country": "FR", "registration_no": "303265045", "legal_form": "SAS", "share_capital": "10000"}
+    pf.admin_set_company(admin, full)
     assert pf.admin_settings(admin)["warnings"] == []
-    pf.admin_set_company(admin, {"name": "Acme", "address": "1 rue X", "vat_id": "FR40303265046", "country": "FR"})
+    pf.admin_set_company(admin, {**full, "vat_id": "FR40303265046"})
     assert any("does not look valid" in x for x in pf.admin_settings(admin)["warnings"])
 
 
@@ -639,3 +644,188 @@ def test_a_custom_role_is_per_organisation_and_http_exposes_roles_and_permission
     other = c.req("POST", "/api/orgs", {"name": "Other"})[1]["org"]
     assert "ops" not in {r["name"] for r in c.req("GET", "/api/org", headers={"X-Org": str(other["id"])})[1]["org"]["roles"]}
     assert c.req("DELETE", "/api/org/roles/ops", headers=H)[0] == 200
+
+
+# ------------------------------------------------------------------------------------------------ per-app scope
+def test_a_scoped_member_sees_only_their_apps_and_cannot_reach_the_others(tmp_path):
+    pf, _, clk = make(tmp_path)
+    owner, org = org_with(pf)
+    co = pf._c(owner, org["id"])
+    a1, a2, a3 = (pf.create_app(co, n) for n in ("alpha", "beta", "gamma"))
+    for a in (a1, a2, a3):
+        write_usage(pf.usage_path, [{"ts": clk.t, "tenant": a["tenant"], "ok": True, "wall_s": 10}])
+    u = user(pf, "dev@example.com")
+    with pytest.raises(ApiError):
+        pf.invite(co, "dev@example.com", "member", [a1["id"], 999])                      # not an app of this organization
+    with pytest.raises(ApiError):
+        pf.invite(co, "dev@example.com", "member", ["x"])
+    pf.invite(co, "dev@example.com", "member", [a1["id"], a2["id"]])
+    pf.accept_invite(u, link_token(pf, "invite", "dev@example.com"))
+    dev = pf._c(u, org["id"])
+    assert dev["app_scope"] == frozenset({a1["id"], a2["id"]})
+    assert [a["name"] for a in pf.list_apps(dev)] == ["alpha", "beta"]
+    assert pf.usage_for_app(dev, a1["id"], 30)["tasks"] == 1
+    for bad in (a3["id"], 12345):                                                       # outside the scope = same answer as "does not exist"
+        for call in (lambda: pf.usage_for_app(dev, bad), lambda: pf.create_key(dev, bad, "k"), lambda: pf.submit_job(dev, bad, "montecarlo_pi", {"samples": 1000}),
+                     lambda: pf.update_app(dev, bad, name="x"), lambda: pf._app(dev, bad)):
+            with pytest.raises(ApiError) as e:
+                call()
+            assert e.value.status == 404
+    assert pf.overview(dev)["apps"] == 2 and pf.overview(dev)["tasks_this_month"] == 2   # counts only what they can see
+    assert pf.overview(co)["apps"] == 3 and pf.overview(co)["tasks_this_month"] == 3
+    mine = pf.create_app(dev, "mine")                                                   # a new app is theirs too
+    assert [a["name"] for a in pf.list_apps(pf._c(u, org["id"]))] == ["alpha", "beta", "mine"]
+    assert [a["name"] for a in pf.list_apps(co)] == ["alpha", "beta", "gamma", "mine"]  # the owner sees everything
+    # nobody can share more than they see
+    pf.create_role(co, "lead", ["members.manage", "apps.write"])
+    pf.invite(co, "lead@example.com", "lead", [a1["id"]])
+    lead_user = user(pf, "lead@example.com"); pf.accept_invite(lead_user, link_token(pf, "invite", "lead@example.com"))
+    lead = pf._c(lead_user, org["id"])
+    with pytest.raises(ApiError) as e:
+        pf.invite(lead, "z@example.com", "viewer", [a1["id"], a2["id"]])
+    assert e.value.status == 403
+    with pytest.raises(ApiError) as e:
+        pf.invite(lead, "z@example.com", "viewer")                                      # "all apps" is not theirs to give
+    assert e.value.status == 403
+    assert pf.invite(lead, "z@example.com", "viewer", [a1["id"]])["apps"] == [a1["id"]]
+    # the owner widens and then removes the limit
+    pf.set_member_apps(co, u["id"], [a3["id"]])
+    assert [a["name"] for a in pf.list_apps(pf._c(u, org["id"]))] == ["gamma"]
+    pf.set_member_apps(co, u["id"], None)
+    assert len(pf.list_apps(pf._c(u, org["id"]))) == 4
+    assert any(m["apps"] is None for m in pf.org_detail(co)["member_list"])
+
+
+def test_http_member_apps_endpoint_and_invite_scope(web2):
+    c, pf = web2
+    st, d, _ = c.req("POST", "/api/signup", {"email": "o@example.com", "password": PW, "name": "O"}); c.csrf = d["csrf"]
+    org = c.req("POST", "/api/orgs", {"name": "Team"})[1]["org"]; H = {"X-Org": str(org["id"])}
+    a = c.req("POST", "/api/apps", {"name": "one"}, headers=H)[1]["app"]; b = c.req("POST", "/api/apps", {"name": "two"}, headers=H)[1]["app"]
+    assert c.req("POST", "/api/org/invites", {"email": "d@example.com", "role": "member", "apps": [a["id"]]}, headers=H)[1]["invite"]["apps"] == [a["id"]]
+    assert c.req("POST", "/api/org/invites", {"email": "e@example.com", "role": "member", "apps": [999]}, headers=H)[0] == 404
+    d2 = Http(c.port)
+    st, dd, _ = d2.req("POST", "/api/signup", {"email": "d@example.com", "password": PW, "name": "D"}); d2.csrf = dd["csrf"]
+    tok = link_token(pf, "invite", "d@example.com")
+    assert d2.req("POST", "/api/invites/accept", {"token": tok})[0] == 200
+    assert [x["name"] for x in d2.req("GET", "/api/apps", headers=H)[1]["apps"]] == ["one"]
+    assert d2.req("GET", f"/api/apps/{b['id']}", headers=H)[0] == 404
+    uid = [m["user_id"] for m in c.req("GET", "/api/org", headers=H)[1]["org"]["member_list"] if m["email"] == "d@example.com"][0]
+    assert c.req("PATCH", f"/api/org/members/{uid}", {"apps": [a["id"], b["id"]]}, headers=H)[0] == 200
+    assert len(d2.req("GET", "/api/apps", headers=H)[1]["apps"]) == 2
+
+
+# ------------------------------------------------------------------------------------------------ legal mentions and UBL e-invoices
+SELLER = {"name": "Acme SAS", "address": "1 rue de la Paix", "city": "Paris", "postal_code": "75001", "vat_id": "FR40303265045", "country": "FR", "registration_no": "303265045",
+          "legal_form": "SAS", "share_capital": "10000", "iban": "FR1420041010050500013M02606", "bic": "PSSTFRPPPAR", "email": "billing@acme.example", "payment_terms_days": 30}
+
+
+def test_company_form_validates_iban_and_payment_terms(tmp_path):
+    pf, _, _ = make(tmp_path)
+    admin = user(pf, "admin@example.com")
+    with pytest.raises(ApiError):
+        pf.admin_set_company(admin, {**SELLER, "iban": "FR1420041010050500013M02607"})            # wrong check digits
+    with pytest.raises(ApiError):
+        pf.admin_set_company(admin, {**SELLER, "payment_terms_days": 400})
+    pf.admin_set_company(admin, {**SELLER, "iban": "FR14 2004 1010 0505 0001 3M02 606"})
+    assert pf.company()["iban"] == "FR1420041010050500013M02606"
+
+
+def _setup(tmp_path, company=True, billing=True):
+    """An invoice issued AFTER the company and customer details are set, so it snapshots them."""
+    pf, _, clk = make(tmp_path)
+    admin = user(pf, "admin@example.com")
+    pf.admin_set_pricing(admin, {"compute_usd_per_hour": 1, "free_compute_hours_per_month": 0, "tax_rate_percent": 20, "min_invoice_usd": 0.5})
+    if company:
+        pf.admin_set_company(admin, SELLER)
+    cust = user(pf, "cust@example.com"); c = pf._c(cust)
+    if billing:
+        pf.update_org(c, billing={"name": "Client SARL", "address": "5 rue Bleue", "city": "Lyon", "postal_code": "69001", "country": "FR", "email": "ap@client.example"})
+    app = pf.create_app(c, "svc"); usage_month(pf, app, clk, 4)
+    clk.t += 40 * 86400
+    return pf, admin, cust, c, pf.billing(c)["invoices"][0]
+
+
+def test_invoice_carries_due_date_payment_details_and_french_mentions(tmp_path):
+    pf, admin, cust, c, inv = _setup(tmp_path)
+    d = pf._document(cust, "invoice", inv["id"])
+    assert d["due"] > d["issued"] and d["period_start"].endswith("-01") and d["seller"]["iban"].startswith("FR14")
+    assert any("L441-10" in m for m in d["mentions"])
+    pdf, _ = pf.invoice_pdf(cust, inv["id"])
+    assert pdf.startswith(b"%PDF") and b"L441-10" not in b""                            # rendered without error
+
+
+def test_reverse_charge_text_follows_the_sellers_language():
+    from spatial.platform import invoice_rules as r
+    assert "Autoliquidation" in r.reverse_charge_text("fr") and "Steuerschuldnerschaft" in r.reverse_charge_text("DE") and "Reverse charge" in r.reverse_charge_text("US")
+    assert "city" in r.required({"country": "FR", "name": "x", "address": "y"}, True)
+    assert r.required({"country": "DE", "name": "x", "address": "y", "city": "z", "postal_code": "1"}, False) == ["vat_id or tax_no"]
+
+
+UBL_DIR = Path(__file__).parent / "data" / "ubl"
+
+
+def _xsd(name):
+    etree = pytest.importorskip("lxml.etree")
+    return etree, etree.XMLSchema(etree.parse(str(UBL_DIR / "maindoc" / name)))
+
+
+def test_ubl_invoice_and_credit_note_validate_against_the_official_xsd(tmp_path):
+    etree, inv_schema = _xsd("UBL-Invoice-2.1.xsd")
+    _, cn_schema = _xsd("UBL-CreditNote-2.1.xsd")
+    pf, admin, cust, c, inv = _setup(tmp_path)
+    xml, name = pf.invoice_ubl(cust, inv["id"])
+    assert inv_schema.validate(etree.fromstring(xml)), inv_schema.error_log
+    assert name.endswith(".xml") and b"INV-" in xml and b"urn:cen.eu:en16931:2017" in xml
+    note = pf.admin_credit_note(admin, inv["id"], 1.0, "goodwill")
+    cxml, _ = pf.credit_note_ubl(cust, note["id"])
+    assert cn_schema.validate(etree.fromstring(cxml)), cn_schema.error_log
+
+
+def test_ubl_refuses_when_mandatory_fields_are_missing_and_names_them(tmp_path):
+    pf, admin, cust, c, inv = _setup(tmp_path, company=False, billing=False)
+    with pytest.raises(ApiError) as e:
+        pf.invoice_ubl(cust, inv["id"])
+    assert e.value.status == 422 and "seller" in e.value.message.lower()
+
+
+def test_http_ubl_endpoint_returns_xml_to_the_owner_only(web2):
+    c, pf = web2
+    st, d, _ = c.req("POST", "/api/signup", {"email": "u@example.com", "password": PW, "name": "U"}); c.csrf = d["csrf"]
+    assert c.req("GET", "/api/invoices/1/ubl")[0] == 404
+    assert Http(c.port).req("GET", "/api/invoices/1/ubl")[0] == 401
+
+
+# ------------------------------------------------------------------------------------------------ embedded hub (one process)
+def test_embedded_hub_runs_in_the_same_process_and_serves_keys_issued_by_the_console(tmp_path):
+    import subprocess, sys, re, os
+    from spatial.core.protocol import RpcClient
+    mk = tmp_path / "master.key"; mk.write_bytes(b"hub-master-key-0123456789abcdef"); mk.chmod(0o600)
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])}
+    proc = subprocess.Popen([sys.executable, "-m", "spatial.platform.server", "--db", str(tmp_path / "p.db"), "--master-key-file", str(mk), "--embedded-hub",
+                             "--hub-listen", "127.0.0.1:0", "--port", "0"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    try:
+        line = ""
+        t0 = time.time()
+        while time.time() - t0 < 20 and "embedded hub on" not in line:
+            line = proc.stdout.readline()
+            assert line or proc.poll() is None, "platform exited early"
+        m = re.search(r"http://127\.0\.0\.1:(\d+)/.*embedded hub on 127\.0\.0\.1:(\d+)", line)
+        assert m, line
+        web, hubport = int(m.group(1)), int(m.group(2))
+        c = Http(web)
+        st, d, _ = c.req("POST", "/api/signup", {"email": "e@example.com", "password": PW, "name": "E"}); c.csrf = d["csrf"]
+        app = c.req("POST", "/api/apps", {"name": "emb"})[1]["app"]
+        key = c.req("POST", f"/api/apps/{app['id']}/keys", {"name": "c", "kind": "client"})[1]["key"]["token"]
+        info, _ = RpcClient("127.0.0.1", hubport, key.encode()).call({"op": "nodes"})          # the same process answers with the console's key
+        assert "nodes" in info
+        with pytest.raises(Exception):
+            RpcClient("127.0.0.1", hubport, b"not-a-key", timeout=3).call({"op": "nodes"})             # an unknown credential is refused
+    finally:
+        proc.terminate(); proc.wait(timeout=10)
+
+
+def test_embedded_hub_refuses_to_start_without_a_master_key(tmp_path):
+    import subprocess, sys, os
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])}
+    r = subprocess.run([sys.executable, "-m", "spatial.platform.server", "--db", str(tmp_path / "p.db"), "--embedded-hub"], capture_output=True, text=True, env=env, timeout=30)
+    assert r.returncode != 0 and "master-key-file" in r.stderr

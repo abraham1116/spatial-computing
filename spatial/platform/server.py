@@ -70,6 +70,8 @@ def make_handler(pf: Platform, secure_cookies: bool):
     route("GET", "/api/admin/invoices", "admin_invoices")
     route("POST", r"/api/admin/invoices/(\d+)/credit", "admin_credit")
     route("GET", r"/api/credit-notes/(\d+)/pdf", "credit_pdf")
+    route("GET", r"/api/invoices/(\d+)/ubl", "invoice_ubl")
+    route("GET", r"/api/credit-notes/(\d+)/ubl", "credit_ubl")
     route("GET", "/api/admin/mail", "admin_mail")
     route("POST", "/api/login/2fa", "login_2fa", auth=False, csrf=False)
     route("GET", "/api/sso/config", "sso_config", auth=False)
@@ -338,7 +340,7 @@ def make_handler(pf: Platform, secure_cookies: bool):
 
         def h_invites_create(self, g, u, s):
             d = self._data()
-            self._json(201, {"invite": pf.invite(s[0], d.get("email"), d.get("role", "member"))})
+            self._json(201, {"invite": pf.invite(s[0], d.get("email"), d.get("role", "member"), d.get("apps"))})
 
         def h_invites_revoke(self, g, u, s):
             pf.revoke_invite(s[0], int(g[0]))
@@ -348,7 +350,11 @@ def make_handler(pf: Platform, secure_cookies: bool):
             self._json(200, {"org": pf.accept_invite(s[0], self._data().get("token"))})
 
         def h_members_role(self, g, u, s):
-            pf.set_member_role(s[0], int(g[0]), self._data().get("role"))
+            d = self._data()
+            if "role" in d:
+                pf.set_member_role(s[0], int(g[0]), d["role"])
+            if "apps" in d:
+                pf.set_member_apps(s[0], int(g[0]), d["apps"])
             self._json(200, {"ok": True})
 
         def h_members_remove(self, g, u, s):
@@ -377,6 +383,14 @@ def make_handler(pf: Platform, secure_cookies: bool):
         def h_admin_credit(self, g, u, s):
             d = self._data()
             self._json(201, {"credit_note": pf.admin_credit_note(s[0], int(g[0]), d.get("amount_usd"), d.get("reason"))})
+
+        def h_invoice_ubl(self, g, u, s):
+            xml, name = pf.invoice_ubl(s[0], int(g[0]))
+            self._send(200, xml, "application/xml; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
+
+        def h_credit_ubl(self, g, u, s):
+            xml, name = pf.credit_note_ubl(s[0], int(g[0]))
+            self._send(200, xml, "application/xml; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
 
         def h_credit_pdf(self, g, u, s):
             pdf, name = pf.credit_note_pdf(s[0], int(g[0]))
@@ -539,6 +553,7 @@ def main(argv=None):
     ap.add_argument("--smtp-user")
     ap.add_argument("--smtp-from", default="no-reply@localhost")
     ap.add_argument("--smtp-ssl", action="store_true", help="implicit TLS (port 465) instead of STARTTLS")
+    ap.add_argument("--smtp-ca-file", help="CA certificate (PEM) that signed the SMTP server's certificate, for a private relay; certificates are always verified")
     ap.add_argument("--smtp-no-starttls", action="store_true", help="plain SMTP, for a local relay only")
     ap.add_argument("--oidc-issuer", help="OpenID Connect provider URL (enables 'Sign in with ...'); the client secret goes in OIDC_CLIENT_SECRET")
     ap.add_argument("--oidc-client-id")
@@ -546,16 +561,41 @@ def main(argv=None):
     ap.add_argument("--oidc-domains", default="", help="comma list: only these e-mail domains may sign in this way")
     ap.add_argument("--oidc-no-create", action="store_true", help="only existing accounts may sign in this way")
     ap.add_argument("--require-verified", choices=["auto", "yes", "no"], default="auto", help="e-mail verification before keys and jobs (auto: only when SMTP is configured)")
+    ap.add_argument("--embedded-hub", action="store_true", help="run the fleet hub inside this process (one container, one command): needs --master-key-file")
+    ap.add_argument("--hub-listen", default="127.0.0.1:7700", help="with --embedded-hub: host:port the hub listens on (use 0.0.0.0:7700 for a container; remote binding is allowed only with --allow-remote)")
     ap.add_argument("--dev-outbox", action="store_true", help="expose /api/dev/outbox (reset links) for local development")
     a = ap.parse_args(argv)
     Path(a.db).parent.mkdir(parents=True, exist_ok=True)
+    if not a.master_key_file and os.environ.get("HUB_MASTER_KEY"):                      # hosts that give secrets as environment variables only
+        kf = Path(a.db).with_name("master.key")
+        fd = os.open(kf, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(os.environ["HUB_MASTER_KEY"])
+        a.master_key_file = str(kf)
+    embedded = None
+    if a.embedded_hub:
+        if not a.master_key_file:
+            raise SystemExit("--embedded-hub needs --master-key-file (the hub authenticates every call with credentials this service issues)")
+        if a.hub:
+            raise SystemExit("--embedded-hub and --hub are exclusive")
+        from ..fleet.hub import serve_hub
+        hh, _, hp = a.hub_listen.rpartition(":")
+        a.usage_file = a.usage_file or str(Path(a.db).with_name("hub-usage.jsonl"))
+        a.revoked_file = a.revoked_file or str(Path(a.db).with_name("hub-revoked.txt"))
+        hub_auth = authorizer_from_file(a.master_key_file, revoked_file=a.revoked_file)
+        hsrv, hub = serve_hub(None, hh or "127.0.0.1", int(hp), a.allow_remote, hub_auth)
+        hub.usage_path = a.usage_file
+        hsrv.start()
+        a.hub = f"127.0.0.1:{hsrv.port}"
+        a.hub_public = a.hub_public or f"{hh or '127.0.0.1'}:{hsrv.port}"
+        embedded = hsrv
     auth = authorizer_from_file(a.master_key_file, revoked_file=a.revoked_file) if a.master_key_file else None
     smtp = None
     host = a.smtp_host or os.environ.get("SMTP_HOST")
     if host:
         smtp = {"host": host, "port": a.smtp_port if a.smtp_host else int(os.environ.get("SMTP_PORT", "587")), "user": a.smtp_user or os.environ.get("SMTP_USER"),
                 "password": os.environ.get("SMTP_PASSWORD"), "from": a.smtp_from if a.smtp_host else os.environ.get("SMTP_FROM", "no-reply@localhost"),
-                "ssl": a.smtp_ssl, "starttls": not a.smtp_no_starttls}
+                "ssl": a.smtp_ssl, "starttls": not a.smtp_no_starttls, "ca_file": a.smtp_ca_file or os.environ.get("SMTP_CA_FILE")}
     pf = Platform(DB(a.db), auth, a.hub, a.hub_public, a.usage_file, a.revoked_file, Pricing.load(a.pricing_file),
                   Stripe(os.environ.get("STRIPE_SECRET_KEY"), os.environ.get("STRIPE_WEBHOOK_SECRET")),
                   a.public_url or f"http://{a.host}:{a.port}", smtp=smtp, docs_url=a.docs_url,
@@ -580,7 +620,7 @@ def main(argv=None):
             time.sleep(10)
     threading.Thread(target=ingest_loop, daemon=True).start()
     print(f"platform on http://{a.host}:{srv.server_address[1]}/ (payments: {'Stripe' if pf.stripe.configured else 'not configured'}; "
-          f"hub keys: {'yes' if auth else 'no'})", flush=True)
+          f"hub keys: {'yes' if auth else 'no'}" + (f"; embedded hub on {a.hub_public}" if embedded else "") + ")", flush=True)
     srv.serve_forever()
 
 

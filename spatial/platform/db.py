@@ -14,13 +14,14 @@ CREATE TABLE IF NOT EXISTS users(
   recovery TEXT NOT NULL DEFAULT '[]', personal_org INTEGER);
 CREATE TABLE IF NOT EXISTS orgs(
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, created REAL NOT NULL, personal INTEGER NOT NULL DEFAULT 0,
-  billing_name TEXT NOT NULL DEFAULT '', billing_address TEXT NOT NULL DEFAULT '', billing_country TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '', vat_status TEXT NOT NULL DEFAULT '');
-CREATE TABLE IF NOT EXISTS members(org_id INTEGER NOT NULL, user_id INTEGER NOT NULL, role TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(org_id, user_id));
+  billing_name TEXT NOT NULL DEFAULT '', billing_address TEXT NOT NULL DEFAULT '', billing_country TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '', vat_status TEXT NOT NULL DEFAULT '',
+  billing_city TEXT NOT NULL DEFAULT '', billing_postal TEXT NOT NULL DEFAULT '', billing_email TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS members(org_id INTEGER NOT NULL, user_id INTEGER NOT NULL, role TEXT NOT NULL, created REAL NOT NULL, app_ids TEXT, PRIMARY KEY(org_id, user_id));
 CREATE TABLE IF NOT EXISTS org_roles(org_id INTEGER NOT NULL, name TEXT NOT NULL, perms TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(org_id, name));
 CREATE TABLE IF NOT EXISTS sso_states(state_hash TEXT PRIMARY KEY, nonce TEXT NOT NULL, verifier TEXT NOT NULL, expires REAL NOT NULL, ip TEXT);
 CREATE TABLE IF NOT EXISTS invites(
   id INTEGER PRIMARY KEY, org_id INTEGER NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL, token_hash TEXT UNIQUE NOT NULL, invited_by INTEGER NOT NULL,
-  created REAL NOT NULL, expires REAL NOT NULL, accepted REAL);
+  created REAL NOT NULL, expires REAL NOT NULL, accepted REAL, app_ids TEXT);
 CREATE TABLE IF NOT EXISTS verifications(token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS challenges(token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, ip TEXT, ua TEXT);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL, updated REAL NOT NULL);
@@ -87,7 +88,8 @@ class DB:
            "apps": [("org_id", "INTEGER")],
            "invoices": [("org_id", "INTEGER"), ("number", "TEXT"), ("subtotal_usd", "REAL"), ("tax_rate", "REAL"), ("tax_usd", "REAL"), ("billing", "TEXT"), ("seller", "TEXT"),
                         ("payment_ref", "TEXT"), ("credited_usd", "REAL NOT NULL DEFAULT 0")],
-           "orgs": [("vat_status", "TEXT NOT NULL DEFAULT ''")],
+           "orgs": [("vat_status", "TEXT NOT NULL DEFAULT ''"), ("billing_city", "TEXT NOT NULL DEFAULT ''"), ("billing_postal", "TEXT NOT NULL DEFAULT ''"), ("billing_email", "TEXT NOT NULL DEFAULT ''")],
+           "members": [("app_ids", "TEXT")], "invites": [("app_ids", "TEXT")],
            "outbox": [("attempts", "INTEGER NOT NULL DEFAULT 0"), ("next_try", "REAL NOT NULL DEFAULT 0"), ("last_error", "TEXT")]}
 
     def _migrate(self) -> None:

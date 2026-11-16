@@ -13,6 +13,8 @@ from . import security as sec
 from . import totp as totp_mod
 from . import vat as vat_mod
 from .oidc import Oidc, OidcError, pkce_pair
+from . import invoice_rules as rules
+from . import ubl as ubl_mod
 from .billing import DEFAULT_PRICING, PaymentError, Pricing, Stripe, validate_pricing
 from .db import DB
 from .mailer import Mailer
@@ -132,7 +134,8 @@ class Platform:
         return self._setting("pricing") is None and self._pricing0.data == DEFAULT_PRICING
 
     def company(self) -> dict:
-        return {"name": "", "address": "", "vat_id": "", "country": "", "email": "", **(self._setting("company") or {})}
+        return {"name": "", "address": "", "city": "", "postal_code": "", "vat_id": "", "country": "", "email": "", "registration_no": "", "legal_form": "",
+                "share_capital": "", "tax_no": "", "iban": "", "bic": "", "payment_terms_days": 30, "legal_footer": "", "tax_exempt_note": "", **(self._setting("company") or {})}
 
     # ------------------------------------------------------------------ context: who acts, in which organisation, with which role
     def _c(self, user, org_id: int | None = None) -> Ctx:
@@ -140,10 +143,11 @@ class Platform:
             return user
         base = dict(user)
         oid = org_id or base.get("personal_org")
-        m = self.db.one("SELECT role FROM members WHERE org_id=? AND user_id=?", (oid, base["id"]))
+        m = self.db.one("SELECT role, app_ids FROM members WHERE org_id=? AND user_id=?", (oid, base["id"]))
         if not m:
             raise ApiError(404, "organization not found")
         base["org_id"], base["role"] = oid, m["role"]
+        base["app_scope"] = None if m["app_ids"] is None else frozenset(json.loads(m["app_ids"]))          # None = every app of the organization
         base["perms"] = self._role_perms(oid, m["role"])
         return Ctx(base)
 
@@ -456,13 +460,16 @@ class Platform:
 
     def org_detail(self, c: Ctx) -> dict:
         o = self.db.one("SELECT * FROM orgs WHERE id=?", (c.org_id,))
-        members = [{"user_id": m["user_id"], "email": m["email"], "name": m["name"], "role": m["role"], "since": m["created"]} for m in
-                   self.db.q("SELECT m.user_id, m.role, m.created, u.email, u.name FROM members m JOIN users u ON u.id=m.user_id WHERE m.org_id=? ORDER BY m.created", (c.org_id,))]
-        out = {**self.org_view(c.org_id, c), "member_list": members, "perms": sorted(c["perms"]), "roles": self.list_roles(c), "permission_help": PERMS}
+        members = [{"user_id": m["user_id"], "email": m["email"], "name": m["name"], "role": m["role"], "since": m["created"], "apps": None if m["app_ids"] is None else json.loads(m["app_ids"])} for m in
+                   self.db.q("SELECT m.user_id, m.role, m.created, m.app_ids, u.email, u.name FROM members m JOIN users u ON u.id=m.user_id WHERE m.org_id=? ORDER BY m.created", (c.org_id,))]
+        out = {**self.org_view(c.org_id, c), "my_apps": None if c["app_scope"] is None else sorted(c["app_scope"]),
+               "app_list": [{"id": a["id"], "name": a["name"]} for a in self.db.q("SELECT id,name FROM apps WHERE org_id=? AND deleted IS NULL ORDER BY id", (c.org_id,)) if c["app_scope"] is None or a["id"] in c["app_scope"]],
+               "member_list": members, "perms": sorted(c["perms"]), "roles": self.list_roles(c), "permission_help": PERMS}
         if self._has(c, "members.manage") or self._has(c, "org.manage"):
             out["invites"] = [{"id": i["id"], "email": i["email"], "role": i["role"], "expires": i["expires"]} for i in
                               self.db.q("SELECT * FROM invites WHERE org_id=? AND accepted IS NULL AND expires>? ORDER BY id DESC", (c.org_id, self.clock()))]
-            out["billing"] = {"name": o["billing_name"], "address": o["billing_address"], "country": o["billing_country"], "vat_id": o["vat_id"], "vat_status": o["vat_status"]}
+            out["billing"] = {"name": o["billing_name"], "address": o["billing_address"], "country": o["billing_country"], "vat_id": o["vat_id"], "vat_status": o["vat_status"],
+                              "city": o["billing_city"], "postal_code": o["billing_postal"], "email": o["billing_email"]}
         return out
 
     def update_org(self, c: Ctx, name=None, billing: dict | None = None) -> dict:
@@ -472,7 +479,10 @@ class Platform:
                 raise ApiError(400, "organization name must be 1 to 60 characters")
             self.db.x("UPDATE orgs SET name=? WHERE id=?", (name.strip(), c.org_id))
         if billing is not None:
-            f = {"name": (billing.get("name") or "")[:120], "address": (billing.get("address") or "")[:400], "country": (billing.get("country") or "").strip().upper()[:2], "vat_id": (billing.get("vat_id") or "").strip()[:40]}
+            f = {"name": (billing.get("name") or "")[:120], "address": (billing.get("address") or "")[:400], "country": (billing.get("country") or "").strip().upper()[:2], "vat_id": (billing.get("vat_id") or "").strip()[:40],
+                 "city": (billing.get("city") or "").strip()[:80], "postal": (billing.get("postal_code") or "").strip()[:20], "email": (billing.get("email") or "").strip()[:120]}
+            if f["email"] and not sec.valid_email(f["email"]):
+                raise ApiError(400, "enter a valid billing e-mail address")
             if f["country"] and not f["country"].isalpha():
                 raise ApiError(400, "country must be a 2-letter code")
             status = ""
@@ -489,7 +499,8 @@ class Platform:
                     if v is False:
                         raise ApiError(400, "VIES (European Commission) says this VAT number is not registered")
                     status = "registered (VIES)" if v else status + ", VIES unreachable"
-            self.db.x("UPDATE orgs SET billing_name=?, billing_address=?, billing_country=?, vat_id=?, vat_status=? WHERE id=?", (f["name"], f["address"], f["country"], f["vat_id"], status, c.org_id))
+            self.db.x("UPDATE orgs SET billing_name=?, billing_address=?, billing_country=?, vat_id=?, vat_status=?, billing_city=?, billing_postal=?, billing_email=? WHERE id=?",
+                      (f["name"], f["address"], f["country"], f["vat_id"], status, f["city"], f["postal"], f["email"], c.org_id))
         return self.org_detail(c)
 
     def delete_org(self, c: Ctx) -> None:
@@ -511,13 +522,29 @@ class Platform:
         self.db.x("DELETE FROM orgs WHERE id=?", (org_id,))
         self.db.event(actor["id"], "org_deleted", str(org_id))
 
-    def invite(self, c: Ctx, email: str, role: str) -> dict:
+    def _check_scope(self, c: Ctx, apps) -> str | None:
+        """Validate an app list for an invitation or a member: only apps of this organization, and never more than the giver can see."""
+        if apps is None:
+            if c["app_scope"] is not None:
+                raise ApiError(403, "you can only share the apps you can see yourself: choose the apps explicitly")
+            return None
+        if not isinstance(apps, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in apps):
+            raise ApiError(400, "apps must be a list of app ids")
+        ok = {a["id"] for a in self.db.q("SELECT id FROM apps WHERE org_id=? AND deleted IS NULL", (c.org_id,))}
+        if not set(apps) <= ok:
+            raise ApiError(404, "app not found")
+        if c["app_scope"] is not None and not set(apps) <= c["app_scope"]:
+            raise ApiError(403, "you cannot share apps you cannot see yourself")
+        return json.dumps(sorted(set(apps)))
+
+    def invite(self, c: Ctx, email: str, role: str, apps=None) -> dict:
         self._need(c, "members.manage")
         self._need_verified(c)
         email = (email or "").strip().lower()
         if not sec.valid_email(email):
             raise ApiError(400, "enter a valid e-mail address")
         self._may_grant(c, role)
+        scope = self._check_scope(c, apps)
         if self.db.one("SELECT personal FROM orgs WHERE id=?", (c.org_id,))["personal"]:
             raise ApiError(400, "a personal workspace has one member: create an organization to work with others")
         if self.db.one("SELECT COUNT(*) c FROM members WHERE org_id=?", (c.org_id,))["c"] >= 25:
@@ -525,12 +552,23 @@ class Platform:
         if self.db.one("SELECT 1 FROM members m JOIN users u ON u.id=m.user_id WHERE m.org_id=? AND u.email=?", (c.org_id, email)):
             raise ApiError(409, "this person is already a member")
         t = sec.new_token()
-        iid = self.db.x("INSERT INTO invites(org_id,email,role,token_hash,invited_by,created,expires) VALUES(?,?,?,?,?,?,?)",
-                        (c.org_id, email, role, sec.token_hash(t), c["id"], self.clock(), self.clock() + 7 * 86400))
+        iid = self.db.x("INSERT INTO invites(org_id,email,role,token_hash,invited_by,created,expires,app_ids) VALUES(?,?,?,?,?,?,?,?)",
+                        (c.org_id, email, role, sec.token_hash(t), c["id"], self.clock(), self.clock() + 7 * 86400, scope))
         org = self.db.one("SELECT name FROM orgs WHERE id=?", (c.org_id,))["name"]
         self._mail(email, f"{c['name']} invited you to {org}", f"{c['name']} invited you to join \"{org}\" as {role}.\n\nSign in or create an account with this address, then open:\n{self.public_url}/#/invite/{t}\n\nThe invitation works for seven days.\n")
         self.db.event(c["id"], "member_invited", f"{c.org_id} {email} {role}")
-        return {"id": iid, "email": email, "role": role}
+        return {"id": iid, "email": email, "role": role, "apps": None if scope is None else json.loads(scope)}
+
+    def set_member_apps(self, c: Ctx, user_id: int, apps) -> None:
+        """Limit a member to some apps (a list of app ids) or give them all apps (None, only if the giver has all apps themselves)."""
+        self._need(c, "members.manage")
+        m = self.db.one("SELECT role FROM members WHERE org_id=? AND user_id=?", (c.org_id, user_id))
+        if not m:
+            raise ApiError(404, "member not found")
+        if m["role"] == "owner" and "members.owner" not in c["perms"]:
+            raise ApiError(403, "only an owner can change an owner")
+        self.db.x("UPDATE members SET app_ids=? WHERE org_id=? AND user_id=?", (self._check_scope(c, apps), c.org_id, user_id))
+        self.db.event(c["id"], "member_apps", f"{c.org_id} {user_id}")
 
     def revoke_invite(self, c: Ctx, invite_id: int) -> None:
         self._need(c, "members.manage")
@@ -542,7 +580,7 @@ class Platform:
             raise ApiError(400, "this invitation is invalid or expired")
         if i["email"] != user["email"].lower():
             raise ApiError(403, f"this invitation was sent to another address ({i['email'][:2]}…): sign in with that account")
-        self.db.x("INSERT OR IGNORE INTO members(org_id,user_id,role,created) VALUES(?,?,?,?)", (i["org_id"], user["id"], i["role"], self.clock()))
+        self.db.x("INSERT OR IGNORE INTO members(org_id,user_id,role,created,app_ids) VALUES(?,?,?,?,?)", (i["org_id"], user["id"], i["role"], self.clock(), i["app_ids"]))
         self.db.x("UPDATE invites SET accepted=? WHERE id=?", (self.clock(), i["id"]))
         self.db.event(user["id"], "invite_accepted", str(i["org_id"]))
         return {**self.org_view(i["org_id"]), "role": i["role"]}
@@ -614,8 +652,8 @@ class Platform:
     def _app(self, user, app_id: int):
         c = self._c(user)
         a = self.db.one("SELECT * FROM apps WHERE id=? AND org_id=? AND deleted IS NULL", (app_id, c.org_id))
-        if not a:
-            raise ApiError(404, "app not found")                       # same answer for "not yours" and "does not exist"
+        if not a or (c["app_scope"] is not None and a["id"] not in c["app_scope"]):
+            raise ApiError(404, "app not found")                       # same answer for "not yours", "not in your scope" and "does not exist"
         return a
 
     def app_view(self, a) -> dict:
@@ -643,12 +681,17 @@ class Platform:
             raise ApiError(400, "budget must be a number between 0 and 1,000,000")
         aid = self.db.x("INSERT INTO apps(user_id,org_id,name,description,budget_usd,created) VALUES(?,?,?,?,?,?)",
                         (c["id"], c.org_id, name, (description or "")[:300], budget_usd, self.clock()))
+        if c["app_scope"] is not None:                                  # a scoped member sees the apps they create
+            ids = sorted(c["app_scope"] | {aid})
+            self.db.x("UPDATE members SET app_ids=? WHERE org_id=? AND user_id=?", (json.dumps(ids), c.org_id, c["id"]))
+            c = Ctx({**c, "app_scope": frozenset(ids)})
         self.db.event(c["id"], "app_created", str(aid))
         return self.app_view(self._app(c, aid))
 
     def list_apps(self, user) -> list[dict]:
         c = self._c(user)
-        return [self.app_view(a) for a in self.db.q("SELECT * FROM apps WHERE org_id=? AND deleted IS NULL ORDER BY id", (c.org_id,))]
+        return [self.app_view(a) for a in self.db.q("SELECT * FROM apps WHERE org_id=? AND deleted IS NULL ORDER BY id", (c.org_id,))
+                if c["app_scope"] is None or a["id"] in c["app_scope"]]
 
     def delete_app(self, user, app_id: int) -> None:
         c = self._c(user)
@@ -790,7 +833,7 @@ class Platform:
         country = (org["billing_country"] or "").upper()
         rate = float(p["tax_by_country"].get(country, p["tax_rate_percent"]))
         if p.get("no_tax_with_vat_id_abroad") and org["vat_id"] and country and seller.get("country") and country != seller["country"].upper():
-            return 0.0, "Reverse charge: tax due by the customer."
+            return 0.0, rules.reverse_charge_text(seller["country"])
         return rate, ""
 
     def _rate_org(self, c: Ctx, period: str) -> dict:
@@ -843,10 +886,11 @@ class Platform:
                     number = self._next_invoice_number(self.clock()) if status == "open" else None
                     names = {a["id"]: a["name"] for a in self.db.q("SELECT id,name FROM apps WHERE org_id=?", (c.org_id,))}
                     lines = [{**l, "app": names.get(l["app_id"], f"app{l['app_id']}"), "usd_per_hour": self.pricing.data["compute_usd_per_hour"]} for l in r["lines"]]
-                    billing = {"name": org["billing_name"] or org["name"], "address": org["billing_address"], "country": org["billing_country"], "vat_id": org["vat_id"]}
+                    billing = {"name": org["billing_name"] or org["name"], "address": org["billing_address"], "country": org["billing_country"], "vat_id": org["vat_id"],
+                               "city": org["billing_city"], "postal_code": org["billing_postal"], "email": org["billing_email"]}
                     self.db.x("INSERT INTO invoices(user_id,org_id,period,amount_usd,status,lines,created,paid,number,subtotal_usd,tax_rate,tax_usd,billing,seller) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                               (c["id"], c.org_id, p, r["total_usd"] if status == "open" else 0.0, status, json.dumps(lines), self.clock(), self.clock() if status == "paid" else None,
-                               number, sub if status == "open" else 0.0, r["tax_rate"], r["tax_usd"] if status == "open" else 0.0, json.dumps(billing), json.dumps({**self.company(), "tax_label": self.pricing.data["tax_label"], "currency": self.pricing.data["currency"], "tax_note": r["tax_note"]})))
+                               number, sub if status == "open" else 0.0, r["tax_rate"], r["tax_usd"] if status == "open" else 0.0, json.dumps(billing), json.dumps({**self.company(), "tax_label": self.pricing.data["tax_label"], "currency": self.pricing.data["currency"], "tax_note": r["tax_note"], "reverse_charge": bool(r["tax_note"])})))
             m += 1
             if m == 13:
                 y, m = y + 1, 1
@@ -867,21 +911,70 @@ class Platform:
         self.db.x("UPDATE invoices SET provider_ref=? WHERE id=?", (ref, inv["id"]))
         return {"url": url}
 
-    def invoice_pdf(self, user, invoice_id: int) -> tuple[bytes, str]:
+    def _invoice_doc(self, i, credit=None) -> dict:
+        """The data of one invoice (or credit note) in the form every renderer (PDF, UBL) needs."""
+        seller = json.loads(i["seller"] or "{}") if credit is None else json.loads(self.db.one("SELECT seller FROM invoices WHERE id=?", (credit["invoice_id"],))["seller"] or "{}")
+        inv = i if credit is None else self.db.one("SELECT * FROM invoices WHERE id=?", (credit["invoice_id"],))
+        customer = json.loads(inv["billing"] or "{}")
+        cur = seller.get("currency") or "usd"
+        y, m = int(inv["period"][:4]), int(inv["period"][5:7])
+        start = datetime(y, m, 1, tzinfo=timezone.utc)
+        end = datetime(y + (m == 12), 1 if m == 12 else m + 1, 1, tzinfo=timezone.utc).timestamp() - 86400
+        created = (credit or inv)["created"]
+        terms = int(seller.get("payment_terms_days") or 30)
+        due = datetime.fromtimestamp(inv["created"] + terms * 86400, timezone.utc).strftime("%Y-%m-%d")
+        reverse = bool(seller.get("reverse_charge"))
+        rate = inv["tax_rate"] or 0.0
+        doc = {"kind": "credit" if credit else "invoice", "number": (credit or inv)["number"], "refers_to": inv["number"] if credit else None,
+               "issued": datetime.fromtimestamp(created, timezone.utc).strftime("%Y-%m-%d"), "due": due, "period": inv["period"],
+               "period_start": start.strftime("%Y-%m-%d"), "period_end": datetime.fromtimestamp(end, timezone.utc).strftime("%Y-%m-%d"),
+               "status": (credit or inv)["status"], "seller": seller, "customer": customer, "currency": cur, "tax_rate": rate, "reverse_charge": reverse,
+               "tax_exempt_note": seller.get("tax_exempt_note", ""), "buyer_reference": customer.get("name", "")}
+        if credit:
+            doc.update(lines=[{"description": ("Credit: " + credit["reason"])[:48], "qty": 1.0, "unit": "C62", "unit_price": credit["subtotal_usd"], "amount": credit["subtotal_usd"]}],
+                       subtotal=credit["subtotal_usd"], tax=credit["tax_usd"], total=credit["total_usd"], note="This credit note reduces invoice " + inv["number"] + "."
+                       + (" Refund due to the customer." if credit["status"] == "refund_due" else ""))
+        else:
+            lines = []
+            for l in json.loads(inv["lines"]):
+                if l["billable_seconds"] > 0:
+                    h = l["billable_seconds"] / 3600
+                    lines.append({"description": f"Compute: {l['app']}", "qty": h, "unit": "HUR", "unit_price": l.get("usd_per_hour", 0), "amount": l["usd"]})
+            doc.update(lines=lines, subtotal=inv["subtotal_usd"] or 0.0, tax=inv["tax_usd"] or 0.0, total=inv["amount_usd"],
+                       note="Free monthly allowance already deducted." if any(l["seconds"] > l["billable_seconds"] for l in json.loads(inv["lines"])) else "")
+        doc["mentions"] = rules.mentions(seller, customer, rate, reverse, due)
+        return doc
+
+    def _document(self, user, kind: str, ident: int):
         c = self._c(user)
         self._need(c, "billing.read")
-        i = self.db.one("SELECT * FROM invoices WHERE id=? AND org_id=?", (invoice_id, c.org_id))
-        if not i or not i["number"]:
-            raise ApiError(404, "invoice not found")
-        seller = json.loads(i["seller"] or "{}")
-        cur = (seller.get("currency") or "usd")
-        lines = [{"description": f"Compute: {l['app']}", "qty": f"{l['billable_seconds'] / 3600:.3f} h", "unit": f"{l.get('usd_per_hour', 0):g} {cur.upper()}/h", "amount": l["usd"]}
-                 for l in json.loads(i["lines"]) if l["billable_seconds"] > 0]
-        note = " ".join(x for x in [seller.get("tax_note"), "Free monthly allowance already deducted." if any(l["seconds"] > l["billable_seconds"] for l in json.loads(i["lines"])) else ""] if x)
-        pdf = render_invoice({"number": i["number"], "period": i["period"], "issued": datetime.fromtimestamp(i["created"], timezone.utc).strftime("%Y-%m-%d"),
-                              "status": i["status"], "seller": seller, "customer": json.loads(i["billing"] or "{}"), "lines": lines, "subtotal": i["subtotal_usd"] or 0.0,
-                              "tax_rate": i["tax_rate"] or 0.0, "tax": i["tax_usd"] or 0.0, "total": i["amount_usd"], "currency": cur, "note": note})
-        return pdf, f"{i['number']}.pdf"
+        if kind == "invoice":
+            i = self.db.one("SELECT * FROM invoices WHERE id=? AND org_id=?", (ident, c.org_id))
+            if not i or not i["number"]:
+                raise ApiError(404, "invoice not found")
+            return self._invoice_doc(i)
+        n = self.db.one("SELECT * FROM credit_notes WHERE id=? AND org_id=?", (ident, c.org_id))
+        if not n:
+            raise ApiError(404, "credit note not found")
+        return self._invoice_doc(n, credit=n)
+
+    def invoice_pdf(self, user, invoice_id: int) -> tuple[bytes, str]:
+        d = self._document(user, "invoice", invoice_id)
+        return render_invoice({**d, "lines": [{"description": l["description"], "qty": f"{l['qty']:.3f} h", "unit": f"{l['unit_price']:g} {d['currency'].upper()}/h", "amount": l["amount"]} for l in d["lines"]]}), f"{d['number']}.pdf"
+
+    def invoice_ubl(self, user, invoice_id: int) -> tuple[bytes, str]:
+        d = self._document(user, "invoice", invoice_id)
+        try:
+            return ubl_mod.build(d), f"{d['number']}.xml"
+        except ValueError as e:
+            raise ApiError(422, str(e))
+
+    def credit_note_ubl(self, user, note_id: int) -> tuple[bytes, str]:
+        d = self._document(user, "credit", note_id)
+        try:
+            return ubl_mod.build(d), f"{d['number']}.xml"
+        except ValueError as e:
+            raise ApiError(422, str(e))
 
     def webhook(self, payload: bytes, signature: str) -> bool:
         try:
@@ -898,7 +991,6 @@ class Platform:
                     self.db.event(inv["user_id"], "invoice_paid", str(iid))
                     return True
         return False
-
 
     # ------------------------------------------------------------------ credit notes (operator)
     def _next_number(self, prefix: str, ts: float) -> str:
@@ -957,19 +1049,10 @@ class Platform:
         return {"id": cid, "number": number, "total_usd": total, "status": status, "refund_ref": ref}
 
     def credit_note_pdf(self, user, note_id: int) -> tuple[bytes, str]:
-        c = self._c(user)
-        self._need(c, "billing.read")
-        n = self.db.one("SELECT * FROM credit_notes WHERE id=? AND org_id=?", (note_id, c.org_id))
-        if not n:
-            raise ApiError(404, "credit note not found")
-        inv = self.db.one("SELECT * FROM invoices WHERE id=?", (n["invoice_id"],))
-        seller = json.loads(inv["seller"] or "{}")
-        cur = seller.get("currency") or "usd"
-        pdf = render_invoice({"kind": "credit", "number": n["number"], "refers_to": inv["number"], "period": inv["period"], "issued": datetime.fromtimestamp(n["created"], timezone.utc).strftime("%Y-%m-%d"),
-                              "status": n["status"], "seller": seller, "customer": json.loads(inv["billing"] or "{}"), "lines": [{"description": ("Credit: " + n["reason"])[:48], "qty": "1", "unit": f"{-n['subtotal_usd']:.2f} {cur.upper()}", "amount": -n["subtotal_usd"]}],
-                              "subtotal": -n["subtotal_usd"], "tax_rate": inv["tax_rate"] or 0.0, "tax": -n["tax_usd"], "total": -n["total_usd"], "currency": cur,
-                              "note": "This credit note reduces invoice " + inv["number"] + "." + (" Refund due to the customer." if n["status"] == "refund_due" else "")})
-        return pdf, f"{n['number']}.pdf"
+        d = self._document(user, "credit", note_id)
+        cur = d["currency"].upper()
+        return render_invoice({**d, "subtotal": -d["subtotal"], "tax": -d["tax"], "total": -d["total"],
+                               "lines": [{"description": l["description"], "qty": "1", "unit": f"{-l['unit_price']:.2f} {cur}", "amount": -l["amount"]} for l in d["lines"]]}), f"{d['number']}.pdf"
 
     # ------------------------------------------------------------------ account tokens (console API) and sessions
     def create_token(self, user, name: str, scope: str = "read", ttl_days: int = 90) -> dict:
@@ -1090,7 +1173,8 @@ class Platform:
     def fleet(self, user) -> dict:
         """Nodes that joined with this user's node keys and the user's live tasks, read from the hub."""
         c = self._c(user)
-        apps = {a["id"]: a for a in self.db.q("SELECT * FROM apps WHERE org_id=? AND deleted IS NULL", (c.org_id,))}
+        apps = {a["id"]: a for a in self.db.q("SELECT * FROM apps WHERE org_id=? AND deleted IS NULL", (c.org_id,))
+                if c["app_scope"] is None or a["id"] in c["app_scope"]}
         tenants = [f"app{i}" for i in apps]
         out = {"hub": self.hub_public, "reachable": False, "nodes": [], "queue": {"counts": {}, "recent": []}}
         if not (self.auth and self.hub_addr):
@@ -1216,6 +1300,11 @@ class Platform:
             w.append("Your company VAT id does not look valid: " + vat_mod.check(co["vat_id"])["reason"])
         if taxed and not co["country"]:
             w.append("Set your company country: it decides when the simplified reverse charge applies.")
+        if co["country"]:
+            miss = [rules.COMPANY_FIELDS.get(f, f) for f in rules.required(co, taxed) if f not in ("name", "address", "vat_id") or (f == "vat_id" and not taxed and False)]
+            miss = [m for m in miss if m not in ("company name", "address")]
+            if miss:
+                w.append(f"Invoices from {co['country']} normally need: " + ", ".join(miss) + ". This list is a checklist, not legal advice.")
         if self.pricing_is_default:
             w.append("You are using the example price list.")
         return w
@@ -1232,13 +1321,28 @@ class Platform:
         self.db.event(user["id"], "pricing_changed", json.dumps({k: clean[k] for k in ("compute_usd_per_hour", "free_compute_hours_per_month", "tax_rate_percent")}))
         return self.admin_settings(user)
 
+    COMPANY_TEXT = ("name", "address", "city", "postal_code", "vat_id", "email", "registration_no", "legal_form", "share_capital", "tax_no", "iban", "bic", "legal_footer", "tax_exempt_note")
+
     def admin_set_company(self, user, data: dict) -> dict:
         if not user["is_admin"]:
             raise ApiError(404, "not found")
-        f = {"name": (data.get("name") or "")[:120], "address": (data.get("address") or "")[:400], "vat_id": (data.get("vat_id") or "")[:40],
-             "country": (data.get("country") or "").strip().upper()[:2], "email": (data.get("email") or "")[:120]}
+        lim = {"address": 400, "legal_footer": 400, "tax_exempt_note": 200}
+        f = {k: str(data.get(k) or "").strip()[:lim.get(k, 120)] for k in self.COMPANY_TEXT}
+        f["country"] = str(data.get("country") or "").strip().upper()[:2]
         if f["country"] and not f["country"].isalpha():
             raise ApiError(400, "country must be a 2-letter code")
+        if f["email"] and not sec.valid_email(f["email"]):
+            raise ApiError(400, "enter a valid contact e-mail address")
+        iban = re.sub(r"\s", "", f["iban"]).upper()
+        if iban and not (re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban) and int("".join(str(int(ch, 36)) for ch in iban[4:] + iban[:4])) % 97 == 1):
+            raise ApiError(400, "this IBAN is not valid (check the characters and the check digits)")
+        f["iban"] = iban
+        try:
+            f["payment_terms_days"] = int(data.get("payment_terms_days", 30))
+        except (TypeError, ValueError):
+            raise ApiError(400, "payment terms must be a number of days")
+        if not 0 <= f["payment_terms_days"] <= 120:
+            raise ApiError(400, "payment terms must be between 0 and 120 days")
         self._set_setting("company", f)
         self.db.event(user["id"], "company_changed")
         return self.admin_settings(user)
@@ -1281,9 +1385,11 @@ class Platform:
         secs = self._seconds_by_app(user, cur)
         a, b = period_bounds(cur)
         oc = self._c(user)
-        tasks = self.db.one("SELECT COUNT(*) c FROM usage u JOIN apps a ON a.id=u.app_id WHERE a.org_id=? AND ts>=? AND ts<?", (oc.org_id, a, b))["c"]
+        ids = [x["id"] for x in apps]
+        qm = ",".join("?" * len(ids)) or "NULL"
+        tasks = self.db.one(f"SELECT COUNT(*) c FROM usage WHERE app_id IN ({qm}) AND ts>=? AND ts<?", (*ids, a, b))["c"]
         keys = [k for x in apps for k in x["keys"] if not k["revoked"]]
-        total_tasks = self.db.one("SELECT COUNT(*) c FROM usage u JOIN apps a ON a.id=u.app_id WHERE a.org_id=?", (oc.org_id,))["c"]
+        total_tasks = self.db.one(f"SELECT COUNT(*) c FROM usage WHERE app_id IN ({qm})", tuple(ids))["c"]
         fl = self.fleet(user) if (self.auth and self.hub_addr) else {"reachable": False, "nodes": []}
         checklist = [{"key": "app", "done": bool(apps), "title": "Create an app", "hint": "A project with its own keys, usage and budget."},
                      {"key": "key", "done": bool(keys), "title": "Create an API key", "hint": "A client key to send work, a node key to add a machine."},

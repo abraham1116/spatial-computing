@@ -297,15 +297,27 @@ async function teamView() {
   const {org} = await api("GET", "/api/org");
   const isAdmin = can("members.manage") || can("org.manage"), canMembers = can("members.manage"), isOwner = can("org.delete");
   const roleNames = org.roles.map(r => r.name).filter(n => n !== "owner" || isOwner);
-  const inviteForm = canMembers && !org.personal ? h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/org/invites", {email: val("iv_email"), role: val("iv_role")}); toast("Invitation sent"); route(); }, "iv_err")},
+  const apps = org.app_list || [];
+  const pickedApps = id => [...document.querySelectorAll("#" + id + " input:checked")].map(i => Number(i.value));
+  const appPicker = (id, chosen) => h("div", {id, class: "perms"}, apps.map(a => h("label", {class: "check"}, h("input", {type: "checkbox", value: a.id, checked: chosen ? chosen.includes(a.id) : false}), " ", a.name)));
+  const inviteForm = canMembers && !org.personal ? h("form", {onsubmit: ev => guarded(ev, async () => { const sc = document.getElementById("iv_scope"), only = sc && sc.checked; const body = {email: val("iv_email"), role: val("iv_role")}; if (only) body.apps = pickedApps("iv_apps"); await api("POST", "/api/org/invites", body); toast("Invitation sent"); route(); }, "iv_err")},
     h("div", {class: "row"}, h("div", {}, ...field("E-mail", "iv_email", "email", {placeholder: "colleague@example.com"})),
       h("div", {}, h("label", {for: "iv_role"}, "Role"), h("select", {id: "iv_role"}, roleNames.map(r => h("option", {value: r, selected: r === "member"}, r)))),
-      h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Invite"))), h("p", {class: "err", id: "iv_err", role: "alert"})) : null;
+      h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Invite"))),
+    apps.length ? h("div", {}, h("label", {class: "check"}, h("input", {type: "checkbox", id: "iv_scope", onchange: ev => { document.getElementById("iv_apps_wrap").hidden = !ev.target.checked; }}), " Only some apps"), h("div", {hidden: true, id: "iv_apps_wrap"}, appPicker("iv_apps", []))) : null,
+    h("p", {class: "err", id: "iv_err", role: "alert"})) : null;
+  const scopeCell = m => {
+    const label = m.apps ? (m.apps.length ? m.apps.map(id => (apps.find(a => a.id === id) || {name: "#" + id}).name).join(", ") : "none") : "all apps";
+    if (!canMembers || !apps.length || m.role === "owner") return h("span", {class: "small " + (m.apps ? "" : "mute")}, label);
+    return h("details", {}, h("summary", {class: "small"}, label), appPicker("sc_" + m.user_id, m.apps || apps.map(a => a.id)),
+      h("button", {class: "btn ghost sm", onclick: async () => { try { await api("PATCH", "/api/org/members/" + m.user_id, {apps: pickedApps("sc_" + m.user_id)}); toast("Apps updated"); route(); } catch (e) { toast(e.message); } }}, "Limit to these"),
+      m.apps ? h("button", {class: "btn ghost sm", onclick: async () => { try { await api("PATCH", "/api/org/members/" + m.user_id, {apps: null}); toast("Access to all apps"); route(); } catch (e) { toast(e.message); } }}, "All apps") : null);
+  };
   const roleSel = m => canMembers && m.user_id !== S.me.id ? h("select", {onchange: async ev => { try { await api("PATCH", "/api/org/members/" + m.user_id, {role: ev.target.value}); toast("Role changed"); route(); } catch (e) { toast(e.message); route(); } }},
     roleNames.map(r => h("option", {value: r, selected: r === m.role}, r))) : tag(m.role, m.role === "owner" ? "warn" : "mute");
     return shell("team", pageTop(org.name, org.personal ? "Your personal workspace: one member. Create an organization to work with others." : "Members, roles and invitations."),
     h("div", {class: "card"}, h("div", {class: "cardhead"}, h("h2", {}, "Members (" + org.member_list.length + ")")),
-      h("table", {}, th(["Name", "E-mail", "Role", "Since", ""]), h("tbody", {}, org.member_list.map(m => h("tr", {}, h("td", {}, m.name), h("td", {class: "mono small"}, m.email), h("td", {}, roleSel(m)), h("td", {}, fmt.date(m.since)),
+      h("table", {}, th(["Name", "E-mail", "Role", "Apps", "Since", ""]), h("tbody", {}, org.member_list.map(m => h("tr", {}, h("td", {}, m.name), h("td", {class: "mono small"}, m.email), h("td", {}, roleSel(m)), h("td", {}, scopeCell(m)), h("td", {}, fmt.date(m.since)),
         h("td", {}, (canMembers && m.user_id !== S.me.id) || (m.user_id === S.me.id && !org.personal) ? h("button", {class: "btn danger sm", onclick: async () => { if (confirm(m.user_id === S.me.id ? "Leave this organization?" : "Remove " + m.name + "?")) { try { await api("DELETE", "/api/org/members/" + m.user_id); if (m.user_id === S.me.id) { localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; } route(); } catch (e) { toast(e.message); } } }}, m.user_id === S.me.id ? "Leave" : "Remove") : null))))),
       h("p", {class: "small mute"}, docLink("docs/console.html", "Roles are explained in the documentation"))),
     canMembers && !org.personal ? h("div", {class: "card"}, h("h2", {}, "Invite someone"), inviteForm,
@@ -327,9 +339,10 @@ async function billingView() {
   const [b, od] = await Promise.all([api("GET", "/api/billing"), api("GET", "/api/org")]);
   const p = b.pricing, e = b.estimate, bd = od.org.billing || {};
   const pay = inv => h("button", {class: "btn sm", disabled: !b.payments_enabled, title: b.payments_enabled ? "" : "Payments are not configured on this server", onclick: async () => { try { const r = await api("POST", "/api/billing/pay", {invoice_id: inv.id}); location.href = r.url; } catch (er) { toast(er.message); } }}, "Pay " + fmt.usd(inv.amount_usd));
-  const details = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {billing: {name: val("bd_name"), address: val("bd_addr"), country: val("bd_country"), vat_id: val("bd_vat")}}); toast("Billing details saved"); route(); }, "bd_err")},
+  const details = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {billing: {name: val("bd_name"), address: val("bd_addr"), country: val("bd_country"), vat_id: val("bd_vat"), city: val("bd_city"), postal_code: val("bd_postal"), email: val("bd_email")}}); toast("Billing details saved"); route(); }, "bd_err")},
     h("div", {class: "grid2"}, h("div", {}, ...field("Company or name on invoices", "bd_name", "text", {required: false, maxlength: 120, value: bd.name || ""}), ...field("VAT id (optional)", "bd_vat", "text", {required: false, maxlength: 40, value: bd.vat_id || ""}), bd.vat_status ? h("p", {class: "small mute"}, "VAT id: ", tag(bd.vat_status, "ok")) : null),
-      h("div", {}, ...field("Country (2 letters)", "bd_country", "text", {required: false, maxlength: 2, value: bd.country || "", placeholder: "FR"}), h("label", {for: "bd_addr"}, "Address"), h("textarea", {id: "bd_addr", rows: 3, maxlength: 400}, bd.address || ""))),
+      h("div", {}, ...field("Country (2 letters)", "bd_country", "text", {required: false, maxlength: 2, value: bd.country || "", placeholder: "FR"}), h("label", {for: "bd_addr"}, "Address"), h("textarea", {id: "bd_addr", rows: 3, maxlength: 400}, bd.address || ""),
+      ...field("Postal code", "bd_postal", "text", {required: false, maxlength: 20, value: bd.postal_code || ""}), ...field("City", "bd_city", "text", {required: false, maxlength: 80, value: bd.city || ""}), ...field("Billing e-mail", "bd_email", "email", {required: false, value: bd.email || ""}))),
     h("p", {class: "err", id: "bd_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save billing details"));
   return shell("billing", pageTop("Usage & billing", "Pay for what you use. Usage is metered per finished task."),
     b.payments_enabled ? null : h("div", {class: "notice"}, "Payments are not configured on this server: invoices are shown, but nothing can be charged."),
@@ -341,11 +354,11 @@ async function billingView() {
         h("tr", {}, h("td", {colspan: 3}, h("b", {}, "Total")), h("td", {}, h("b", {}, fmt.usd(e.total_usd)))))) : h("p", {class: "mute"}, "No usage this month."), e.tax_note ? h("p", {class: "small mute"}, e.tax_note) : null),
     h("div", {class: "card"}, h("h2", {}, "Invoices"), b.invoices.length ? h("table", {}, th(["Number", "Period", "Amount", "Status", "", ""]),
       h("tbody", {}, b.invoices.map(i => h("tr", {}, h("td", {class: "mono small"}, i.number || "-"), h("td", {}, i.period), h("td", {}, fmt.usd(i.amount_usd)), h("td", {}, tag(i.status, i.status === "paid" ? "ok" : i.status === "open" ? "warn" : "mute")),
-        h("td", {}, i.number ? h("a", {class: "btn ghost sm", href: "/api/invoices/" + i.id + "/pdf?org=" + S.org, download: i.number + ".pdf"}, "PDF") : null), h("td", {}, i.status === "open" ? pay(i) : null))))) : h("p", {class: "mute"}, "No invoice yet. Invoices are created when a month with usage ends."),
+        h("td", {}, i.number ? h("a", {class: "btn ghost sm", href: "/api/invoices/" + i.id + "/pdf?org=" + S.org, download: i.number + ".pdf"}, "PDF") : null, i.number ? h("a", {class: "btn ghost sm", href: "/api/invoices/" + i.id + "/ubl?org=" + S.org, download: i.number + ".xml", title: "UBL 2.1 e-invoice (XML)"}, "XML") : null), h("td", {}, i.status === "open" ? pay(i) : null))))) : h("p", {class: "mute"}, "No invoice yet. Invoices are created when a month with usage ends."),
       h("p", {class: "small mute"}, docLink("docs/console.html", "How billing works"))),
     b.credit_notes && b.credit_notes.length ? h("div", {class: "card"}, h("h2", {}, "Credit notes"), h("table", {}, th(["Number", "Date", "Amount", "Reason", "State", ""]),
       h("tbody", {}, b.credit_notes.map(n => h("tr", {}, h("td", {class: "mono small"}, n.number), h("td", {}, fmt.date(n.created)), h("td", {}, "-" + fmt.usd(n.total_usd)), h("td", {class: "small"}, n.reason), h("td", {}, tag(n.status, n.status === "refunded" || n.status === "applied" ? "ok" : "warn")),
-        h("td", {}, h("a", {class: "btn ghost sm", href: "/api/credit-notes/" + n.id + "/pdf?org=" + S.org, download: n.number + ".pdf"}, "PDF"))))))) : null,
+        h("td", {}, h("a", {class: "btn ghost sm", href: "/api/credit-notes/" + n.id + "/pdf?org=" + S.org, download: n.number + ".pdf"}, "PDF"), h("a", {class: "btn ghost sm", href: "/api/credit-notes/" + n.id + "/ubl?org=" + S.org, download: n.number + ".xml", title: "UBL 2.1 credit note (XML)"}, "XML"))))))) : null,
     h("div", {class: "card"}, h("h2", {}, "Billing details"), h("p", {class: "mute small"}, "Printed on invoices; the country and VAT id decide the tax rate. A VAT id is checked for format and, where the algorithm is public, the check digit."), can("org.manage") ? details : h("p", {class: "mute"}, "Only people who can manage the organization edit these.")));
 }
 
@@ -422,9 +435,21 @@ async function adminView() {
     h("label", {for: "pr_by"}, "Tax rate by customer country (JSON)"), h("input", {id: "pr_by", value: JSON.stringify(p.tax_by_country || {})}),
     h("label", {class: "check"}, h("input", {type: "checkbox", id: "pr_rc", checked: !!p.no_tax_with_vat_id_abroad}), " No tax for a customer with a VAT id in another country than yours (simplified reverse charge)"),
     h("p", {class: "err", id: "pr_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save prices"));
-  const company = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PUT", "/api/admin/company", {name: val("co_name"), address: val("co_addr"), vat_id: val("co_vat"), country: val("co_cc"), email: val("co_mail")}); toast("Company details saved"); route(); }, "co_err")},
-    h("div", {class: "grid2"}, h("div", {}, ...field("Legal name", "co_name", "text", {required: false, value: co.name}), ...field("VAT id", "co_vat", "text", {required: false, value: co.vat_id}), ...field("Country (2 letters)", "co_cc", "text", {required: false, maxlength: 2, value: co.country})),
-      h("div", {}, ...field("Contact e-mail", "co_mail", "email", {required: false, value: co.email}), h("label", {for: "co_addr"}, "Address"), h("textarea", {id: "co_addr", rows: 4, maxlength: 400}, co.address))),
+  const coKeys = ["name", "address", "city", "postal_code", "vat_id", "country", "email", "registration_no", "legal_form", "share_capital", "tax_no", "iban", "bic", "payment_terms_days", "legal_footer", "tax_exempt_note"];
+  const coOpt = {required: false};
+  const company = h("form", {onsubmit: ev => guarded(ev, async () => { const body = {}; coKeys.forEach(k => body[k] = val("co_" + k)); await api("PUT", "/api/admin/company", body); toast("Company details saved"); route(); }, "co_err")},
+    h("div", {class: "grid2"},
+      h("div", {}, ...field("Legal name", "co_name", "text", {...coOpt, value: co.name}), ...field("Legal form (SAS, GmbH, Ltd...)", "co_legal_form", "text", {...coOpt, maxlength: 40, value: co.legal_form || ""}),
+        ...field("Company registration number (SIREN, HRB...)", "co_registration_no", "text", {...coOpt, value: co.registration_no || ""}), ...field("Share capital", "co_share_capital", "text", {...coOpt, value: co.share_capital || ""}),
+        ...field("VAT id", "co_vat_id", "text", {...coOpt, value: co.vat_id}), ...field("National tax number (if no VAT id)", "co_tax_no", "text", {...coOpt, value: co.tax_no || ""})),
+      h("div", {}, h("label", {for: "co_address"}, "Address"), h("textarea", {id: "co_address", rows: 3, maxlength: 400}, co.address),
+        ...field("Postal code", "co_postal_code", "text", {...coOpt, value: co.postal_code || ""}), ...field("City", "co_city", "text", {...coOpt, value: co.city || ""}),
+        ...field("Country (2 letters)", "co_country", "text", {...coOpt, maxlength: 2, value: co.country}), ...field("Contact e-mail", "co_email", "email", {...coOpt, value: co.email}))),
+    h("h3", {}, "Payment and legal text"),
+    h("div", {class: "grid2"}, h("div", {}, ...field("IBAN", "co_iban", "text", {...coOpt, value: co.iban || ""}), ...field("BIC", "co_bic", "text", {...coOpt, value: co.bic || ""}), ...field("Payment terms (days)", "co_payment_terms_days", "number", {...coOpt, min: 0, max: 120, value: co.payment_terms_days})),
+      h("div", {}, h("label", {for: "co_legal_footer"}, "Extra legal text (footer)"), h("textarea", {id: "co_legal_footer", rows: 3, maxlength: 400}, co.legal_footer || ""),
+        ...field("Reason when no tax is charged", "co_tax_exempt_note", "text", {...coOpt, maxlength: 200, value: co.tax_exempt_note || ""}))),
+    h("p", {class: "small mute"}, "Required fields depend on your country (the warnings above name what is missing). This is a checklist, not legal advice."),
     h("p", {class: "err", id: "co_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save company details"));
   const testMail = h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("POST", "/api/admin/test-mail", {to: val("tm_to")}); toast(r.sent ? "Test message sent" : "Not sent: " + (r.error || "see the queue below")); route(); }, "tm_err")},
     h("div", {class: "row"}, h("div", {}, ...field("Send a test message to", "tm_to", "email", {value: S.me.email})), h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit", disabled: !st.email.smtp_configured}, "Send test"))), h("p", {class: "err", id: "tm_err", role: "alert"}));

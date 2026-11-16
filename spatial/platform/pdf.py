@@ -59,7 +59,9 @@ def invoice_pdf(inv: dict) -> bytes:
     pg.text(R - 150, 790, "CREDIT NOTE" if credit else "INVOICE", 18, True)
     pg.text(R - 150, 770, "No. " + inv["number"], 10, True)
     pg.text(R - 150, 757, "Issued: " + inv["issued"], 9)
-    pg.text(R - 150, 744, "Period: " + inv["period"], 9)
+    pg.text(R - 150, 744, "Period: " + inv.get("period_start", inv["period"]) + (" to " + inv["period_end"] if inv.get("period_end") else ""), 9)
+    if inv.get("due") and inv.get("kind") != "credit":
+        pg.text(R - 150, 718, "Due: " + inv["due"], 9, True)
     pg.text(R - 150, 731, ("Refers to " + inv["refers_to"]) if credit else "Status: " + inv["status"].upper(), 9, True)
     y = 690
     pg.text(L, y, "Billed to", 9, True)
@@ -78,9 +80,14 @@ def invoice_pdf(inv: dict) -> bytes:
     y -= 14; pg.line(L, y, R, y)
     for label, val, bold in (("Subtotal", inv["subtotal"], False), (f"Tax ({inv['tax_rate']:g}%)", inv["tax"], False), ("Total", inv["total"], True)):
         y -= 18; pg.text(400, y, label, 10, bold); pg.text(490, y, f"{val:.2f} {cur}", 10, bold)
-    if inv.get("note"):
-        y -= 40
-        for ln in inv["note"].splitlines()[:5]:
-            pg.text(L, y, ln, 9); y -= 12
+    y -= 30
+    pay = [x for x in [("IBAN: " + inv["seller"]["iban"]) if inv["seller"].get("iban") else "", ("BIC: " + inv["seller"]["bic"]) if inv["seller"].get("bic") else ""] if x]
+    if pay and inv.get("kind") != "credit":
+        pg.text(L, y, "Payment details", 9, True); y -= 13
+        pg.text(L, y, "   ".join(pay), 9); y -= 18
+    for ln in ([inv["note"]] if inv.get("note") else []) + list(inv.get("mentions", [])):
+        while ln:
+            pg.text(L, y, ln[:105], 8); ln = ln[105:]; y -= 11
+        y -= 2
     pg.text(L, 40, "Usage is metered per finished task on the Spatial Computing fleet.", 8)
     return build([pg], f"{'Credit note' if credit else 'Invoice'} {inv['number']}")

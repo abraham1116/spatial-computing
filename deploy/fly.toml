@@ -1,0 +1,37 @@
+# UNTESTED TEMPLATE. Nobody has deployed this file: read it, adapt it, and test it before relying on it.
+# One machine runs the console and the fleet hub together (--embedded-hub), with a volume for the database.
+#   fly launch --no-deploy --copy-config
+#   fly volumes create spatial_data --size 1
+#   fly secrets set HUB_MASTER_KEY="$(openssl rand -hex 32)" STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=...
+#   fly deploy
+# The hub port (7700) carries only authenticated, scoped calls, but it is a public port: put TLS in front of it for real use.
+app = "your-app-name"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  SPATIAL_PUBLIC_URL = "https://your-app-name.fly.dev"
+
+[processes]
+  app = "platform serve --db /data/platform.db --host 0.0.0.0 --allow-remote --secure-cookies --embedded-hub --hub-listen 0.0.0.0:7700 --public-url https://your-app-name.fly.dev --hub-public your-app-name.fly.dev:7700"
+
+[mounts]
+  source = "spatial_data"
+  destination = "/data"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8090
+  processes = ["app"]
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 7700
+  processes = ["app"]
+  [[services.ports]]
+    port = 7700

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spatial-computing"
-version = "0.17.0"
+version = "0.18.0"
 description = "Spatial Computing: open-source infrastructure efficiency toolkit. Measure, decide, prove (compute, tiered memory, runtime routing, hybrid quantum language)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -18,7 +18,7 @@ dependencies = ["numpy>=1.26,<2.2", "psutil>=5.9", "numba>=0.59,<0.62", "lz4>=4.
 quantum = ["qiskit>=2.0", "qiskit-aer>=0.17", "qiskit-qasm3-import>=0.5", "pyqir>=0.10"]
 build = ["ziglang>=0.13"]
 qpu = ["qiskit>=2.0", "qiskit-ibm-runtime>=0.40"]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "lxml>=5"]
 
 [project.urls]
 Homepage = "https://spatial-computing-ecru.vercel.app"

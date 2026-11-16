@@ -253,3 +253,27 @@ def test_remote_desktop_view_only_password_and_clipboard_policy_are_enforced():
         full.s.close(); view.s.close()
     finally:
         d.stop()
+
+
+@pytest.mark.skipif(find_oci() is None, reason="no container daemon")
+def test_remote_desktop_moves_single_files_both_ways_with_a_size_limit_and_safe_names(tmp_path):
+    from spatial.runtime.desktop import Desktop, DesktopError, start
+    src = tmp_path / "hello.txt"; src.write_bytes(b"data\x00\xff" * 100)
+    d = start("xcalc", wait_s=90)
+    try:
+        assert d.upload(str(src)).endswith("/transfer/hello.txt")
+        out = tmp_path / "back.bin"
+        assert d.download("hello.txt", str(out)) == 600 and out.read_bytes() == src.read_bytes()      # binary content survives
+        for bad in ("../x", ".hidden", "a b", "x/y"):
+            with pytest.raises(DesktopError):
+                d.upload(str(src), bad)
+        for bad in ("../x", ".hidden", "a b", "", "x/y"):
+            with pytest.raises(DesktopError):
+                d.download(bad, str(out))
+        with pytest.raises(DesktopError):
+            d.download("missing.txt", str(out))
+        big = tmp_path / "big.bin"; big.write_bytes(b"0" * (Desktop.MAX_TRANSFER + 1))
+        with pytest.raises(DesktopError):
+            d.upload(str(big))
+    finally:
+        d.stop()

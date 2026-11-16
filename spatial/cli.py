@@ -111,6 +111,11 @@ def cmd_desktop(a):
         print(f"spatial: {e}", file=sys.stderr)
         return 1
     print(f"desktop ({a.app}, {d.runtime}), loopback only: {d.url}", flush=True)
+    for f in a.upload:
+        try:
+            print(f"uploaded {f} to {d.upload(f)}", flush=True)
+        except DesktopError as e:
+            print(f"spatial: {e}", file=sys.stderr)
     if d.view_url:
         print(f"view-only link (watch, cannot type or click): {d.view_url}", flush=True)
     print("Ctrl+C removes it", flush=True)
@@ -340,10 +345,11 @@ def main(argv=None):
     p.add_argument("--workload"); p.add_argument("--params", default="{}"); p.add_argument("--needs", default="{}")
     p.add_argument("--task-id", type=int)
     p.set_defaults(fn=cmd_fleet)
-    p = sub.add_parser("desktop", help="run a graphical Linux app (xterm, xclock, mousepad) in a container and open it in your browser (noVNC, loopback only)")
-    p.add_argument("app", nargs="?", default="xterm", choices=["xterm", "xclock", "mousepad"])
+    p = sub.add_parser("desktop", help="run a graphical Linux app (xterm, xclock, xcalc, mousepad) in a container and open it in your browser (noVNC, loopback only)")
+    p.add_argument("app", nargs="?", default="xterm", choices=["xterm", "xclock", "xcalc", "mousepad"])
     p.add_argument("--no-clipboard", action="store_true", help="no copy and paste between your machine and the desktop")
     p.add_argument("--view-link", action="store_true", help="also print a view-only link for people who only need to watch")
+    p.add_argument("--upload", action="append", default=[], metavar="FILE", help="copy this file into the desktop's ~/transfer folder (repeatable, 16 MiB each)")
     p.set_defaults(fn=cmd_desktop)
     p = sub.add_parser("platform", help="account service: sign up, sign in, apps, API keys, usage, billing (`spatial platform serve --help`)")
     p.add_argument("rest", nargs=argparse.REMAINDER)

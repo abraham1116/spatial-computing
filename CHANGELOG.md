@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.0
+- Invoices: legal mentions by seller country (FR, DE, ES, IT, NL, BE, GB checklist: registration number, legal form, share capital, tax number), localized reverse-charge phrase, due date and service period, payment details (IBAN validated by its check digits, BIC), payment terms, French late-payment mentions; the operator warning names what is missing for the seller's country.
+- E-invoicing: `GET /api/invoices/{id}/ubl` and `/api/credit-notes/{id}/ubl` return UBL 2.1 XML with the Peppol BIS 3.0 / EN 16931 identifiers. Generated files validate against the official OASIS UBL 2.1 schemas (in `tests/data/ubl`). Not checked against the Peppol Schematron business rules and not sent through any network (no Peppol access point, no Chorus Pro, no Factur-X).
+- Customers: city, postal code and billing e-mail on the organization's billing details.
+- Roles: per-app scope on members and invitations (a member limited to some apps sees only those; the others answer 404); Team page shows and edits it.
+- Console service: `--embedded-hub` runs the fleet hub in the same process (one container, one command); `HUB_MASTER_KEY` environment variable for hosts that give secrets only that way; `--smtp-ca-file` for a private relay (certificates are always verified). Fly and Render templates in `deploy/`, **untested**.
+- Remote desktop: `d.upload()` / `d.download()` and `spatial desktop --upload FILE` (single files, 16 MiB, safe names); `xcalc` added.
+- Tests against real servers started in containers: Mailpit (SMTP, STARTTLS, login, certificate and password failures), stripe-mock (Stripe's own mock: checkout session and refund requests), Dex (a real OpenID Connect provider: authorization code with PKCE, RS256 verification against its keys, single-use state).
+- SAML is deliberately not implemented: put an OpenID Connect broker (Dex, Keycloak) in front of your SAML identity provider.
+- Full suite: 256 passed, 1 skipped.
+
 ## 0.17.0
 - Console: OpenID Connect single sign-on (PKCE, RS256 verification); custom roles built from permissions with a no-escalation rule; VAT-number validation (format and check digits, optional VIES); credit notes with PDF and Stripe refunds; operator warnings; QR code for two-factor setup (own encoder, checked against the `qrcode` library module for module).
 - Remote desktop: clipboard switch and a view-only password (`--no-clipboard`, `--view-link`), verified with a real RFB client.

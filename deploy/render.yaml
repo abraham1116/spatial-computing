@@ -1,0 +1,21 @@
+# UNTESTED TEMPLATE. Nobody has deployed this file: read it, adapt it, and test it before relying on it.
+# Render exposes one HTTP port per web service, so this runs the console only; the fleet hub (a raw TCP protocol) needs a
+# private service or another host. For a single machine with both, use deploy/fly.toml or docker-compose.yml.
+services:
+  - type: web
+    name: spatial-console
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: spatial platform serve --db /data/platform.db --host 0.0.0.0 --port 10000 --allow-remote --secure-cookies
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: HUB_MASTER_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
