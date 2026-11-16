@@ -1,0 +1,86 @@
+{
+ "context": {
+  "date": "2026-11-16 00:52:11 +0100",
+  "model": "MacBookPro14,1",
+  "cpu": "Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz",
+  "os": "macOS 13.7.8",
+  "arch": "x86_64",
+  "power_source": "Now drawing from 'AC Power'",
+  "battery": "-InternalBattery-0 (id=6815843)\t84%; charging; 0:55 remaining present: true",
+  "energy_measurable": false,
+  "system_before": {
+   "ts": 1794786731.5994549,
+   "cpu_percent": 26.7,
+   "load1": 26.3994140625,
+   "ram_total": 17179869184,
+   "ram_available": 5996531712,
+   "ram_used_percent": 65.1,
+   "swap_used": 4489740288,
+   "swap_total": 5368709120,
+   "compressor_logical_bytes": 12096974848,
+   "compressor_physical_bytes": 2301661184,
+   "compressor_ratio": 5.26,
+   "compressor_saved_bytes": 9795313664,
+   "swapins": 2178473,
+   "swapouts": 3270287,
+   "memory_pressure": "normal"
+  }
+ },
+ "model": "Qwen2.5-0.5B-Instruct Q4_K_M (llama.cpp server, CPU, 2 threads, in a VM on a 2017 MacBook Pro)",
+ "rows": [
+  {
+   "question": "Question: what does it measure? Answer:",
+   "total_prompt_tokens": 946,
+   "recompute_prompt_ms": 28425.251,
+   "recompute_tokens": 946,
+   "cached_prompt_ms": 361.187,
+   "cached_tokens_reused": 939,
+   "tokens_recomputed_with_cache": 7,
+   "same_text": true
+  },
+  {
+   "question": "Question: what does it choose? Answer:",
+   "total_prompt_tokens": 946,
+   "recompute_prompt_ms": 89079.56,
+   "recompute_tokens": 946,
+   "cached_prompt_ms": 690.735,
+   "cached_tokens_reused": 939,
+   "tokens_recomputed_with_cache": 7,
+   "same_text": true
+  },
+  {
+   "question": "Question: what does it record? Answer:",
+   "total_prompt_tokens": 946,
+   "recompute_prompt_ms": 174787.286,
+   "recompute_tokens": 946,
+   "cached_prompt_ms": 628.901,
+   "cached_tokens_reused": 939,
+   "tokens_recomputed_with_cache": 7,
+   "same_text": true
+  },
+  {
+   "question": "Question: what does it price? Answer:",
+   "total_prompt_tokens": 946,
+   "recompute_prompt_ms": 33712.197,
+   "recompute_tokens": 946,
+   "cached_prompt_ms": 444.368,
+   "cached_tokens_reused": 939,
+   "tokens_recomputed_with_cache": 7,
+   "same_text": true
+  },
+  {
+   "question": "Question: what stays correct? Answer:",
+   "total_prompt_tokens": 945,
+   "recompute_prompt_ms": 36469.167,
+   "recompute_tokens": 945,
+   "cached_prompt_ms": 347.66,
+   "cached_tokens_reused": 939,
+   "tokens_recomputed_with_cache": 6,
+   "same_text": true
+  }
+ ],
+ "median_recompute_ms": 36469.167,
+ "median_cached_ms": 444.368,
+ "speedup_prompt_phase": 82.06974174558025,
+ "same_answer": "5/5"
+}

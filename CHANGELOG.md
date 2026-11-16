@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.15.0
+- New: console and account service (`spatial platform serve`): sign up / sign in / reset, apps linked to the fleet (tenant `appN`), API keys as scoped hub credentials shown once and revocable on the running hub, usage metering from the hub's `--usage-file`, free allowance and invoices, Stripe Checkout with a signed webhook (never marked paid without it), single-page console. 14 tests plus a driven browser session. See `docs/PLATFORM.md`.
+- Console v2: Overview with a get-started checklist, Apps with tabs (Overview, Keys, Connect, Jobs, Settings), Jobs (curated workload catalogue with bounds), Fleet (your nodes and queue from the hub), API keys, Usage & billing, Settings (Profile, Security with sessions, Account tokens for a REST API, Activity, Data export and deletion), Admin. New app and new key open in place instead of redirecting. Docs and landing aligned: Console and REST API pages, "Get started" leads to sign-up when a console URL is configured.
+- Podman 5.8.10 passes the container-route tests as well as Docker.
+- Hub: `--usage-file`, `--revoked-file`; tenant is the part of the credential name before `:`.
+- Production layout: `Dockerfile`, `docker-compose.yml` (hub, console, Caddy HTTPS), `deploy/`, `docs/DEPLOY.md`.
+- Site: Console page, optional Sign in link (`CONSOLE_URL` at build time).
+- Runtime: the `container` route now runs (static Linux ELF in Docker or Podman, read-only root, no network, no capabilities, non-root, memory and process limits; opt-in network and a shared folder copied in and back). Only a daemon that answers counts as available.
+- `spatial serve hub` forwards the hub's own flags (`--state-file`, `--usage-file`, `--revoked-file`, `--peer`...): they were documented but rejected before (found while building the Docker image).
+- AI: `spatial.ai.llm` client for a llama.cpp server; `benchmarks/bench_llm.py` measured prefix-cache reuse on a real model (946-token prompt: at least x41 on the prompt phase, identical answers 5 of 5).
+- Wine: a graphical app window was seen (Notepad); helper `benchmarks/hardware/wine_windows.swift`.
+
 ## 0.14.0
 - Hub: majority election for three or more hubs (`QuorumController`: terms, votes, lease, term file; election safety, not a replicated log).
 - Hub: finished tasks and cache-affinity keys are capped (`--max-finished`, default 5,000). The soak test showed unbounded growth (+12.5 MiB/h) before.

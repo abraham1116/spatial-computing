@@ -103,6 +103,13 @@ def cmd_agent(a):
     return 0
 
 
+def cmd_platform(a):
+    from .platform import server
+    rest = [x for x in a.rest if x != "serve"] if a.rest[:1] == ["serve"] else a.rest
+    server.main(rest)
+    return 0
+
+
 def cmd_dashboard(a):
     from .fleet.dashboard import Dashboard
     d = Dashboard(a.hub, _read_token(a.token_file), port=a.port, min_severity=a.min_severity, webhook=a.webhook).start()
@@ -241,6 +248,7 @@ def cmd_worker(a):
         cmd += ["--audit-log", a.audit_log]
     if a.allow_remote:
         cmd.append("--allow-remote")
+    cmd += a.extra                       # service-specific flags, e.g. the hub's --state-file, --usage-file, --peer
     return subprocess.run(cmd).returncode
 
 
@@ -313,6 +321,9 @@ def main(argv=None):
     p.add_argument("--workload"); p.add_argument("--params", default="{}"); p.add_argument("--needs", default="{}")
     p.add_argument("--task-id", type=int)
     p.set_defaults(fn=cmd_fleet)
+    p = sub.add_parser("platform", help="account service: sign up, sign in, apps, API keys, usage, billing (`spatial platform serve --help`)")
+    p.add_argument("rest", nargs=argparse.REMAINDER)
+    p.set_defaults(fn=cmd_platform)
     p = sub.add_parser("dashboard", help="read-only fleet dashboard in your browser (served on 127.0.0.1 only, behind a random key)")
     p.add_argument("--hub", required=True, help="host:port, or h1:p,h2:p for a hub pair")
     p.add_argument("--token-file", required=True, help="scoped token with fleet:read")
@@ -335,7 +346,11 @@ def main(argv=None):
     p.add_argument("--max-ops", type=int)
     p.add_argument("--max-bytes", type=int)
     p.set_defaults(fn=cmd_token)
-    a = ap.parse_args(argv)
+    a, extra = ap.parse_known_args(argv)
+    if getattr(a, "cmd", None) == "serve":
+        a.extra = extra                  # forwarded to the service
+    elif extra:
+        ap.error("unrecognized arguments: " + " ".join(extra))
     if getattr(a, "cmd", None) == "serve" and bool(a.token_file) == bool(a.master_key_file):
         ap.error("serve needs exactly one of --token-file or --master-key-file")
     try:

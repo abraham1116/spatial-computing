@@ -3,14 +3,16 @@ from scaffold import *  # noqa: F401,F403
 from scaffold import CFG, E, OUT, REPO, ROOT, alt_url, doc, head, nav, out_block
 import scaffold as S
 import pages_new
+import pages_console
 
 NAV_GROUPS = [
-    ("Démarrer", [("index", "Vue d'ensemble"), ("quickstart", "Installation")]),
+    ("Démarrer", [("index", "Vue d'ensemble"), ("quickstart", "Démarrage rapide")]),
+    ("Console", [("console", "Console et comptes"), ("api", "API REST")]),
     ("Moteurs", [("planner", "Planificateur"), ("fleet", "Flotte"), ("compute", "Compute Engine"), ("memory", "Mémoire à étages"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q"), ("accelerators", "Accélérateurs"), ("interconnect", "Interconnexion")]),
     ("Exploitation", [("operations", "Exploitation")]),
     ("Référence", [("cli", "Commandes"), ("security", "Sécurité"), ("results", "Résultats"), ("limits", "Limitations"), ("roadmap", "Feuille de route"), ("changelog", "Versions")]),
 ]
-UI = {"nav_label": "Principal", "proof": "Preuves", "install": "Installer", "docs_label": "Documentation", "examples_label": "Exemples"}
+UI = {"start": "Commencer", "signin": "Connexion", "nav_label": "Principal", "proof": "Preuves", "install": "Installer", "docs_label": "Documentation", "examples_label": "Exemples"}
 
 # ---------------------------------------------------------------- landing
 INSTALL = """python3 -m venv .venv && source .venv/bin/activate
@@ -38,7 +40,9 @@ def docs():
 
     doc("index", "Documentation", "Spatial Computing mesure, compare et choisit l'exécution d'une charge de travail. Voici où commencer.",
         '''<div class="paths">
-<a href="quickstart.html"><b>Installer</b><span>Venv, dépendances, première commande en trois minutes.</span></a>
+<a href="console.html"><b>Console</b><span>Créer un compte, une app, une clé d'API ; envoyer des jobs ; suivre l'usage et payer.</span></a>
+<a href="quickstart.html"><b>Démarrage rapide</b><span>De zéro à un premier job, avec la console ou la CLI.</span></a>
+<a href="api.html"><b>API REST</b><span>Tout ce que fait la console, pour les scripts.</span></a>
 <a href="compute.html"><b>Compute Engine</b><span>Détecter, surveiller, comparer des stratégies, déporter.</span></a>
 <a href="memory.html"><b>Mémoire à étages</b><span>Chaud, compressé, lointain : un échange chiffré, pas de la RAM.</span></a>
 <a href="runtime.html"><b>Runtime Engine</b><span>Inspecter un binaire, choisir une route, l'exécuter isolé.</span></a>
@@ -49,7 +53,7 @@ def docs():
 <a href="roadmap.html"><b>Feuille de route</b><span>Ce qui est construit, ce qui demande matériel ou personnes.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.14.0. Quatre moteurs sont opérationnels et testés (178 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.15.0. Quatre moteurs sont opérationnels et testés (178 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -57,8 +61,16 @@ def docs():
 <li><b>Aucune exposition réseau implicite.</b> Tout écoute en boucle locale par défaut.</li></ul>''',
         [("Première commande", f'<span class="k">$ spatial audit</span>\n<span class="d">{out_block("audit", 7)}</span>')])
 
-    doc("quickstart", "Installation", "Python 3.10 ou plus récent. Testé sur macOS 13 (Intel) avec Python 3.13.",
-        f'''<div class="callout"><b>Sur PyPI</b>Publié sous le nom <code>spatial-computing</code>. Pour travailler sur le code, clone le dépôt GitHub et lance <code>pip install -e ".[quantum,dev]"</code>.</div>
+    doc("quickstart", "Démarrage rapide", "De zéro à un premier job. Deux voies : la console (comptes, clés, jobs) ou la ligne de commande seule.",
+        f'''<h2>Voie la plus rapide : la console</h2>
+<ol><li>Ouvrez la console (<code>http://127.0.0.1:8090</code> si vous la lancez vous-même, voir <a href="console.html">Console et comptes</a>) et <b>créez un compte</b>.</li>
+<li>Sur l'Overview, appuyez sur <b>New app</b>, puis créez une <b>clé nœud</b> et une <b>clé client</b> (API keys). Chacune n'est affichée qu'une fois : enregistrez-la.</li>
+<li>Sur une machine : <code>pip install "spatial-computing[quantum]"</code>, puis <code>spatial agent --hub HUB:7700 --token-file node.tok</code>. Elle apparaît dans <b>Fleet</b>.</li>
+<li>Ouvrez <b>Jobs</b>, choisissez <code>montecarlo_pi</code>, soumettez. Voyez le résultat, l'usage et la charge estimée dans <b>Usage &amp; billing</b>.</li></ol>
+<p>Vous préférez les scripts ? Les mêmes étapes sont dans l'<a href="api.html">API REST</a>.</p>
+<h2>Ligne de commande seule</h2>
+<div class="callout"><b>Python 3.10 ou plus récent</b>Testé sur macOS 13 (Intel) avec Python 3.13.</div>
+<div class="callout"><b>Sur PyPI</b>Publié sous le nom <code>spatial-computing</code>. Pour travailler sur le code, clone le dépôt GitHub et lance <code>pip install -e ".[quantum,dev]"</code>.</div>
 <h2>1. Environnement</h2>
 <pre id="q1"><code>{E(INSTALL.splitlines()[0])}
 {E(INSTALL.splitlines()[1])}</code></pre>
@@ -77,7 +89,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Binaires de test (facultatif)</h2>
 <p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p>''',
         [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">68 passed, 9 skipped</span>\n<span class="d"># les ignorés demandent benchmarks/build, QEMU ou Wine</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">196 passed, 1 skipped</span>\n<span class="d"># le test ignoré demande un outil non installé</span>')])
 
     doc("planner", "Planificateur", "Un seul objectif pour tous les moteurs : réaliser chaque travail correctement au moindre coût, et le prouver.",
         f'''<div class="callout"><b>L'objectif</b>Réaliser le travail <b>correctement</b> au plus bas <b>coût en dollars</b>, dans les contraintes que tu fixes (délai, RAM, isolation, matériel autorisé), et le <b>prouver</b> : l'estimation est consignée à côté de ce qui s'est réellement passé, et les estimations suivantes sont corrigées par cet historique.</div>
@@ -190,9 +202,10 @@ print(st.stats())</code></pre>
 <tr><td><code>native</code></td><td>Même système et même processeur</td><td>Aucune</td></tr>
 <tr><td><code>microvm-hvf</code></td><td>ELF Linux x86_64 sur hôte x86_64</td><td>VM matérielle, sans réseau ni disque</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Autre processeur, en émulation logicielle</td><td>VM émulée</td></tr>
+<tr><td><code>container</code></td><td>ELF Linux statique dans Docker ou Podman</td><td>Racine en lecture seule, sans réseau, sans capacités, non-root, 256 Mio ; réseau et dossier partagé seulement sur demande</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>Modules WASM</td><td>Bac à sable WASI</td></tr>
 <tr><td><code>wine</code></td><td>Binaires Windows (programme console testé)</td><td>Processus hôte (faible)</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>Avec Wine présent, un binaire Windows console s'exécute et rend la somme de référence. Sans Wine, le moteur le dit au lieu de faire semblant. Wine n'est jamais installé automatiquement (binaire tiers, accord de l'utilisateur requis). Les applications graphiques ne sont pas testées.</div>
+<div class="callout warn"><b>Windows</b>Avec Wine présent, un binaire Windows console s'exécute et rend la somme de référence. Sans Wine, le moteur le dit au lieu de faire semblant. Wine n'est jamais installé automatiquement (binaire tiers, accord de l'utilisateur requis). Une fenêtre graphique du Bloc-notes de Wine a été vue à l'écran ; aucune autre application graphique n'a été essayée.</div>
 <h2>Mesuré sur un même programme C</h2>
 <table><thead><tr><th>Route</th><th>Calcul</th><th>Démarrage</th></tr></thead><tbody>
 <tr><td>natif</td><td>1,00×</td><td>0,005 s</td></tr>
@@ -200,7 +213,7 @@ print(st.stats())</code></pre>
 <tr><td>micro-VM HVF</td><td>1,04×</td><td>0,88 s</td></tr>
 <tr><td>micro-VM TCG (émulation)</td><td>23,8×</td><td>3,4 s</td></tr>
 <tr><td>.exe Windows sous Wine</td><td>1,35 à 1,59×</td><td>environ 4,5 s</td></tr></tbody></table>
-<p>Comparaison avec Docker Desktop, UTM, Parallels ou CrossOver : non faite, aucun n'est installé ici.</p>''',
+<p>La route conteneur est testée avec Docker via Colima (chaque propriété d'isolation a un test) ; les mêmes tests passent aussi sur Podman. Comparaison avec Docker Desktop, UTM, Parallels ou CrossOver : non faite.</p>''',
         [("Binaire Windows", f'<span class="k">$ spatial plan bench-windows.exe</span>\n<span class="d">{out_block("plan_exe")}</span>'),
          ("ELF Linux", f'<span class="k">$ spatial plan bench-linux.elf</span>\n<span class="d">{out_block("plan_elf")}</span>\n\n<span class="k">$ spatial run bench-linux.elf 300 200</span>\n<span class="g">{out_block("run_elf")}</span>')])
 
@@ -313,6 +326,7 @@ main {
         [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nAI / scientifique / simulation /\nintelligence / holographique\n  first-components</span>')])
 
     pages_new.fr()
+    pages_console.render("fr")
 
 
 if __name__ == "__main__":

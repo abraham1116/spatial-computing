@@ -7,7 +7,7 @@ from spatial.compute import workloads
 from spatial.runtime import execute, inspect, plan
 from spatial.runtime import microvm
 from spatial.runtime.envs import IsolatedEnv, detect_interpreters
-from spatial.runtime.planner import find_wine
+from spatial.runtime.planner import find_wine, host_caps
 
 BUILD = Path(__file__).resolve().parents[1] / "benchmarks" / "build"
 needs_build = pytest.mark.skipif(not (BUILD / "bench.wasm").exists(),
@@ -66,3 +66,57 @@ def test_environment_detection_and_isolated_env(tmp_path):
     r = env.run("import qiskit")                                # project packages not visible
     assert r.returncode != 0
     env.destroy()
+
+
+# ---- OCI container route (needs a reachable Docker or Podman daemon; skipped otherwise)
+from spatial.runtime.planner import find_oci
+
+_oci = find_oci()
+needs_oci = pytest.mark.skipif(_oci is None or not (Path(__file__).resolve().parents[1] / "vendor" / "busybox-x86_64").exists(),
+                               reason="no reachable container daemon or no vendor/busybox-x86_64")
+BUSYBOX = str(Path(__file__).resolve().parents[1] / "vendor" / "busybox-x86_64")
+
+
+def test_container_route_is_infeasible_with_a_reason_when_no_daemon_answers():
+    caps = {**host_caps(), "docker": None}
+    art = inspect(BUSYBOX) if Path(BUSYBOX).exists() else None
+    if art is None:
+        pytest.skip("no busybox")
+    r = next(x for x in plan(art, caps) if x.name == "container")
+    assert not r.feasible and "daemon" in r.reason
+
+
+@needs_oci
+def test_a_static_linux_binary_runs_in_a_locked_down_container(tmp_path):
+    bb = tmp_path / "busybox"; shutil.copy(BUSYBOX, bb); bb.chmod(0o755)
+    BUSYBOX_ = str(bb)
+    ex = execute(BUSYBOX_, ["echo", "hello from a container"], route="container", timeout_s=180)
+    assert ex.ok and ex.stdout == "hello from a container" and ex.extra["runtime"] == _oci[0]
+    # read-only root, no network, no capabilities, non-root: the binary cannot change the system
+    w = execute(BUSYBOX_, ["sh", "-c", "touch /pwned 2>&1; echo rc=$?"], route="container", timeout_s=120)
+    assert "rc=0" not in w.stdout and ("Read-only" in w.stdout or "denied" in w.stdout)
+    n = execute(BUSYBOX_, ["sh", "-c", "wget -q -T 3 -O- http://1.1.1.1 2>&1; echo rc=$?"], route="container", timeout_s=120)
+    assert "rc=0" not in n.stdout
+    u = execute(BUSYBOX_, ["id", "-u"], route="container", timeout_s=120)
+    assert u.stdout == "65534"
+    m = execute(BUSYBOX_, ["sh", "-c", "exit 3"], route="container", timeout_s=120)
+    assert not m.ok and m.extra["exit_code"] == 3
+
+
+@needs_oci
+def test_container_can_be_given_a_shared_folder_copied_in_and_back_and_network_only_on_request(tmp_path):
+    bb = tmp_path / "busybox"; shutil.copy(BUSYBOX, bb); bb.chmod(0o755)
+    share = tmp_path / "share"; share.mkdir()
+    (share / "in.txt").write_text("hello\n")
+    ex = execute(str(bb), ["sh", "-c", "cat /work/in.txt > /work/out.txt; echo from-container >> /work/out.txt"], route="container", timeout_s=180, share_dir=str(share))
+    assert ex.ok and (share / "out.txt").read_text() == "hello\nfrom-container\n" and ex.extra["files_copied_back"] >= 2
+    assert (share / "in.txt").read_text() == "hello\n"
+    # a program cannot write outside the folder it was given, and a link it creates is not followed back to the host
+    ev = execute(str(bb), ["sh", "-c", "ln -s /etc/passwd /work/link; echo x > /work/ok.txt"], route="container", timeout_s=120, share_dir=str(share))
+    assert ev.ok and not (share / "link").exists() and (share / "ok.txt").exists()
+    nonet = execute(str(bb), ["sh", "-c", "wget -q -T 4 -O /dev/null http://example.com; echo rc=$?"], route="container", timeout_s=120)
+    assert "rc=0" not in nonet.stdout                                                      # default: no network
+    net = execute(str(bb), ["sh", "-c", "wget -q -T 8 -O /dev/null http://example.com; echo rc=$?"], route="container", timeout_s=120, allow_network=True)
+    assert "rc=" in net.stdout                                                             # allowed: the call is attempted (success depends on connectivity)
+    bad = execute(str(bb), ["true"], route="container", share_dir="/does/not/exist")
+    assert not bad.ok and "not a directory" in bad.extra["not_runnable"]

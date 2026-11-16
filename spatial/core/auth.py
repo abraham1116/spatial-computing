@@ -10,7 +10,8 @@ Scopes are strings such as "run:mandel_numba", "mem:read", "mem:write", "exec:el
 "*" matches a prefix ("run:*", "*"). Services call require(scope) before acting.
 Every request (allowed or denied) is appended to a hash-chained audit ledger.
 
-Limits: revocation and usage counters live in the server process (restart resets counters);
+Limits: usage counters live in the server process (restart resets them); revocation lives in memory unless a
+revoked-names file is given (one name per line, re-read when it changes);
 a stolen token works until it expires or is revoked.
 """
 from __future__ import annotations
@@ -82,13 +83,28 @@ def _unb64(s: str) -> bytes:
 
 
 class Authorizer:
-    def __init__(self, master_key: bytes, audit: Ledger | None = None):
+    def __init__(self, master_key: bytes, audit: Ledger | None = None, revoked_file=None):
         if len(master_key) < 16:
             raise ValueError("master key must be at least 16 bytes")
         self._master = master_key
         self.audit = audit
         self._revoked: set[str] = set()
         self._seen: dict[str, Principal] = {}
+        self._revoked_file, self._revoked_mtime = revoked_file, None     # one name per line; edited by the account service
+
+    def _file_revoked(self, name: str) -> bool:
+        if not self._revoked_file:
+            return False
+        import os
+        try:
+            m = os.stat(self._revoked_file).st_mtime_ns
+        except OSError:
+            return False
+        if m != self._revoked_mtime:
+            with open(self._revoked_file) as f:
+                self._file_names = {l.strip() for l in f if l.strip()}
+            self._revoked_mtime = m
+        return name in getattr(self, "_file_names", ())
 
     def _sig(self, payload: str) -> str:
         return hmac.new(self._master, b"sig|" + payload.encode(), hashlib.sha256).hexdigest()[:32]
@@ -121,7 +137,7 @@ class Authorizer:
         body = json.loads(_unb64(payload))
         if body["e"] < time.time():
             raise AuthError("credential expired")
-        if body["n"] in self._revoked:
+        if body["n"] in self._revoked or self._file_revoked(body["n"]):
             raise AuthError("credential revoked")
         if cred not in self._seen:
             self._seen[cred] = Principal(body["n"], tuple(body["s"]), body["e"], body.get("o"), body.get("b"), cred)
@@ -164,7 +180,7 @@ def init_master_key(path) -> None:
         f.write(os.urandom(32))
 
 
-def authorizer_from_file(master_key_file, audit_path=None) -> Authorizer:
+def authorizer_from_file(master_key_file, audit_path=None, revoked_file=None) -> Authorizer:
     from pathlib import Path
     audit = Ledger(audit_path) if audit_path else Ledger(Path.home() / ".spatial" / "audit.jsonl")
-    return Authorizer(Path(master_key_file).read_bytes(), audit)
+    return Authorizer(Path(master_key_file).read_bytes(), audit, revoked_file)

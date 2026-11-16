@@ -2,9 +2,11 @@
 from scaffold import CFG, E, OUT, REPO, ROOT, alt_url, doc, head, nav, out_block
 import scaffold as S
 import pages_new
+import pages_console
 
 NAV_GROUPS = [
-    ("Get started", [("index", "Overview"), ("quickstart", "Installation")]),
+    ("Get started", [("index", "Overview"), ("quickstart", "Quickstart")]),
+    ("Console", [("console", "Console and accounts"), ("api", "REST API")]),
     ("Engines", [("planner", "Planner"), ("fleet", "Fleet"), ("compute", "Compute Engine"), ("memory", "Tiered memory"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q"), ("accelerators", "Accelerators"), ("interconnect", "Interconnect")]),
     ("Operate", [("operations", "Operations")]),
     ("Reference", [("cli", "Commands"), ("security", "Security"), ("results", "Results"), ("limits", "Limitations"), ("roadmap", "Roadmap"), ("changelog", "Changelog")]),
@@ -35,7 +37,9 @@ def landing():
 def docs():
     doc("index", "Documentation", "Spatial Computing measures, compares and chooses how a workload runs. Here is where to start.",
         '''<div class="paths">
-<a href="quickstart.html"><b>Install</b><span>Venv, dependencies, first command in three minutes.</span></a>
+<a href="console.html"><b>Console</b><span>Create an account, an app, an API key; send jobs; watch usage and pay.</span></a>
+<a href="quickstart.html"><b>Quickstart</b><span>From zero to a first job, with the console or the CLI.</span></a>
+<a href="api.html"><b>REST API</b><span>Everything the console does, for scripts.</span></a>
 <a href="compute.html"><b>Compute Engine</b><span>Detect, monitor, compare strategies, offload.</span></a>
 <a href="memory.html"><b>Tiered memory</b><span>Hot, compressed, far: a priced trade-off, not RAM.</span></a>
 <a href="runtime.html"><b>Runtime Engine</b><span>Inspect a binary, pick a route, run it isolated.</span></a>
@@ -46,7 +50,7 @@ def docs():
 <a href="roadmap.html"><b>Roadmap</b><span>What is built, what needs hardware or people.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.14.0. Four engines are operational and tested (178 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.15.0. Four engines are operational and tested (178 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -54,8 +58,16 @@ def docs():
 <li><b>No implicit network exposure.</b> Everything listens on loopback by default.</li></ul>''',
         [("First command", f'<span class="k">$ spatial audit</span>\n<span class="d">{out_block("audit", 7)}</span>')])
 
-    doc("quickstart", "Installation", "Python 3.10 or newer. Tested on macOS 13 (Intel) with Python 3.13, and in CI on Linux and macOS.",
-        f'''<div class="callout"><b>On PyPI</b>Published as <code>spatial-computing</code>. To work on the code itself, clone the GitHub repository and run <code>pip install -e ".[quantum,dev]"</code>.</div>
+    doc("quickstart", "Quickstart", "From zero to a first job. Two ways: the console (accounts, keys, jobs) or the command line alone.",
+        f'''<h2>Fastest path: the console</h2>
+<ol><li>Open the console (<code>http://127.0.0.1:8090</code> if you run it yourself, see <a href="console.html">Console and accounts</a>) and <b>create an account</b>.</li>
+<li>On the Overview, press <b>New app</b>, then create a <b>node key</b> and a <b>client key</b> (API keys). Each is shown once: save it.</li>
+<li>On a machine: <code>pip install "spatial-computing[quantum]"</code>, then <code>spatial agent --hub HUB:7700 --token-file node.tok</code>. It appears in <b>Fleet</b>.</li>
+<li>Open <b>Jobs</b>, pick <code>montecarlo_pi</code>, submit. See the result, the usage and the estimated charge in <b>Usage &amp; billing</b>.</li></ol>
+<p>Prefer scripts? The same steps are in the <a href="api.html">REST API</a>.</p>
+<h2>Command line only</h2>
+<div class="callout"><b>Python 3.10 or newer</b>Tested on macOS 13 (Intel) with Python 3.13, and in CI on Linux and macOS.</div>
+<div class="callout"><b>On PyPI</b>Published as <code>spatial-computing</code>. To work on the code itself, clone the GitHub repository and run <code>pip install -e ".[quantum,dev]"</code>.</div>
 <h2>1. Environment</h2>
 <pre id="q1"><code>{E(INSTALL.splitlines()[0])}
 {E(INSTALL.splitlines()[1])}</code></pre>
@@ -74,7 +86,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Test binaries (optional)</h2>
 <p>To reproduce the runtime tests, install the <code>build</code> extra (the <code>ziglang</code> cross-compiler) and run <code>spatial bench runtime</code>: it compiles the same C program for macOS, Linux, Windows and WASM into <code>benchmarks/build/</code>.</p>''',
         [("Verification", '<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">68 passed, 9 skipped</span>\n<span class="d"># the skipped ones need benchmarks/build, QEMU or Wine</span>')])
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">196 passed, 1 skipped</span>\n<span class="d"># the skipped one needs a tool that is not installed</span>')])
 
     doc("planner", "Planner", "One objective for every engine: get each job done correctly at the lowest cost, and prove it.",
         f'''<div class="callout"><b>The objective</b>Get the job done <b>correctly</b> at the lowest <b>cost in dollars</b>, within the constraints you state (deadline, RAM, isolation, hardware allowed), and <b>prove it</b>: the estimate is recorded next to what really happened, and future estimates are corrected by that history.</div>
@@ -187,9 +199,10 @@ print(st.stats())</code></pre>
 <tr><td><code>native</code></td><td>Same system and same CPU</td><td>None</td></tr>
 <tr><td><code>microvm-hvf</code></td><td>Linux x86_64 ELF on an x86_64 host</td><td>Hardware VM, no network, no disk</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Other CPU, software emulation</td><td>Emulated VM</td></tr>
+<tr><td><code>container</code></td><td>Static Linux ELF in Docker or Podman</td><td>Read-only root, no network, no capabilities, non-root, 256 MiB; network and a shared folder only if asked</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>WASM modules</td><td>WASI sandbox</td></tr>
 <tr><td><code>wine</code></td><td>Windows binaries (console program tested)</td><td>Host process (weak)</td></tr></tbody></table>
-<div class="callout warn"><b>Windows</b>With Wine present, a Windows console binary runs and returns the reference checksum. Without Wine the engine says so instead of pretending. Wine is never installed automatically (third-party build, user consent required). Graphical applications are untested.</div>
+<div class="callout warn"><b>Windows</b>With Wine present, a Windows console binary runs and returns the reference checksum. Without Wine the engine says so instead of pretending. Wine is never installed automatically (third-party build, user consent required). A graphical window of Wine's Notepad was seen on screen; no other graphical application was tried.</div>
 <h2>Measured on one C program</h2>
 <table><thead><tr><th>Route</th><th>Compute</th><th>Startup</th></tr></thead><tbody>
 <tr><td>native</td><td>1.00×</td><td>0.005 s</td></tr>
@@ -197,7 +210,7 @@ print(st.stats())</code></pre>
 <tr><td>micro-VM HVF</td><td>1.04×</td><td>0.88 s</td></tr>
 <tr><td>micro-VM TCG (emulation)</td><td>23.8×</td><td>3.4 s</td></tr>
 <tr><td>Windows .exe under Wine</td><td>1.35 to 1.59×</td><td>about 4.5 s</td></tr></tbody></table>
-<p>Comparison with Docker Desktop, UTM, Parallels or CrossOver: not done, none is installed here.</p>''',
+<p>The container route is tested with Docker through Colima (each isolation property has a test); the same tests also pass on Podman. Comparison with Docker Desktop, UTM, Parallels or CrossOver: not done.</p>''',
         [("Windows binary", f'<span class="k">$ spatial plan bench-windows.exe</span>\n<span class="d">{out_block("plan_exe")}</span>'),
          ("Linux ELF", f'<span class="k">$ spatial plan bench-linux.elf</span>\n<span class="d">{out_block("plan_elf")}</span>\n\n<span class="k">$ spatial run bench-linux.elf 300 200</span>\n<span class="g">{out_block("run_elf")}</span>')])
 
@@ -311,3 +324,4 @@ main {
         [("Engine status", '<span class="k">$ spatial status</span>\n<span class="d">compute / memory / runtime / SPATIAL Q\n  operational-prototype\nAI / scientific / simulation /\nintelligence / holographic\n  first-components</span>')])
 
     pages_new.en()
+    pages_console.render("en")

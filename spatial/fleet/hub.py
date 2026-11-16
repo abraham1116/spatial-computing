@@ -55,6 +55,7 @@ class Hub:
         self.ha = None                              # a fleet.ha controller, if any
         self.max_finished, self.max_affinity = max_finished, max_affinity   # bounded memory: the soak test showed the hub grew without limit
         self._finished: deque = deque()             # ids of done/failed tasks, oldest first
+        self.usage_path = None                      # JSONL file: one line per finished task, read by the account service for billing
 
     # ------------------------------------------------------------------ identity
     @staticmethod
@@ -120,13 +121,15 @@ class Hub:
         running = sum(now - t.get("started", now) for t in self.tasks.values() if t["state"] == "running" and t["tenant"] == tenant)
         return (self.usage.get(tenant, 0.0) + running) / self.weights.get(tenant, 1.0)
 
-    def queue_view(self, recent: int = 12) -> dict:
-        """Counts per state plus the most recent tasks (no parameters or results: those can be large)."""
+    def queue_view(self, recent: int = 12, tenants: list | None = None) -> dict:
+        """Counts per state plus the most recent tasks (no parameters or results: those can be large).
+        `tenants` restricts both to those tenants."""
         with self._lock:
+            pool = [t for t in self.tasks.values() if tenants is None or t["tenant"] in tenants]
             counts: dict[str, int] = {}
-            for t in self.tasks.values():
+            for t in pool:
                 counts[t["state"]] = counts.get(t["state"], 0) + 1
-            last = sorted(self.tasks.values(), key=lambda t: t["id"], reverse=True)[:recent]
+            last = sorted(pool, key=lambda t: t["id"], reverse=True)[:min(int(recent), 500)]
             return {"counts": counts, "recent": [{k: t.get(k) for k in ("id", "workload", "state", "node", "tenant", "gang", "wall_s")} for t in last]}
 
     def tenants(self) -> list[dict]:
@@ -245,6 +248,13 @@ class Hub:
                 self.affinity[t["needs"]["affinity"]] = node
                 while len(self.affinity) > self.max_affinity:
                     self.affinity.pop(next(iter(self.affinity)))
+            if self.usage_path:
+                try:
+                    with open(self.usage_path, "a") as f:
+                        f.write(json.dumps({"ts": self.clock(), "tenant": t["tenant"], "task": task_id, "workload": t["workload"], "node": node,
+                                            "ok": bool(ok), "wall_s": wall_s if wall_s is not None else 0.0}) + "\n")
+                except OSError:
+                    pass                                      # metering must never break scheduling; the gap is visible in the file
             self._finished.append(task_id)
             while len(self._finished) > self.max_finished:     # forget the oldest finished tasks (and gangs with no task left)
                 self.tasks.pop(self._finished.popleft(), None)
@@ -422,7 +432,7 @@ def _avg(xs):
 def _tenant(h: dict) -> str:
     """With scoped credentials the tenant is the credential name (it cannot be spoofed); otherwise the declared one."""
     p = auth.current()
-    t = p.name if p is not None else h.get("tenant", "default")
+    t = p.name.split(":", 1)[0] if p is not None else h.get("tenant", "default")     # "app7:k3" (app 7, key 3) -> tenant "app7"
     return str(t)[:128]
 
 
@@ -464,7 +474,8 @@ def make_handler(hub: Hub):
             return hub.submit_gang(h["workload"], h["params_list"], h.get("needs"), h.get("priority", 10), _tenant(h)), b""
         if op == "queue":
             require("fleet:read")
-            return hub.queue_view(int(h.get("recent", 12))), b""
+            ten = h.get("tenants")
+            return hub.queue_view(int(h.get("recent", 12)), [str(x) for x in ten] if isinstance(ten, list) else None), b""
         if op == "tenants":
             require("fleet:read")
             return {"tenants": hub.tenants()}, b""
@@ -499,6 +510,8 @@ def main():
     ap.add_argument("--state-file", help="save tasks, queue, tenant usage here every 5 s and reload it at start")
     ap.add_argument("--peer", action="append", default=[], help="host:port of another hub (repeatable): active/standby with automatic promotion")
     ap.add_argument("--peer-token-file", help="token this hub presents to its peers (scope fleet:replicate); default: --token-file")
+    ap.add_argument("--usage-file", help="append one JSON line per finished task (tenant, workload, wall_s) for metering and billing")
+    ap.add_argument("--revoked-file", help="credential names revoked by the account service, one per line")
     ap.add_argument("--max-finished", type=int, default=5000, help="finished tasks kept in memory (older ones are forgotten)")
     ap.add_argument("--name", default="hub", help="this hub's name (HA tie-break: the smaller name stays active)")
     ap.add_argument("--fail-after", type=float, default=6.0, help="seconds without an active peer before a standby promotes itself")
@@ -506,9 +519,10 @@ def main():
     if bool(a.token_file) == bool(a.master_key_file):
         raise SystemExit("give exactly one of --token-file or --master-key-file")
     srv, hub = serve_hub(Path(a.token_file).read_bytes() if a.token_file else None, a.host, a.port, a.allow_remote,
-                         authorizer_from_file(a.master_key_file, a.audit_log) if a.master_key_file else None,
+                         authorizer_from_file(a.master_key_file, a.audit_log, a.revoked_file) if a.master_key_file else None,
                          ledger=Ledger(a.decision_log))
     hub.max_finished = a.max_finished
+    hub.usage_path = a.usage_file
     if a.state_file:
         print("restored", hub.load(a.state_file), flush=True)
     if a.peer:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spatial-computing"
-version = "0.14.0"
+version = "0.15.0"
 description = "Spatial Computing: open-source infrastructure efficiency toolkit. Measure, decide, prove (compute, tiered memory, runtime routing, hybrid quantum language)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -33,6 +33,7 @@ include = ["spatial*"]
 
 [tool.setuptools.package-data]
 "spatial.fabric" = ["*.swift"]
+"spatial.platform" = ["static/*", "static/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

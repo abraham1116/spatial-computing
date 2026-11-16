@@ -4,6 +4,7 @@ Command outputs shown on the site come from data/outputs.txt, captured from real
 from __future__ import annotations
 
 import html
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -54,8 +55,10 @@ def nav(base, active, alt):
     return (f'<header class="nav"><div class="wrap"><a class="brand" href="{base}index.html"><img src="{p}assets/logo.svg" alt="">Spatial Computing</a>'
             f'<nav aria-label="{ui["nav_label"]}">{a("docs/index.html", "Docs", "docs")}{a("index.html#proof", ui["proof"], "p", "hide-sm")}'
             f'<a class="hide-sm" href="{REPO}" rel="noopener">GitHub</a>'
+            + (f'<a class="hide-sm" href="{os.environ["CONSOLE_URL"]}">{ui.get("signin", "Sign in")}</a>' if os.environ.get("CONSOLE_URL") else "") +
             f'<a class="lang" href="{alt}" hreflang="{other.lower()}" lang="{other.lower()}" title="{other_name}">{other}</a>'
-            f'<a class="btn" href="{base}docs/quickstart.html">{ui["install"]}</a></nav></div></header>')
+            + (f'<a class="btn" href="{os.environ["CONSOLE_URL"].rstrip("/")}/#/signup">{ui.get("start", "Get started")}</a>' if os.environ.get("CONSOLE_URL")
+             else f'<a class="btn" href="{base}docs/quickstart.html">{ui["install"]}</a>') + '</nav></div></header>')
 
 
 def out_block(key, n=None):

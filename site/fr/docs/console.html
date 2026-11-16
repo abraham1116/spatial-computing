@@ -1,0 +1,56 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Console et comptes — Spatial Computing docs</title><meta name="description" content="Créer un compte, des apps liées à l&#x27;infrastructure, des clés d&#x27;API, envoyer des jobs, suivre l&#x27;usage, payer ce qu&#x27;on consomme."><link rel="alternate" hreflang="en" href="../../docs/console.html"><link rel="icon" href="../../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Principal"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Preuves</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../../docs/console.html" hreflang="en" lang="en" title="English">EN</a><a class="btn" href="../docs/quickstart.html">Installer</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Démarrer</h4><a href="index.html">Vue d'ensemble</a><a href="quickstart.html">Démarrage rapide</a><h4>Console</h4><a href="console.html" aria-current="page">Console et comptes</a><a href="api.html">API REST</a><h4>Moteurs</h4><a href="planner.html">Planificateur</a><a href="fleet.html">Flotte</a><a href="compute.html">Compute Engine</a><a href="memory.html">Mémoire à étages</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><a href="accelerators.html">Accélérateurs</a><a href="interconnect.html">Interconnexion</a><h4>Exploitation</h4><a href="operations.html">Exploitation</a><h4>Référence</h4><a href="cli.html">Commandes</a><a href="security.html">Sécurité</a><a href="results.html">Résultats</a><a href="limits.html">Limitations</a><a href="roadmap.html">Feuille de route</a><a href="changelog.html">Versions</a></aside><main class="main"><h1>Console et comptes</h1><p class="lead" style="margin-bottom:8px">Créer un compte, des apps liées à l'infrastructure, des clés d'API, envoyer des jobs, suivre l'usage, payer ce qu'on consomme.</p><h2>Les cinq étapes</h2>
+<ol><li><b>Créer un compte</b> (e-mail et mot de passe). Une allocation gratuite mensuelle est incluse.</li>
+<li><b>Créer une app</b> depuis la Vue d'ensemble (Overview). Une app est un projet : son propre identifiant de locataire sur la flotte, ses clés, son usage et un budget mensuel facultatif.</li>
+<li><b>Créer une clé d'API</b> : une clé <i>client</i> envoie du travail et lit les résultats ; une clé <i>nœud</i> permet à une machine de rejoindre la flotte. La clé n'est affichée qu'une fois.</li>
+<li><b>Connecter une machine</b> : <code>spatial agent --hub HUB --token-file node.tok</code>. Elle apparaît dans Fleet en quelques secondes.</li>
+<li><b>Lancer un job</b> depuis Jobs (ou <code>spatial fleet submit</code> avec une clé client). L'usage est mesuré par tâche terminée et facturé chaque mois.</li></ol>
+<p>L'Overview affiche ces étapes comme une liste de contrôle et les coche d'après ce qui existe réellement sur le hub.</p>
+<h2>La console, page par page</h2>
+<table><thead><tr><th>Page</th><th>À quoi elle sert</th></tr></thead><tbody>
+<tr><td><b>Overview</b></td><td>La liste de contrôle, apps, clés actives, nœuds en ligne, tâches et calcul du mois, charge estimée</td></tr>
+<tr><td><b>Apps</b></td><td>Une page par app avec onglets : <i>Overview</i> (graphique d'usage, tâches récentes), <i>Keys</i>, <i>Connect</i> (extraits CLI et Python avec l'adresse de votre hub), <i>Jobs</i>, <i>Settings</i> (nom, budget, suppression)</td></tr>
+<tr><td><b>Jobs</b></td><td>Soumettre une des charges autorisées du hub avec ses paramètres, suivre les jobs en file, en cours et terminés</td></tr>
+<tr><td><b>Fleet</b></td><td>Les machines qui ont rejoint avec vos clés nœud (état, cœurs, CPU, RAM), compteurs de la file, comment ajouter une machine</td></tr>
+<tr><td><b>API keys</b></td><td>Tous les identifiants de hub de vos apps ; créer, copier une fois, révoquer</td></tr>
+<tr><td><b>Usage &amp; billing</b></td><td>Le mois par app, allocation gratuite, prix par heure de calcul, factures, paiement</td></tr>
+<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (mot de passe, sessions actives), <i>Account tokens</i> pour l'API REST, <i>Activity</i>, <i>Data</i> (export, suppression du compte)</td></tr>
+<tr><td><b>Admin</b></td><td>Premier compte seulement : utilisateurs, totaux de la plateforme, état du hub, configuration</td></tr></tbody></table>
+<p><img src="../../assets/console-overview.png" alt="Vue d'ensemble de la console avec la liste de démarrage" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../../assets/console-jobs.png" alt="Page Jobs : soumettre un job et suivre les jobs récents" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../../assets/console-fleet.png" alt="Page Fleet : nœuds ayant rejoint avec des clés nœud, compteurs de la file, jobs récents" style="max-width:100%;border:1px solid var(--line)"></p>
+<h2>Clés d'API et jetons de compte : deux choses différentes</h2>
+<table><thead><tr><th></th><th>Clé d'API</th><th>Jeton de compte</th></tr></thead><tbody>
+<tr><td>Sert avec</td><td>Le <b>hub</b> (SWP/2) : <code>spatial agent</code>, <code>spatial fleet</code>, tout client</td><td>L'<b>API REST de la console</b> (<a href="api.html">référence</a>) : scripts qui créent apps et clés, lisent l'usage</td></tr>
+<tr><td>Ressemble à</td><td><code>spc1.…~…</code> (un identifiant de hub à portée limitée nommé <code>app7:k3</code>)</td><td><code>spt_…</code></td></tr>
+<tr><td>Portées</td><td>client : <code>fleet:submit</code>, <code>fleet:read</code>. nœud : <code>fleet:report</code>, <code>fleet:work</code></td><td>read (GET seulement) ou write</td></tr>
+<tr><td>Affichage</td><td>Une fois, à la création ; seuls les 4 derniers caractères sont gardés</td><td>Une fois ; seul un hachage est gardé</td></tr>
+<tr><td>Révocation</td><td>Immédiate, sur le hub en marche (fichier de noms révoqués relu)</td><td>Immédiate</td></tr></tbody></table>
+<h2>Comment c'est relié à l'infrastructure</h2>
+<table><thead><tr><th>Dans la console</th><th>Sur le hub</th></tr></thead><tbody>
+<tr><td>Une app</td><td>Le locataire <code>app7</code> : équité, file et quotas s'appliquent à lui</td></tr>
+<tr><td>Une clé</td><td>Un identifiant <code>app7:k3</code> signé avec la clé maîtresse du hub</td></tr>
+<tr><td>Une machine dans Fleet</td><td>Un nœud dont l'identité est sa clé nœud</td></tr>
+<tr><td>Un job</td><td>Une tâche soumise avec un identifiant client de courte durée de l'app</td></tr>
+<tr><td>L'usage</td><td>Une ligne par tâche terminée dans le fichier d'usage du hub, lu au fil de l'eau</td></tr></tbody></table>
+<h2>Sécurité</h2>
+<ul><li>Mots de passe hachés avec scrypt ; même message et même travail pour un compte inconnu ou connu ; cinq mots de passe faux verrouillent le compte 15 minutes ; inscriptions, connexions et réinitialisations sont limitées en fréquence.</li>
+<li>Cookie de session <code>HttpOnly</code>, <code>SameSite=Strict</code> (<code>Secure</code> derrière TLS), jeton CSRF et contrôle de même origine à chaque changement. Les jetons sont des identifiants porteurs sans cookie, donc sans CSRF ; un jeton ne peut ni créer de jeton, ni changer le mot de passe, ni supprimer le compte.</li>
+<li>Les liens de réinitialisation sont à usage unique, expirent en une heure et ne révèlent jamais si une adresse a un compte ; changer le mot de passe déconnecte toutes les autres sessions ; vous pouvez lister et fermer vos sessions.</li>
+<li>Un utilisateur ne peut ni voir ni modifier l'app d'un autre (même réponse que pour une app inexistante). Politique de sécurité de contenu stricte : ni script ni style en ligne.</li>
+<li>Écoute sur 127.0.0.1 sauf autorisation explicite : mettez TLS devant (le fichier compose utilise Caddy).</li></ul>
+<h2>Facturation</h2>
+<p>Le prix par heure de calcul et l'allocation gratuite mensuelle sont de la configuration (<code>--pricing-file</code>) ; les valeurs par défaut sont une grille d'exemple. Les factures sont créées à la fin d'un mois avec usage ; les petits montants sont annulés. Le paiement passe par Stripe Checkout quand <code>STRIPE_SECRET_KEY</code> est défini, et une facture n'est marquée payée que par le webhook signé de Stripe. Sans Stripe, la console affiche les factures et refuse de débiter.</p>
+<h2>Lancer et déployer</h2>
+<p>En local : <code>spatial platform serve</code> (voir le panneau). Sur un serveur : <code>docker compose --env-file deploy/.env up -d --build</code> démarre le hub, la console et HTTPS automatique (<code>docs/DEPLOY.md</code>).</p>
+<div class="callout warn"><b>Limites</b>Un seul processus avec SQLite. Pas d'équipes ni de rôles, pas de double authentification, pas de vérification de l'e-mail à l'inscription, ni taxes ni factures PDF. Les e-mails ne partent qu'avec SMTP configuré, sinon ils restent dans une table. Testé de bout en bout avec un vrai hub et de vrais agents et dans une session de navigateur pilotée ; paiements seulement contre une fausse API Stripe, jamais avec de l'argent réel.</div><div class="pager"><a href="quickstart.html">← Démarrage rapide</a><a href="api.html">API REST →</a></div></main><aside class="rail" aria-label="Exemples"><h5>Lancer en local</h5><pre><span class="k">$ spatial token init --master-key-file hub.key
+$ spatial serve hub \
+    --master-key-file hub.key \
+    --usage-file usage.jsonl \
+    --revoked-file revoked.txt
+$ spatial platform serve \
+    --master-key-file hub.key \
+    --hub 127.0.0.1:PORT \
+    --usage-file usage.jsonl \
+    --revoked-file revoked.txt</span>
+<span class="d">console sur http://127.0.0.1:8090/</span></pre><h5>Production</h5><pre><span class="k">$ docker compose \
+    --env-file deploy/.env \
+    up -d --build</span>
+<span class="d">hub + console + HTTPS</span></pre></aside></div><script src="../../assets/app.js"></script></body></html>

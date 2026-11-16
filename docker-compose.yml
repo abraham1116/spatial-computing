@@ -1,0 +1,54 @@
+# Production layout: a TLS reverse proxy in front of the account service; the fleet hub next to it.
+#   cp deploy/.env.example deploy/.env      # edit: domain, secrets
+#   docker compose --env-file deploy/.env up -d --build
+#   docker compose run --rm init            # once: creates the hub master key in the data volume
+services:
+  init:
+    build: .
+    profiles: ["init"]
+    command: ["token", "init", "--master-key-file", "/data/hub.key"]
+    volumes: ["data:/data"]
+
+  hub:
+    build: .
+    restart: unless-stopped
+    command: ["serve", "hub", "--master-key-file", "/data/hub.key", "--host", "0.0.0.0", "--allow-remote", "--port", "7700",
+              "--state-file", "/data/hub-state.json", "--usage-file", "/data/usage.jsonl", "--revoked-file", "/data/revoked.txt",
+              "--audit-log", "/data/audit.jsonl", "--decision-log", "/data/decisions.jsonl"]
+    volumes: ["data:/data"]
+    # Agents and API clients connect here (SWP/2 is encrypted and authenticated). Loopback only by default: set
+    # HUB_BIND=0.0.0.0 in deploy/.env when you really want it reachable from outside, and firewall it.
+    ports: ["${HUB_BIND:-127.0.0.1}:7700:7700"]
+    healthcheck: {disable: true}
+
+  platform:
+    build: .
+    restart: unless-stopped
+    command: ["platform", "serve", "--db", "/data/platform.db", "--master-key-file", "/data/hub.key", "--hub", "hub:7700",
+              "--hub-public", "${HUB_PUBLIC_ADDR}", "--usage-file", "/data/usage.jsonl", "--revoked-file", "/data/revoked.txt",
+              "--pricing-file", "/data/pricing.json", "--public-url", "https://${DOMAIN}", "--host", "0.0.0.0", "--allow-remote",
+              "--secure-cookies", "--port", "8090"]
+    environment:
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes: ["data:/data"]
+    depends_on: [hub]
+    expose: ["8090"]
+
+  caddy:                             # automatic HTTPS (Let's Encrypt) for ${DOMAIN}
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: ["./deploy/Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    environment: {DOMAIN: "${DOMAIN}"}
+    depends_on: [platform]
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:

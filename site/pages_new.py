@@ -115,8 +115,8 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
 <li>Conversations with GPU cloud and inference operators, then a design-partner pilot with a measured saving.</li>
 <li>Patent, trademark and export-control checks.</li></ul>
 <h2>Not built</h2>
-<ul><li>OCI containers, graphical Windows apps, remote desktop (the tools are not installed on the reference machine).</li>
-<li>A real language model and inference server (the AI engine is a toy model on the CPU).</li>
+<ul><li>Remote desktop and application streaming; a Windows VM route (no licence); comparisons with Docker Desktop, UTM, Parallels, CrossOver.</li>
+<li>Model routing, vLLM or llm-d, and GPU inference (a real small model was measured on the CPU: prefix reuse saved at least ×41 on a 946-token prompt, identical answers).</li>
 <li>A replicated log for the hub, tiling and tensor cores in kernels, coverage-guided fuzzing.</li></ul>
 <p>The full list with identifiers and procedures: <code>docs/TESTS_NOT_DONE.md</code> and <code>ROADMAP.md</code> in the repository. A weekly workflow (<code>verify.yml</code>) re-checks the properties behind the published results.</p>''',
         [("Re-check the claims", '<span class="k">$ python benchmarks/verify.py</span>\n<span class="d">PASS  interconnect: exact sums\nPASS  kernels: Metal == CPU\nPASS  fleet: 100 agents, no errors\n…</span>')])
@@ -249,8 +249,8 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
 <li>Des conversations avec des opérateurs de cloud GPU et d'inférence, puis un pilote avec un partenaire et une économie mesurée.</li>
 <li>Vérifications de brevets, de marque et de contrôle des exportations.</li></ul>
 <h2>Pas construit</h2>
-<ul><li>Conteneurs OCI, applications Windows graphiques, bureau distant (les outils ne sont pas installés sur la machine de référence).</li>
-<li>Un vrai modèle de langage et un serveur d'inférence (le moteur IA est un petit modèle sur CPU).</li>
+<ul><li>Bureau distant et diffusion d'applications ; une route VM Windows (pas de licence) ; comparaisons avec Docker Desktop, UTM, Parallels, CrossOver.</li>
+<li>Routage de modèles, vLLM ou llm-d, et inférence sur GPU (un vrai petit modèle a été mesuré sur CPU : la réutilisation du préfixe a fait gagner au moins ×41 sur un prompt de 946 jetons, réponses identiques).</li>
 <li>Un journal répliqué pour le hub, tuilage et cœurs tenseurs dans les noyaux, fuzzing guidé par la couverture.</li></ul>
 <p>La liste complète avec identifiants et procédures : <code>docs/TESTS_NOT_DONE.md</code> et <code>ROADMAP.md</code> dans le dépôt. Un workflow hebdomadaire (<code>verify.yml</code>) revérifie les propriétés derrière les résultats publiés.</p>''',
         [("Revérifier les affirmations", '<span class="k">$ python benchmarks/verify.py</span>\n<span class="d">PASS  interconnect : sommes exactes\nPASS  noyaux : Metal == CPU\nPASS  flotte : 100 agents, sans erreur\n…</span>')])

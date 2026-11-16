@@ -81,7 +81,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | H-5 | A learned runtime model instead of probes plus a median correction; compare accuracy and probe cost | design |
 | H-6 | Real QPU option priced with the provider's tariff and compared with simulators on cost and fidelity | design, needs tariff and QPU time |
 | H-7 | Fleet node speed: measure per-node speed instead of assuming it equals this machine's | design, needs several machines |
-| H-8 | Real LLM KV-cache policy against a real inference server | design, needs a GPU (see A2-G2) |
+| H-8 | Real LLM KV-cache policy against a real inference server | **measured in v0.15.0** (`benchmarks/bench_llm.py`, `llm_kvcache.json`): a 946-token prompt, five questions, prefix caching on or off. Recompute 28 to 175 s (median 36 s; noisy: the 2-vCPU VM shared the machine with other work), cached 0.35 to 0.69 s, so reuse saved at least ×41 on the prompt phase (best recompute against worst cached); the 939 shared tokens were reused and the answers were identical in 5 of 5. One small model, CPU, one prompt length. The planner's KV policy is **not** yet calibrated from these numbers; no GPU |
 
 ## G. Fleet tests (agent + hub)
 
@@ -114,10 +114,10 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 
 | Id | Test | State |
 |---|---|---|
-| C1 | Graphical Windows applications under Wine; a Windows VM route with a licensed image | design |
-| C2 | OCI containers; comparison against Docker Desktop, UTM, Parallels, CrossOver | design, needs those tools installed (some are paid) |
-| C3 | Remote desktop and application streaming | design |
-| C4 | A guest with network or writable shared folders (the micro-VM has neither) | design |
+| C1 | Graphical Windows applications under Wine; a Windows VM route with a licensed image | **partly done in v0.15.0**: Wine's own Notepad was started and a Wine-owned on-screen window of 847 x 635 appeared (found through CoreGraphics, `benchmarks/hardware/wine_windows.swift`); window contents were not captured (no screen-recording permission), and no application other than Notepad was tried. Windows VM route: not built (no licence) |
+| C2 | OCI containers; comparison against Docker Desktop, UTM, Parallels, CrossOver | **partly done in v0.15.0**: the `container` route runs a static Linux ELF in Docker (via Colima) or Podman: read-only root, no network, no capabilities, non-root, 256 MiB, 64 processes (tests check each of these). Podman 5.8.10 (applehv machine) passes the same three container tests (`SPATIAL_OCI=podman`). Not done: comparison with Docker Desktop, UTM, Parallels, CrossOver (not installed or paid) |
+| C3 | Remote desktop and application streaming | not built (needs a display server in the guest and a streaming protocol) |
+| C4 | A guest with network or writable shared folders (the micro-VM has neither) | **done for the container route in v0.15.0**: `allow_network` and `share_dir` (a copy into a volume and back, no links followed); the micro-VM still has neither |
 | C5 | Adversarial test of the sandbox: malicious ELF trying to escape the micro-VM | design, needs a security professional |
 
 ## D. Scale, endurance and security
@@ -135,7 +135,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 
 | Id | Test | State |
 |---|---|---|
-| E1 | AI: a real language model, model routing, vLLM / llm-d integration | design (see A2-G2) |
+| E1 | AI: a real language model, model routing, vLLM / llm-d integration | **partly done in v0.15.0**: a real model (Qwen2.5-0.5B Q4, llama.cpp server in a container, CPU, 2 vCPUs) behind `spatial.ai.llm`; see H-8. Not done: model routing, vLLM / llm-d, a GPU, a larger model |
 | E2 | Scientific: domain solvers against reference codes (OpenFOAM, LAMMPS, ...) | design, needs those codes and HPC time |
 | E3 | Simulation: multiphysics, digital twin validated against real sensor data | design, needs data |
 | E4 | Intelligence: predictor tested on unseen machines and many workload families | design, needs a second machine and more workloads |

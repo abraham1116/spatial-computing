@@ -288,3 +288,24 @@ def test_finished_tasks_are_forgotten_beyond_the_cap_so_memory_stays_bounded():
     for _ in range(100):
         t = hub.poll("n1"); hub.result("n1", t["id"], True, 0, wall_s=0.1); hub.submit("montecarlo_pi", {"samples": 1})
     assert pending not in hub.queue and hub.snapshot()["tasks"].__len__() <= 52
+
+
+def test_spatial_serve_hub_forwards_the_hub_flags(tmp_path):
+    import subprocess, sys
+    key = tmp_path / "k"; key.write_bytes(b"x" * 32)
+    p = subprocess.Popen([sys.executable, "-m", "spatial.cli", "serve", "hub", "--master-key-file", str(key), "--port", "0",
+                          "--usage-file", str(tmp_path / "u.jsonl"), "--revoked-file", str(tmp_path / "r.txt"), "--state-file", str(tmp_path / "s.json"),
+                          "--decision-log", str(tmp_path / "d.jsonl"), "--audit-log", str(tmp_path / "a.jsonl")], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        lines = []
+        deadline = time.time() + 20
+        while time.time() < deadline and not any(l.startswith("PORT") for l in lines):
+            l = p.stdout.readline()
+            if not l and p.poll() is not None:
+                break
+            lines.append(l)
+        assert any(l.startswith("PORT") for l in lines), (lines, p.stderr.read() if p.poll() is not None else "")
+    finally:
+        p.terminate(); p.wait(10)
+    bad = subprocess.run([sys.executable, "-m", "spatial.cli", "status", "--nonsense"], capture_output=True, text=True)
+    assert bad.returncode != 0 and "unrecognized" in bad.stderr

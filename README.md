@@ -4,7 +4,7 @@
 
 One objective for the whole infrastructure: get every job done correctly at the lowest cost, and prove it. Spatial Computing prices every way to run a job across compute, memory, runtime, quantum, AI, science and a fleet of machines, picks the cheapest, and records the estimate next to what really happened. A gain is claimed only when it is measured. It does not add RAM, cores or GPUs: it compares execution strategies on the hardware you have, trades one resource for another in numbers, and says plainly what it cannot do.
 
-> **Status: v0.14.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
+> **Status: v0.15.0, early-stage open-source toolkit.** Everything here was built and measured on a single 2017 MacBook Pro (Intel i7-7660U, 2 cores, 16 GB). Nothing has been proven on a second machine, a data-center GPU or a real quantum computer. See [Limitations](docs/LIMITATIONS.md) and the [site](https://spatial-computing-ecru.vercel.app).
 
 [Français](README.fr.md)
 
@@ -34,6 +34,16 @@ curl -O https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/netboot/vmli
 curl -o busybox-x86_64 https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox
 shasum -a 256 -c SHA256SUMS
 ```
+
+## Console (accounts, apps, API keys, jobs, billing)
+```bash
+spatial token init --master-key-file hub.key
+spatial serve hub --master-key-file hub.key --port 7700 --usage-file usage.jsonl --revoked-file revoked.txt
+spatial platform serve --master-key-file hub.key --hub 127.0.0.1:7700 --usage-file usage.jsonl --revoked-file revoked.txt
+# open http://127.0.0.1:8090/ : sign up, create an app, create a node key and a client key
+spatial agent --hub 127.0.0.1:7700 --token-file node.tok     # the machine appears in Fleet; submit jobs from Jobs
+```
+Production (hub, console, HTTPS): `docker compose --env-file deploy/.env up -d --build`. See [docs/PLATFORM.md](docs/PLATFORM.md) and [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Use
 

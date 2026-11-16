@@ -1,5 +1,7 @@
 """Landing page v2, product first: what the product does and what it brings. Limits live in the docs
 (Limitations, Roadmap), not here. Every figure comes from a test or benchmark in the repository."""
+import os
+
 from scaffold import CFG, E, REPO, alt_url, head, nav
 
 KERNEL = '''@kernel
@@ -164,6 +166,8 @@ def render(lang: str, ctx: dict, version: str) -> str:
             code = code.replace(">&gt; ", "<span class=\"g\">&gt;&gt; ", 1) if False else code
         return f'<pre><span class="d">{code}</span></pre>'
 
+    console = os.environ.get("CONSOLE_URL")
+    start_href = (console.rstrip("/") + "/#/signup") if console else "docs/quickstart.html"          # no console deployed: the quickstart is the way in
     p = [head(t["title"], t["desc"], "", alt), "<body>" + nav("", "home", alt), "<main>"]
     p.append(f'''<div class="lp-hero grid-bg"><div class="wrap">
 <p class="eyebrow">{t["eyebrow"].format(v=version)}</p>
@@ -171,7 +175,7 @@ def render(lang: str, ctx: dict, version: str) -> str:
 <p class="sub">{t["sub"]}</p>
 <div class="row">
 <pre class="install" id="inst" tabindex="0"><button class="copy" data-copy="inst" type="button">Copy</button>{E(ctx["INSTALL"])}</pre>
-<div class="cta" style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="docs/quickstart.html">{t["start"]}</a><a class="btn ghost" href="docs/index.html">{t["docs"]}</a></div>
+<div class="cta" style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="{start_href}">{t["start"]}</a><a class="btn ghost" href="docs/index.html">{t["docs"]}</a></div>
 </div>
 <div class="frame"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">{t["frame"]}</span></div>
 <div class="shot"><img src="{pre}assets/dashboard-hero.png" alt="Spatial Fleet dashboard: nodes, alerts, recommendations, tenants and queue" width="1280" height="860"></div></div>
@@ -202,7 +206,7 @@ def render(lang: str, ctx: dict, version: str) -> str:
 <span class="g">{E(ctx["Q_OUT"])}</span></pre></div>
 </div></section>''')
     p.append(f'''<div class="band"><div class="wrap"><div><h2>{t["band_h"]}</h2><p>{t["band_p"]}</p>
-<a class="btn" href="docs/quickstart.html">{t["start"]}</a> <a class="btn ghost" href="{REPO}" rel="noopener">{t["gh"]}</a></div>
+<a class="btn" href="{start_href}">{t["start"]}</a> <a class="btn ghost" href="{REPO}" rel="noopener">{t["gh"]}</a></div>
 <pre class="install" tabindex="0" style="margin:0">{E(ctx["INSTALL"])}</pre></div></div>''')
     p.append(f'''<section><div class="wrap split"><div><p class="eyebrow">{t["oc_eye"]}</p><h2>{t["oc_h"]}</h2><p class="lead">{t["oc_p"]}</p>
 <a class="btn" href="docs/index.html">{t["docs"]}</a> <a class="btn ghost" href="{REPO}" rel="noopener">{t["gh"]}</a></div><div></div></div></section>''')

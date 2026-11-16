@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Console and accounts — Spatial Computing docs</title><meta name="description" content="Sign up, create apps linked to the infrastructure, get API keys, send jobs, watch usage, pay for what you use."><link rel="alternate" hreflang="fr" href="../fr/docs/console.html"><link rel="icon" href="../assets/logo.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"><link rel="stylesheet" href="../assets/style.css"></head><body><header class="nav"><div class="wrap"><a class="brand" href="../index.html"><img src="../assets/logo.svg" alt="">Spatial Computing</a><nav aria-label="Main"><a href="../docs/index.html" aria-current="page" class="">Docs</a><a href="../index.html#proof" class="hide-sm">Proof</a><a class="hide-sm" href="https://github.com/abraham1116/spatial-computing" rel="noopener">GitHub</a><a class="lang" href="../fr/docs/console.html" hreflang="fr" lang="fr" title="Français">FR</a><a class="btn" href="../docs/quickstart.html">Install</a></nav></div></header><div class="docs"><aside class="side" aria-label="Documentation"><h4>Get started</h4><a href="index.html">Overview</a><a href="quickstart.html">Quickstart</a><h4>Console</h4><a href="console.html" aria-current="page">Console and accounts</a><a href="api.html">REST API</a><h4>Engines</h4><a href="planner.html">Planner</a><a href="fleet.html">Fleet</a><a href="compute.html">Compute Engine</a><a href="memory.html">Tiered memory</a><a href="runtime.html">Runtime Engine</a><a href="spatialq.html">SPATIAL Q</a><a href="accelerators.html">Accelerators</a><a href="interconnect.html">Interconnect</a><h4>Operate</h4><a href="operations.html">Operations</a><h4>Reference</h4><a href="cli.html">Commands</a><a href="security.html">Security</a><a href="results.html">Results</a><a href="limits.html">Limitations</a><a href="roadmap.html">Roadmap</a><a href="changelog.html">Changelog</a></aside><main class="main"><h1>Console and accounts</h1><p class="lead" style="margin-bottom:8px">Sign up, create apps linked to the infrastructure, get API keys, send jobs, watch usage, pay for what you use.</p><h2>The five steps</h2>
+<ol><li><b>Create an account</b> (e-mail and password). A free monthly allowance is included.</li>
+<li><b>Create an app</b> from the Overview. An app is a project: its own tenant id on the fleet, its own keys, usage and optional monthly budget.</li>
+<li><b>Create an API key</b>: a <i>client</i> key sends work and reads results; a <i>node</i> key lets a machine join the fleet. The key is shown once.</li>
+<li><b>Connect a machine</b>: <code>spatial agent --hub HUB --token-file node.tok</code>. It appears in Fleet within seconds.</li>
+<li><b>Run a job</b> from Jobs (or <code>spatial fleet submit</code> with a client key). Usage is metered per finished task and billed monthly.</li></ol>
+<p>The Overview shows these steps as a checklist and ticks them from what really exists on the hub.</p>
+<h2>The console, page by page</h2>
+<table><thead><tr><th>Page</th><th>What it is for</th></tr></thead><tbody>
+<tr><td><b>Overview</b></td><td>The checklist, apps, active keys, nodes up, tasks and compute this month, estimated charge</td></tr>
+<tr><td><b>Apps</b></td><td>One page per app with tabs: <i>Overview</i> (usage chart, recent tasks), <i>Keys</i>, <i>Connect</i> (CLI and Python snippets with your hub address), <i>Jobs</i>, <i>Settings</i> (name, budget, delete)</td></tr>
+<tr><td><b>Jobs</b></td><td>Submit one of the hub's allow-listed workloads with its parameters, follow queued, running and finished jobs</td></tr>
+<tr><td><b>Fleet</b></td><td>The machines that joined with your node keys (status, cores, CPU, RAM), queue counts, how to add a machine</td></tr>
+<tr><td><b>API keys</b></td><td>Every hub credential of your apps; create, copy once, revoke</td></tr>
+<tr><td><b>Usage &amp; billing</b></td><td>This month by app, free allowance, price per compute hour, invoices, payment</td></tr>
+<tr><td><b>Settings</b></td><td><i>Profile</i>, <i>Security</i> (password, active sessions), <i>Account tokens</i> for the REST API, <i>Activity</i>, <i>Data</i> (export, delete account)</td></tr>
+<tr><td><b>Admin</b></td><td>First account only: users, platform totals, hub status, configuration</td></tr></tbody></table>
+<p><img src="../assets/console-overview.png" alt="Console overview with the get-started checklist" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-jobs.png" alt="Jobs page: submit a job and follow recent jobs" style="max-width:100%;border:1px solid var(--line)"></p><p><img src="../assets/console-fleet.png" alt="Fleet page: nodes that joined with node keys, queue counts, recent jobs" style="max-width:100%;border:1px solid var(--line)"></p>
+<h2>API keys and account tokens: two different things</h2>
+<table><thead><tr><th></th><th>API key</th><th>Account token</th></tr></thead><tbody>
+<tr><td>Used with</td><td>The <b>hub</b> (SWP/2): <code>spatial agent</code>, <code>spatial fleet</code>, any client</td><td>The <b>console REST API</b> (<a href="api.html">reference</a>): scripts that create apps, keys, read usage</td></tr>
+<tr><td>Looks like</td><td><code>spc1.…~…</code> (a scoped hub credential named <code>app7:k3</code>)</td><td><code>spt_…</code></td></tr>
+<tr><td>Scopes</td><td>client: <code>fleet:submit</code>, <code>fleet:read</code>. node: <code>fleet:report</code>, <code>fleet:work</code></td><td>read (GET only) or write</td></tr>
+<tr><td>Shown</td><td>Once, at creation; only the last 4 characters are kept</td><td>Once; only a hash is kept</td></tr>
+<tr><td>Revocation</td><td>At once, on the running hub (a revoked-names file it re-reads)</td><td>At once</td></tr></tbody></table>
+<h2>How it is wired to the infrastructure</h2>
+<table><thead><tr><th>In the console</th><th>On the hub</th></tr></thead><tbody>
+<tr><td>An app</td><td>The tenant <code>app7</code>: fair share, queue and quotas apply to it</td></tr>
+<tr><td>A key</td><td>A credential <code>app7:k3</code> signed with the hub's master key</td></tr>
+<tr><td>A machine in Fleet</td><td>A node whose identity is its node key</td></tr>
+<tr><td>A job</td><td>A task submitted with a short-lived client credential of the app</td></tr>
+<tr><td>Usage</td><td>One line per finished task in the hub's usage file, read incrementally</td></tr></tbody></table>
+<h2>Security</h2>
+<ul><li>Passwords hashed with scrypt; the same message and the same work for unknown and known accounts; five wrong passwords lock the account for 15 minutes; sign-ups, logins and resets are rate-limited.</li>
+<li>Session cookie <code>HttpOnly</code>, <code>SameSite=Strict</code> (<code>Secure</code> behind TLS), CSRF token and same-origin check on every change. Tokens are bearer credentials without cookies, so no CSRF; a token cannot create tokens, change the password or delete the account.</li>
+<li>Reset links are single-use and expire in an hour and never reveal whether an address has an account; changing the password signs out every other session; you can list and end sessions.</li>
+<li>One user cannot see or change another's app (same answer as for an app that does not exist). Strict content security policy: no inline script or style.</li>
+<li>Binds to 127.0.0.1 unless you explicitly allow remote access: put TLS in front (the compose file uses Caddy).</li></ul>
+<h2>Billing</h2>
+<p>Price per compute hour and the monthly free allowance are configuration (<code>--pricing-file</code>); the defaults are an example price list. Invoices are created when a month with usage ends; tiny amounts are waived. Payment goes through Stripe Checkout when <code>STRIPE_SECRET_KEY</code> is set, and an invoice is marked paid only by Stripe's signed webhook. Without Stripe the console shows invoices and refuses to charge.</p>
+<h2>Run and deploy</h2>
+<p>Locally: <code>spatial platform serve</code> (see the panel). On a server: <code>docker compose --env-file deploy/.env up -d --build</code> starts the hub, the console and automatic HTTPS (<code>docs/DEPLOY.md</code>).</p>
+<div class="callout warn"><b>Limits</b>One service process with SQLite. No teams or roles, no two-factor sign-in, no e-mail verification of new accounts, no taxes or PDF invoices. E-mails are sent only with SMTP configured, otherwise they stay in an outbox table. Tested end to end with a real hub and agents and in a driven browser session; payments only against a fake Stripe API, never with real money.</div><div class="pager"><a href="quickstart.html">← Quickstart</a><a href="api.html">REST API →</a></div></main><aside class="rail" aria-label="Examples"><h5>Run it locally</h5><pre><span class="k">$ spatial token init --master-key-file hub.key
+$ spatial serve hub \
+    --master-key-file hub.key \
+    --usage-file usage.jsonl \
+    --revoked-file revoked.txt
+$ spatial platform serve \
+    --master-key-file hub.key \
+    --hub 127.0.0.1:PORT \
+    --usage-file usage.jsonl \
+    --revoked-file revoked.txt</span>
+<span class="d">console on http://127.0.0.1:8090/</span></pre><h5>Production</h5><pre><span class="k">$ docker compose \
+    --env-file deploy/.env \
+    up -d --build</span>
+<span class="d">hub + console + HTTPS</span></pre></aside></div><script src="../assets/app.js"></script></body></html>
