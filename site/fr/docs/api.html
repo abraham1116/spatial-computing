@@ -20,7 +20,9 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET</code> · <code>POST /api/orgs</code> ; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/org</code></td><td>Vos organisations ; en créer une ; l'organisation courante (membres, invitations en attente, coordonnées de facturation) ; renommer ou fixer les coordonnées (admin) ; supprimer (propriétaire)</td></tr>
 <tr><td><code>POST /api/org/invites</code> · <code>DELETE /api/org/invites/{id}</code> · <code>POST /api/invites/accept</code></td><td>Inviter par e-mail avec un rôle ; annuler ; accepter avec le jeton reçu (session de navigateur de l'adresse invitée)</td></tr>
 <tr><td><code>PATCH</code> · <code>DELETE /api/org/members/{user_id}</code></td><td>Changer un rôle ; retirer un membre (ou partir, avec votre propre id)</td></tr>
-<tr><td><code>GET /api/invoices/{id}/pdf</code></td><td>La facture en PDF (admin et propriétaire ; factures numérotées seulement)</td></tr>
+<tr><td><code>GET /api/invoices/{id}/pdf</code> · <code>/api/credit-notes/{id}/pdf</code></td><td>Une facture ou un avoir en PDF (exige <code>billing.read</code> ; documents numérotés seulement)</td></tr>
+<tr><td><code>POST /api/org/roles</code> · <code>DELETE /api/org/roles/{name}</code></td><td>Définir un rôle personnalisé à partir de la liste de permissions (jamais plus que ce que vous détenez) ; supprimer un rôle inutilisé</td></tr>
+<tr><td><code>GET /api/sso/config</code> · <code>/api/sso/start</code> · <code>/api/sso/callback</code></td><td>Connexion unique OpenID Connect : si elle est active ; redirection vers le fournisseur ; retour du fournisseur (pose le cookie de session et redirige)</td></tr>
 <tr><td><code>GET /api/overview</code></td><td>Liste de contrôle, compteurs, charge estimée</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/apps</code> ; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/apps/{id}</code></td><td>Lister, créer (<code>name</code>, <code>description</code>, <code>budget_usd</code>), lire, modifier, supprimer (révoque ses clés)</td></tr>
 <tr><td><code>POST /api/apps/{id}/keys</code> · <code>DELETE /api/apps/{id}/keys/{kid}</code></td><td>Créer une clé de hub (<code>name</code>, <code>kind</code> : client ou node, <code>ttl_days</code> ; le jeton est dans la réponse, une fois) ; révoquer</td></tr>
@@ -34,6 +36,7 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET /api/sessions</code> · <code>DELETE /api/sessions/{id}</code> · <code>GET /api/activity</code></td><td>Sessions actives, en fermer une ; activité de sécurité</td></tr>
 <tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code> · <code>/api/admin/settings</code> · <code>/api/admin/mail</code></td><td>Premier compte seulement : totaux, utilisateurs, prix et société, file des messages</td></tr>
 <tr><td><code>PUT /api/admin/pricing</code> · <code>/api/admin/company</code> · <code>POST /api/admin/test-mail</code></td><td>Premier compte seulement : fixer prix et taxe (validés, bornés), coordonnées de la société pour les factures, envoyer un message de test</td></tr>
+<tr><td><code>GET /api/admin/invoices</code> · <code>POST /api/admin/invoices/{id}/credit</code></td><td>Premier compte seulement : factures numérotées ; émettre un avoir (<code>amount_usd</code> du sous-total, <code>reason</code>)</td></tr>
 <tr><td><code>POST /api/billing/webhook</code></td><td>Webhook signé de Stripe (pas de session ; la signature authentifie)</td></tr>
 <tr><td><code>GET /api/health</code></td><td><code>{"ok": true}</code></td></tr></tbody></table>
 <h2>Exemple : de rien à un résultat</h2>

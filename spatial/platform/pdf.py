@@ -55,11 +55,12 @@ def invoice_pdf(inv: dict) -> bytes:
         y -= 13; pg.text(L, y, ln, 9)
     if inv["seller"].get("vat_id"):
         y -= 13; pg.text(L, y, "VAT ID: " + inv["seller"]["vat_id"], 9)
-    pg.text(R - 150, 790, "INVOICE", 18, True)
+    credit = inv.get("kind") == "credit"
+    pg.text(R - 150, 790, "CREDIT NOTE" if credit else "INVOICE", 18, True)
     pg.text(R - 150, 770, "No. " + inv["number"], 10, True)
     pg.text(R - 150, 757, "Issued: " + inv["issued"], 9)
     pg.text(R - 150, 744, "Period: " + inv["period"], 9)
-    pg.text(R - 150, 731, "Status: " + inv["status"].upper(), 9, True)
+    pg.text(R - 150, 731, ("Refers to " + inv["refers_to"]) if credit else "Status: " + inv["status"].upper(), 9, True)
     y = 690
     pg.text(L, y, "Billed to", 9, True)
     c = inv["customer"]
@@ -82,4 +83,4 @@ def invoice_pdf(inv: dict) -> bytes:
         for ln in inv["note"].splitlines()[:5]:
             pg.text(L, y, ln, 9); y -= 12
     pg.text(L, 40, "Usage is metered per finished task on the Spatial Computing fleet.", 8)
-    return build([pg], f"Invoice {inv['number']}")
+    return build([pg], f"{'Credit note' if credit else 'Invoice'} {inv['number']}")

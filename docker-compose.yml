@@ -28,6 +28,7 @@ services:
               "--hub-public", "${HUB_PUBLIC_ADDR}", "--usage-file", "/data/usage.jsonl", "--revoked-file", "/data/revoked.txt",
               "--pricing-file", "/data/pricing.json", "--public-url", "https://${DOMAIN}", "--host", "0.0.0.0", "--allow-remote",
               "--secure-cookies", "--port", "8090"]
+    # single sign-on: add  "--oidc-issuer", "https://...", "--oidc-client-id", "...", "--oidc-name", "Acme SSO"  to the command and set OIDC_CLIENT_SECRET
     environment:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -36,6 +37,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     volumes: ["data:/data"]
     depends_on: [hub]
     expose: ["8090"]

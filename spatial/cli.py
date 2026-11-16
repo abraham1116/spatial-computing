@@ -106,11 +106,13 @@ def cmd_agent(a):
 def cmd_desktop(a):
     from .runtime.desktop import DesktopError, start
     try:
-        d = start(a.app)
+        d = start(a.app, clipboard=not a.no_clipboard, view_only_link=a.view_link)
     except DesktopError as e:
         print(f"spatial: {e}", file=sys.stderr)
         return 1
     print(f"desktop ({a.app}, {d.runtime}), loopback only: {d.url}", flush=True)
+    if d.view_url:
+        print(f"view-only link (watch, cannot type or click): {d.view_url}", flush=True)
     print("Ctrl+C removes it", flush=True)
     try:
         while True:
@@ -340,6 +342,8 @@ def main(argv=None):
     p.set_defaults(fn=cmd_fleet)
     p = sub.add_parser("desktop", help="run a graphical Linux app (xterm, xclock, mousepad) in a container and open it in your browser (noVNC, loopback only)")
     p.add_argument("app", nargs="?", default="xterm", choices=["xterm", "xclock", "mousepad"])
+    p.add_argument("--no-clipboard", action="store_true", help="no copy and paste between your machine and the desktop")
+    p.add_argument("--view-link", action="store_true", help="also print a view-only link for people who only need to watch")
     p.set_defaults(fn=cmd_desktop)
     p = sub.add_parser("platform", help="account service: sign up, sign in, apps, API keys, usage, billing (`spatial platform serve --help`)")
     p.add_argument("rest", nargs=argparse.REMAINDER)

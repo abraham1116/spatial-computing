@@ -1,8 +1,7 @@
 "use strict";
 /* Spatial Computing console. One file, no framework. Everything user-supplied is inserted with textContent. */
-const S = {me: null, csrf: "", hub: null, payments: false, docs: "#", newKey: null, jobMsg: {}, timer: null, org: null, orgs: [], role: "owner", requireVerified: false, invite: null, ticket: null};
-const RANK = {viewer: 0, member: 1, admin: 2, owner: 3};
-const can = r => RANK[S.role] >= RANK[r];
+const S = {me: null, csrf: "", hub: null, payments: false, docs: "#", newKey: null, jobMsg: {}, timer: null, org: null, orgs: [], role: "owner", perms: [], sso: {enabled: false}, requireVerified: false, invite: null, ticket: null};
+const can = p => (S.perms || []).includes(p);
 const root = document.getElementById("root");
 const NS = "http://www.w3.org/2000/svg";
 
@@ -121,10 +120,13 @@ function authScreen(title, lead, form, alt) {
     h("div", {class: "form"}, h("div", {}, h("form", {onsubmit: form.submit, novalidate: true}, h("h1", {}, title), h("p", {class: "mute"}, lead), ...form.fields,
       h("p", {class: "err", id: "err", role: "alert"}), h("button", {class: "btn", type: "submit"}, form.button), h("p", {class: "alt"}, alt)))));
 }
+const ssoError = () => { const m = /sso_error=([^&]*)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : ""; };
 const loginView = () => authScreen("Sign in", "Welcome back.", {
   fields: [...field("E-mail", "email", "email", {autocomplete: "username"}), ...field("Password", "password", "password", {autocomplete: "current-password"})], button: "Sign in",
   submit: ev => guarded(ev, async () => { const d = await api("POST", "/api/login", {email: val("email"), password: val("password")}); if (d.needs_2fa) { S.ticket = d.ticket; location.hash = "#/2fa"; route(); return; } await afterAuth(); })},
-  [h("a", {href: "#/forgot"}, "Forgot your password?"), "  ·  ", h("a", {href: "#/signup"}, "Create an account")]);
+  [h("a", {href: "#/forgot"}, "Forgot your password?"), "  ·  ", h("a", {href: "#/signup"}, "Create an account"),
+    S.sso.enabled ? h("div", {class: "ssorow"}, h("a", {class: "btn ghost", href: "/api/sso/start"}, "Sign in with " + S.sso.name)) : null,
+    ssoError() ? h("p", {class: "err", role: "alert"}, ssoError()) : null]);
 const twofaView = () => authScreen("Two-factor code", "Enter the 6-digit code from your authenticator app, or one of your recovery codes.", {
   fields: field("Code", "code", "text", {autocomplete: "one-time-code", inputmode: "numeric", maxlength: 24}), button: "Verify",
   submit: ev => guarded(ev, async () => { try { await api("POST", "/api/login/2fa", {ticket: S.ticket, code: val("code")}); S.ticket = null; await afterAuth(); } catch (e) { if (/expired/.test(e.message)) { S.ticket = null; location.hash = "#/login"; } throw e; } })},
@@ -155,7 +157,7 @@ function shell(active, ...content) {
   return h("div", {class: "shell"},
     h("aside", {class: "side"}, h("div", {class: "logo"}, h("img", {src: "/logo.svg", alt: ""}), "Console"), orgSwitcher(),
       link("#/", "Overview", "overview"), link("#/apps", "Apps", "apps"), link("#/jobs", "Jobs", "jobs"), link("#/fleet", "Fleet", "fleet"),
-      link("#/keys", "API keys", "keys"), link("#/team", "Team", "team"), can("admin") ? link("#/billing", "Usage & billing", "billing") : null, link("#/settings", "Settings", "settings"),
+      link("#/keys", "API keys", "keys"), link("#/team", "Team", "team"), can("billing.read") ? link("#/billing", "Usage & billing", "billing") : null, link("#/settings", "Settings", "settings"),
       S.me.is_admin ? link("#/admin", "Admin", "admin") : null,
       h("a", {class: "nav ext", href: S.docs, target: "_blank", rel: "noopener"}, "Documentation ↗"),
       h("div", {class: "grow"}), h("div", {class: "me"}, S.me.name, h("br"), S.me.email),
@@ -293,22 +295,28 @@ async function keysView() {
 /* ---------------------------------------------------------------- team */
 async function teamView() {
   const {org} = await api("GET", "/api/org");
-  const isAdmin = can("admin"), isOwner = can("owner");
-  const inviteForm = isAdmin && !org.personal ? h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/org/invites", {email: val("iv_email"), role: val("iv_role")}); toast("Invitation sent"); route(); }, "iv_err")},
+  const isAdmin = can("members.manage") || can("org.manage"), canMembers = can("members.manage"), isOwner = can("org.delete");
+  const roleNames = org.roles.map(r => r.name).filter(n => n !== "owner" || isOwner);
+  const inviteForm = canMembers && !org.personal ? h("form", {onsubmit: ev => guarded(ev, async () => { await api("POST", "/api/org/invites", {email: val("iv_email"), role: val("iv_role")}); toast("Invitation sent"); route(); }, "iv_err")},
     h("div", {class: "row"}, h("div", {}, ...field("E-mail", "iv_email", "email", {placeholder: "colleague@example.com"})),
-      h("div", {}, h("label", {for: "iv_role"}, "Role"), h("select", {id: "iv_role"}, ["member", "viewer", "admin", ...(isOwner ? ["owner"] : [])].map(r => h("option", {value: r}, r)))),
+      h("div", {}, h("label", {for: "iv_role"}, "Role"), h("select", {id: "iv_role"}, roleNames.map(r => h("option", {value: r, selected: r === "member"}, r)))),
       h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Invite"))), h("p", {class: "err", id: "iv_err", role: "alert"})) : null;
-  const roleSel = m => isAdmin && m.user_id !== S.me.id ? h("select", {onchange: async ev => { try { await api("PATCH", "/api/org/members/" + m.user_id, {role: ev.target.value}); toast("Role changed"); route(); } catch (e) { toast(e.message); route(); } }},
-    ["viewer", "member", "admin", "owner"].map(r => h("option", {value: r, selected: r === m.role}, r))) : tag(m.role, m.role === "owner" ? "warn" : "mute");
-  const roles = h("table", {class: "mini"}, h("tbody", {}, [["viewer", "sees apps, usage, fleet and jobs"], ["member", "+ creates apps, keys and jobs"], ["admin", "+ members, budgets, billing, deletes apps"], ["owner", "+ owners, deletes the organization"]].map(([r, d]) => h("tr", {}, h("td", {}, tag(r)), h("td", {class: "mute small"}, d)))));
-  return shell("team", pageTop(org.name, org.personal ? "Your personal workspace: one member. Create an organization to work with others." : "Members, roles and invitations."),
+  const roleSel = m => canMembers && m.user_id !== S.me.id ? h("select", {onchange: async ev => { try { await api("PATCH", "/api/org/members/" + m.user_id, {role: ev.target.value}); toast("Role changed"); route(); } catch (e) { toast(e.message); route(); } }},
+    roleNames.map(r => h("option", {value: r, selected: r === m.role}, r))) : tag(m.role, m.role === "owner" ? "warn" : "mute");
+    return shell("team", pageTop(org.name, org.personal ? "Your personal workspace: one member. Create an organization to work with others." : "Members, roles and invitations."),
     h("div", {class: "card"}, h("div", {class: "cardhead"}, h("h2", {}, "Members (" + org.member_list.length + ")")),
       h("table", {}, th(["Name", "E-mail", "Role", "Since", ""]), h("tbody", {}, org.member_list.map(m => h("tr", {}, h("td", {}, m.name), h("td", {class: "mono small"}, m.email), h("td", {}, roleSel(m)), h("td", {}, fmt.date(m.since)),
-        h("td", {}, (isAdmin && m.user_id !== S.me.id) || (m.user_id === S.me.id && !org.personal) ? h("button", {class: "btn danger sm", onclick: async () => { if (confirm(m.user_id === S.me.id ? "Leave this organization?" : "Remove " + m.name + "?")) { try { await api("DELETE", "/api/org/members/" + m.user_id); if (m.user_id === S.me.id) { localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; } route(); } catch (e) { toast(e.message); } } }}, m.user_id === S.me.id ? "Leave" : "Remove") : null))))),
+        h("td", {}, (canMembers && m.user_id !== S.me.id) || (m.user_id === S.me.id && !org.personal) ? h("button", {class: "btn danger sm", onclick: async () => { if (confirm(m.user_id === S.me.id ? "Leave this organization?" : "Remove " + m.name + "?")) { try { await api("DELETE", "/api/org/members/" + m.user_id); if (m.user_id === S.me.id) { localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; } route(); } catch (e) { toast(e.message); } } }}, m.user_id === S.me.id ? "Leave" : "Remove") : null))))),
       h("p", {class: "small mute"}, docLink("docs/console.html", "Roles are explained in the documentation"))),
-    isAdmin && !org.personal ? h("div", {class: "card"}, h("h2", {}, "Invite someone"), inviteForm,
+    canMembers && !org.personal ? h("div", {class: "card"}, h("h2", {}, "Invite someone"), inviteForm,
       (org.invites || []).length ? h("table", {}, th(["Pending invitation", "Role", "Expires", ""]), h("tbody", {}, org.invites.map(i => h("tr", {}, h("td", {}, i.email), h("td", {}, tag(i.role)), h("td", {}, fmt.date(i.expires)), h("td", {}, h("button", {class: "btn ghost sm", onclick: async () => { await api("DELETE", "/api/org/invites/" + i.id); route(); }}, "Cancel")))))) : null) : null,
-    h("div", {class: "card"}, h("h2", {}, "What each role can do"), roles),
+    h("div", {class: "card"}, h("h2", {}, "Roles and permissions"), h("p", {class: "small mute"}, "Everyone in the organization can read apps, usage, fleet and jobs. Everything else is a permission. Nobody can give a role with permissions they do not have themselves."),
+      h("table", {}, th(["Role", "Permissions", "Members", ""]), h("tbody", {}, org.roles.map(r => h("tr", {}, h("td", {}, tag(r.name, r.builtin ? "mute" : "warn")), h("td", {class: "small"}, r.perms.length ? r.perms.map(p => h("span", {class: "pill", title: org.permission_help[p]}, p)) : h("span", {class: "mute"}, "read only")),
+        h("td", {}, r.builtin ? "" : r.members), h("td", {}, !r.builtin && canMembers ? h("button", {class: "btn danger sm", onclick: async () => { try { await api("DELETE", "/api/org/roles/" + r.name); route(); } catch (e) { toast(e.message); } }}, "Delete") : null))))),
+      canMembers ? h("form", {onsubmit: ev => guarded(ev, async () => { const perms = [...document.querySelectorAll("#rl_perms input:checked")].map(i => i.value); await api("POST", "/api/org/roles", {name: val("rl_name"), perms}); toast("Role created"); route(); }, "rl_err")},
+        h("h3", {}, "New role"), h("div", {class: "row"}, h("div", {}, ...field("Name", "rl_name", "text", {maxlength: 30, placeholder: "billing-clerk"}))),
+        h("div", {id: "rl_perms", class: "perms"}, Object.entries(org.permission_help).filter(([p]) => p !== "org.delete" && p !== "members.owner" && org.perms.includes(p)).map(([p, d]) => h("label", {class: "check"}, h("input", {type: "checkbox", value: p}), " ", h("span", {class: "mono small"}, p), " ", h("span", {class: "mute small"}, "— " + d)))),
+        h("p", {class: "err", id: "rl_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Create role")) : null),
     isAdmin ? h("div", {class: "card"}, h("h2", {}, "Organization"), h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {name: val("on_name")}); toast("Saved"); loadSession(await api("GET", "/api/me")); route(); }, "on_err")},
         ...field("Name", "on_name", "text", {maxlength: 60, value: org.name}), h("p", {class: "err", id: "on_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save")),
       isOwner && !org.personal ? h("p", {}, h("button", {class: "btn danger", onclick: async () => { if (confirm("Delete organization “" + org.name + "” with its apps, keys and usage?")) { try { await api("DELETE", "/api/org"); localStorage.removeItem("sp_org"); loadSession(await api("GET", "/api/me")); location.hash = "#/"; route(); } catch (e) { toast(e.message); } } }}, "Delete organization")) : null) : null);
@@ -320,7 +328,7 @@ async function billingView() {
   const p = b.pricing, e = b.estimate, bd = od.org.billing || {};
   const pay = inv => h("button", {class: "btn sm", disabled: !b.payments_enabled, title: b.payments_enabled ? "" : "Payments are not configured on this server", onclick: async () => { try { const r = await api("POST", "/api/billing/pay", {invoice_id: inv.id}); location.href = r.url; } catch (er) { toast(er.message); } }}, "Pay " + fmt.usd(inv.amount_usd));
   const details = h("form", {onsubmit: ev => guarded(ev, async () => { await api("PATCH", "/api/org", {billing: {name: val("bd_name"), address: val("bd_addr"), country: val("bd_country"), vat_id: val("bd_vat")}}); toast("Billing details saved"); route(); }, "bd_err")},
-    h("div", {class: "grid2"}, h("div", {}, ...field("Company or name on invoices", "bd_name", "text", {required: false, maxlength: 120, value: bd.name || ""}), ...field("VAT id (optional)", "bd_vat", "text", {required: false, maxlength: 40, value: bd.vat_id || ""})),
+    h("div", {class: "grid2"}, h("div", {}, ...field("Company or name on invoices", "bd_name", "text", {required: false, maxlength: 120, value: bd.name || ""}), ...field("VAT id (optional)", "bd_vat", "text", {required: false, maxlength: 40, value: bd.vat_id || ""}), bd.vat_status ? h("p", {class: "small mute"}, "VAT id: ", tag(bd.vat_status, "ok")) : null),
       h("div", {}, ...field("Country (2 letters)", "bd_country", "text", {required: false, maxlength: 2, value: bd.country || "", placeholder: "FR"}), h("label", {for: "bd_addr"}, "Address"), h("textarea", {id: "bd_addr", rows: 3, maxlength: 400}, bd.address || ""))),
     h("p", {class: "err", id: "bd_err", role: "alert"}), h("button", {class: "btn", type: "submit"}, "Save billing details"));
   return shell("billing", pageTop("Usage & billing", "Pay for what you use. Usage is metered per finished task."),
@@ -335,7 +343,10 @@ async function billingView() {
       h("tbody", {}, b.invoices.map(i => h("tr", {}, h("td", {class: "mono small"}, i.number || "-"), h("td", {}, i.period), h("td", {}, fmt.usd(i.amount_usd)), h("td", {}, tag(i.status, i.status === "paid" ? "ok" : i.status === "open" ? "warn" : "mute")),
         h("td", {}, i.number ? h("a", {class: "btn ghost sm", href: "/api/invoices/" + i.id + "/pdf?org=" + S.org, download: i.number + ".pdf"}, "PDF") : null), h("td", {}, i.status === "open" ? pay(i) : null))))) : h("p", {class: "mute"}, "No invoice yet. Invoices are created when a month with usage ends."),
       h("p", {class: "small mute"}, docLink("docs/console.html", "How billing works"))),
-    h("div", {class: "card"}, h("h2", {}, "Billing details"), h("p", {class: "mute small"}, "Printed on invoices; the country and VAT id decide the tax rate."), details));
+    b.credit_notes && b.credit_notes.length ? h("div", {class: "card"}, h("h2", {}, "Credit notes"), h("table", {}, th(["Number", "Date", "Amount", "Reason", "State", ""]),
+      h("tbody", {}, b.credit_notes.map(n => h("tr", {}, h("td", {class: "mono small"}, n.number), h("td", {}, fmt.date(n.created)), h("td", {}, "-" + fmt.usd(n.total_usd)), h("td", {class: "small"}, n.reason), h("td", {}, tag(n.status, n.status === "refunded" || n.status === "applied" ? "ok" : "warn")),
+        h("td", {}, h("a", {class: "btn ghost sm", href: "/api/credit-notes/" + n.id + "/pdf?org=" + S.org, download: n.number + ".pdf"}, "PDF"))))))) : null,
+    h("div", {class: "card"}, h("h2", {}, "Billing details"), h("p", {class: "mute small"}, "Printed on invoices; the country and VAT id decide the tax rate. A VAT id is checked for format and, where the algorithm is public, the check digit."), can("org.manage") ? details : h("p", {class: "mute"}, "Only people who can manage the organization edit these.")));
 }
 
 /* ---------------------------------------------------------------- settings */
@@ -349,8 +360,8 @@ function twofaCard() {
           h("div", {class: "row"}, h("div", {}, ...field("Password", "tf_pw", "password", {autocomplete: "current-password"})), h("div", {}, ...field("Code or recovery code", "tf_code", "text", {autocomplete: "one-time-code"})), h("div", {}, h("label", {}, " "), h("button", {class: "btn danger", type: "submit"}, "Turn off"))),
           h("p", {class: "err", id: "tf_err", role: "alert"})));
     } else if (S.tf && S.tf.secret) {
-      box.append(h("p", {class: "small mute"}, "1. In your authenticator app (Google Authenticator, 1Password, Aegis…) add an account with this key, or open the link on your phone:"),
-        h("pre", {class: "code"}, S.tf.secret), h("p", {class: "small"}, h("a", {href: S.tf.uri}, "otpauth link")), h("p", {class: "small mute"}, "2. Enter the 6-digit code it shows:"),
+      box.append(h("p", {class: "small mute"}, "1. In your authenticator app (Google Authenticator, 1Password, Aegis…) scan this code, or add an account by hand with the key below:"),
+        h("div", {class: "row"}, h("img", {class: "qr", alt: "QR code to scan with your authenticator app", width: 200, height: 200, src: "data:image/svg+xml;base64," + btoa(S.tf.qr_svg)}), h("pre", {class: "code"}, S.tf.secret)), h("p", {class: "small mute"}, "2. Enter the 6-digit code it shows:"),
         h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("POST", "/api/2fa/enable", {code: val("tf_code")}); S.me.totp_enabled = true; S.tf = null; S.recovery = r.recovery_codes; route(); }, "tf_err")},
           h("div", {class: "row"}, h("div", {}, ...field("Code", "tf_code", "text", {inputmode: "numeric", maxlength: 6, autocomplete: "one-time-code"})), h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit"}, "Turn on"))), h("p", {class: "err", id: "tf_err", role: "alert"})));
     } else {
@@ -399,7 +410,7 @@ async function settingsView(tab) {
 
 /* ---------------------------------------------------------------- admin */
 async function adminView() {
-  const [o, u, st, mail] = await Promise.all([api("GET", "/api/admin/overview"), api("GET", "/api/admin/users"), api("GET", "/api/admin/settings"), api("GET", "/api/admin/mail")]);
+  const [o, u, st, mail, invs] = await Promise.all([api("GET", "/api/admin/overview"), api("GET", "/api/admin/users"), api("GET", "/api/admin/settings"), api("GET", "/api/admin/mail"), api("GET", "/api/admin/invoices")]);
   const hub = o.hub, p = st.pricing, co = st.company;
   const pricing = h("form", {onsubmit: ev => guarded(ev, async () => {
       let by = {}; try { by = val("pr_by").trim() ? JSON.parse(val("pr_by")) : {}; } catch (e) { throw new Error('Tax by country must be JSON, for example {"FR": 20, "DE": 19}'); }
@@ -418,12 +429,15 @@ async function adminView() {
   const testMail = h("form", {onsubmit: ev => guarded(ev, async () => { const r = await api("POST", "/api/admin/test-mail", {to: val("tm_to")}); toast(r.sent ? "Test message sent" : "Not sent: " + (r.error || "see the queue below")); route(); }, "tm_err")},
     h("div", {class: "row"}, h("div", {}, ...field("Send a test message to", "tm_to", "email", {value: S.me.email})), h("div", {}, h("label", {}, " "), h("button", {class: "btn", type: "submit", disabled: !st.email.smtp_configured}, "Send test"))), h("p", {class: "err", id: "tm_err", role: "alert"}));
   return shell("admin", pageTop("Admin", "The platform as a whole. Visible to the first account only."),
-    st.pricing_is_default ? h("div", {class: "notice"}, "You are still on the example price list: customers would be charged example prices. Set yours below.") : null,
+    ...(st.warnings || []).map(w => h("div", {class: "notice"}, w)),
     h("div", {class: "kpis"}, kpi(o.users, "users"), kpi(o.apps, "apps"), kpi(o.active_keys, "active keys"), kpi(o.tasks_this_month, "tasks this month"), kpi(o.compute_hours_this_month.toFixed(2) + " h", "compute this month"), kpi(fmt.usd(o.open_invoices_usd), "open invoices")),
     h("div", {class: "grid2"}, h("div", {class: "card"}, h("h2", {}, "Hub"), hub.reachable ? h("table", {}, h("tbody", {}, [["Address", hub.address], ["Role", hub.role + " (epoch " + hub.epoch + ")"], ["Nodes up", hub.nodes_up + " / " + hub.nodes], ["Queue", Object.entries(hub.queue || {}).map(([k, v]) => k + " " + v).join(", ") || "empty"]].map(([k, v]) => h("tr", {}, h("td", {class: "mute"}, k), h("td", {}, v))))) : h("p", {class: "mute"}, "Hub not reachable from the console."), h("p", {class: "small mute"}, docLink("docs/operations.html", "Operations: failover, scale, dashboard"))),
       h("div", {class: "card"}, h("h2", {}, "Services"), h("table", {}, h("tbody", {}, [["Payments", st.payments_enabled ? "Stripe configured" : "not configured (invoices cannot be charged)"], ["E-mail", st.email.smtp_configured ? "SMTP configured" : "not configured: messages stay in the queue"], ["E-mail verification", st.email.require_verified ? "required before keys and jobs" : "not required"], ["Unsent e-mails", st.email.unsent]].map(([k, v]) => h("tr", {}, h("td", {class: "mute"}, k), h("td", {}, v))))), h("p", {class: "small mute"}, docLink("docs/console.html", "Deploying the console")))),
     h("div", {class: "card"}, h("h2", {}, "Prices and tax"), h("p", {class: "mute small"}, "Applies to usage from now on. Invoices already issued keep the prices they were issued with."), pricing),
     h("div", {class: "card"}, h("h2", {}, "Company (printed on invoices)"), company),
+    h("div", {class: "card"}, h("h2", {}, "Invoices and credit notes"), invs.invoices.length ? h("table", {}, th(["Number", "Customer", "Period", "Total", "Credited", "State", ""]),
+      h("tbody", {}, invs.invoices.map(i => h("tr", {}, h("td", {class: "mono small"}, i.number), h("td", {}, i.org), h("td", {}, i.period), h("td", {}, fmt.usd(i.total_usd)), h("td", {}, i.credited_usd ? fmt.usd(i.credited_usd) : "-"), h("td", {}, tag(i.status, i.status === "paid" ? "ok" : i.status === "open" ? "warn" : "mute")),
+        h("td", {}, h("button", {class: "btn ghost sm", onclick: async () => { const a = prompt("Amount to credit (subtotal, before tax) for " + i.number); if (!a) return; const r = prompt("Reason (shown on the credit note)"); if (!r) return; try { const n = await api("POST", "/api/admin/invoices/" + i.id + "/credit", {amount_usd: Number(a), reason: r}); toast(n.credit_note.number + " (" + n.credit_note.status + ")"); route(); } catch (e) { toast(e.message); } }}, "Credit")))))) : h("p", {class: "mute"}, "No numbered invoice yet.")),
     h("div", {class: "card"}, h("h2", {}, "E-mail"), testMail, mail.mail.length ? h("table", {}, th(["When", "To", "Subject", "State"]), h("tbody", {}, mail.mail.map(m => h("tr", {}, h("td", {}, fmt.time(m.created)), h("td", {class: "mono small"}, m.to), h("td", {}, m.subject), h("td", {}, m.sent ? tag("sent", "ok") : m.attempts ? tag("retrying (" + m.attempts + ")", "warn") : tag("queued", "mute")))))) : h("p", {class: "mute"}, "No message yet.")),
     h("div", {class: "card"}, h("h2", {}, "Users (" + u.total + ")"), h("table", {}, th(["E-mail", "Name", "Apps", "Compute this month", "Joined", ""]), h("tbody", {}, u.users.map(x => h("tr", {}, h("td", {}, x.email), h("td", {}, x.name), h("td", {}, x.apps), h("td", {}, x.compute_hours_this_month.toFixed(3) + " h"), h("td", {}, fmt.date(x.created)), h("td", {}, x.is_admin ? tag("admin", "warn") : x.locked ? tag("locked", "bad") : null)))))));
 }
@@ -433,8 +447,9 @@ async function route() {
   clearTimeout(S.timer);
   const hash = location.hash.replace(/^#/, "") || "/"; const authed = !!S.me; let view;
   try {
-    if (hash === "/signup") view = authed ? (location.hash = "#/", null) : signupView();
-    else if (hash === "/login") view = authed ? (location.hash = "#/", null) : loginView();
+    if (hash.startsWith("/2fa/")) { S.ticket = hash.slice(5); view = twofaView(); }
+    else if (hash === "/signup") view = authed ? (location.hash = "#/", null) : signupView();
+    else if (hash === "/login" || hash.startsWith("/login?")) view = authed ? (location.hash = "#/", null) : loginView();
     else if (hash === "/forgot") view = forgotView();
     else if (hash === "/2fa") view = S.ticket ? twofaView() : loginView();
     else if (hash.startsWith("/verify/")) { try { const r = await api("POST", "/api/verify", {token: hash.slice(8)}); if (S.me) S.me = r.user; toast("E-mail confirmed"); } catch (e) { toast(e.message); } location.hash = authed ? "#/" : "#/login"; return; }
@@ -461,7 +476,7 @@ window.addEventListener("hashchange", route);
 function loadSession(d) {
   S.me = d.user; S.csrf = d.csrf || ""; S.hub = d.hub; S.payments = d.payments; S.docs = d.docs || "#";
   if (d.user) { S.orgs = d.orgs || []; S.requireVerified = !!d.require_verified; const saved = Number(localStorage.getItem("sp_org") || 0);
-    S.org = (S.orgs.find(o => o.id === saved) || S.orgs[0] || {}).id || d.org; S.role = (S.orgs.find(o => o.id === S.org) || {}).role || d.role || "owner"; }
+    S.org = (S.orgs.find(o => o.id === saved) || S.orgs[0] || {}).id || d.org; S.role = (S.orgs.find(o => o.id === S.org) || {}).role || d.role || "owner"; S.perms = d.perms || []; }
 }
 async function afterAuth() {
   const d = await api("GET", "/api/me"); loadSession(d);
@@ -470,5 +485,6 @@ async function afterAuth() {
 }
 (async () => {
   try { loadSession(await api("GET", "/api/me")); } catch (e) { /* signed out */ }
+  try { S.sso = await api("GET", "/api/sso/config"); } catch (e) { /* no SSO */ }
   route();
 })();

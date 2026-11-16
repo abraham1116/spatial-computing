@@ -78,3 +78,5 @@ dialog.modal::backdrop{background:#12233f99}
 table.mini td{border-bottom:0;padding:3px 12px 3px 0}
 tfoot td{border-bottom:0;padding-top:10px}
 textarea{resize:vertical}
+img.qr{width:200px;height:200px;border:1px solid var(--ink);image-rendering:pixelated;background:#fff}
+.ssorow{margin-top:16px}.pill{display:inline-block;font:400 11px var(--mono);border:1px solid var(--ink);padding:0 6px;margin:2px 4px 2px 0}.perms{display:grid;grid-template-columns:1fr;gap:4px;margin:10px 0}

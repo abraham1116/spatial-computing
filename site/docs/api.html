@@ -20,7 +20,9 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET</code> · <code>POST /api/orgs</code>; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/org</code></td><td>Your organizations; create one; the current one (members, pending invitations, billing details); rename or set billing details (admin); delete (owner)</td></tr>
 <tr><td><code>POST /api/org/invites</code> · <code>DELETE /api/org/invites/{id}</code> · <code>POST /api/invites/accept</code></td><td>Invite by e-mail with a role; cancel; accept with the emailed token (browser session of the invited address)</td></tr>
 <tr><td><code>PATCH</code> · <code>DELETE /api/org/members/{user_id}</code></td><td>Change a role; remove a member (or leave, with your own id)</td></tr>
-<tr><td><code>GET /api/invoices/{id}/pdf</code></td><td>The invoice as a PDF (admin and owner; numbered invoices only)</td></tr>
+<tr><td><code>GET /api/invoices/{id}/pdf</code> · <code>/api/credit-notes/{id}/pdf</code></td><td>An invoice or a credit note as a PDF (needs <code>billing.read</code>; numbered documents only)</td></tr>
+<tr><td><code>POST /api/org/roles</code> · <code>DELETE /api/org/roles/{name}</code></td><td>Define a custom role from the permission list (never more than you hold); delete one nobody uses</td></tr>
+<tr><td><code>GET /api/sso/config</code> · <code>/api/sso/start</code> · <code>/api/sso/callback</code></td><td>Single sign-on with OpenID Connect: whether it is on; redirect to the provider; return from the provider (sets the session cookie and redirects)</td></tr>
 <tr><td><code>GET /api/overview</code></td><td>Checklist, counts, estimated charge</td></tr>
 <tr><td><code>GET</code> · <code>POST /api/apps</code>; <code>GET</code> · <code>PATCH</code> · <code>DELETE /api/apps/{id}</code></td><td>List, create (<code>name</code>, <code>description</code>, <code>budget_usd</code>), read, update, delete (revokes its keys)</td></tr>
 <tr><td><code>POST /api/apps/{id}/keys</code> · <code>DELETE /api/apps/{id}/keys/{kid}</code></td><td>Create a hub key (<code>name</code>, <code>kind</code>: client or node, <code>ttl_days</code>; the token is in the answer, once); revoke</td></tr>
@@ -34,6 +36,7 @@ curl -X POST -H "Authorization: Bearer $WRITE_TOKEN" -H "Content-Type: applicati
 <tr><td><code>GET /api/sessions</code> · <code>DELETE /api/sessions/{id}</code> · <code>GET /api/activity</code></td><td>Active sessions, sign one out; security activity</td></tr>
 <tr><td><code>GET /api/admin/overview</code> · <code>/api/admin/users</code> · <code>/api/admin/settings</code> · <code>/api/admin/mail</code></td><td>First account only: totals, users, prices and company, mail queue</td></tr>
 <tr><td><code>PUT /api/admin/pricing</code> · <code>/api/admin/company</code> · <code>POST /api/admin/test-mail</code></td><td>First account only: set prices and tax (validated, bounded), company details for invoices, send a test message</td></tr>
+<tr><td><code>GET /api/admin/invoices</code> · <code>POST /api/admin/invoices/{id}/credit</code></td><td>First account only: numbered invoices; issue a credit note (<code>amount_usd</code> of the subtotal, <code>reason</code>)</td></tr>
 <tr><td><code>POST /api/billing/webhook</code></td><td>Stripe's signed webhook (no session; the signature is the authentication)</td></tr>
 <tr><td><code>GET /api/health</code></td><td><code>{"ok": true}</code></td></tr></tbody></table>
 <h2>Example: from nothing to a result</h2>

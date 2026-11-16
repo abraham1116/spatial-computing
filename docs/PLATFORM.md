@@ -17,6 +17,10 @@
 | Account | rename, export (no secrets), delete (blocked by an open invoice) |
 | Admin | first account only: users, totals, hub status, configuration |
 | Organizations and roles | every app, key, job, usage and invoice belongs to an organization; four roles (viewer, member, admin, owner) enforced on every call; invitations by e-mail (one address, single use, 7 days); personal workspace per user; at least one owner always remains |
+| Custom roles | permissions (`apps.write`, `keys.write`, `jobs.submit`, `billing.read`, `billing.pay`, `org.manage`, `members.manage`, ...) behind the four built-in roles; up to ten custom roles per organization; nobody can define or grant a role with a permission they lack |
+| Single sign-on | OpenID Connect: authorization code + PKCE, ID token verified (RS256 signature against the provider's keys, issuer, audience, expiry, nonce, confirmed e-mail), single-use state, domain allow-list, auto-create or existing accounts only; our own 2FA still applies; tested with a local fake provider using real RSA signatures |
+| VAT numbers | format for EU, UK, CH, NO; check digit for AT, BE, DE, DK, FR, IT, PL, PT (checked against known real numbers and corrupted ones); optional VIES lookup |
+| Credit notes | numbered `CN-...`, PDF, partial or full, tax at the invoice's rate; unpaid invoices shrink, paid ones refund through Stripe or stay `refund_due` |
 | Two-factor sign-in | TOTP (RFC 6238, checked against the standard test vector), eight single-use recovery codes, a code works once, five tries per attempt |
 | E-mail verification | link at sign-up; enforced for keys, jobs and organizations when SMTP is configured (flag `--require-verified`) |
 | Prices and tax | set by the operator in Admin (validated, bounded), stored in the database; invoices keep the prices they were issued with; tax rate by customer country; simplified reverse charge |
@@ -46,7 +50,8 @@ The hub, the platform and the files must share the master key, the usage file an
 - Two-factor sign-in, the organization switcher, invitations, e-mail verification and the operator's price form were also driven in a real browser session (headless Chrome): a second user joined an organization through an e-mailed link, verified their address, and the operator signed in again with a TOTP code.
 
 ## Not done
-- Tax is a rate table and a simplified reverse-charge switch, not a tax-compliance engine: no VAT-number validation, no country-specific invoice rules, no credit notes. Have an accountant check it.
-- Two-factor setup shows the key and an `otpauth://` link, not a QR code. Four fixed roles, no custom permissions. No single sign-on (SAML, OIDC). One service process with SQLite.
+- Tax is a rate table, a simplified reverse-charge switch, VAT-number checks and credit notes, not a tax-compliance engine: no country-specific invoice rules, no e-invoicing formats. Have an accountant check it.
+- No SAML. SSO tested against a local fake provider, not Google, Entra or Okta. Custom roles have no per-app scoping. One service process with SQLite.
+- The QR code encoder (byte mode, level M, versions 1 to 10) is checked module for module against the `qrcode` library; the automatic mask choice differs from that library's in some cases, which is valid QR but not identical.
 - E-mail was tested against a local SMTP stand-in, not a real provider; payments against a fake Stripe API only; the default price list is an example until the operator saves real prices.
 - Sessions last 7 days with no refresh. API tokens are per user (they act in whichever organization the `X-Org` header names, if the user belongs to it).

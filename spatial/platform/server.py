@@ -18,6 +18,7 @@ import threading
 import time
 from http import cookies
 from pathlib import Path
+import urllib.parse
 from urllib.parse import parse_qs, urlparse
 
 from ..core.auth import Authorizer, authorizer_from_file
@@ -66,8 +67,14 @@ def make_handler(pf: Platform, secure_cookies: bool):
     route("PUT", "/api/admin/pricing", "admin_pricing")
     route("PUT", "/api/admin/company", "admin_company")
     route("POST", "/api/admin/test-mail", "admin_test_mail")
+    route("GET", "/api/admin/invoices", "admin_invoices")
+    route("POST", r"/api/admin/invoices/(\d+)/credit", "admin_credit")
+    route("GET", r"/api/credit-notes/(\d+)/pdf", "credit_pdf")
     route("GET", "/api/admin/mail", "admin_mail")
     route("POST", "/api/login/2fa", "login_2fa", auth=False, csrf=False)
+    route("GET", "/api/sso/config", "sso_config", auth=False)
+    route("GET", "/api/sso/start", "sso_start", auth=False)
+    route("GET", "/api/sso/callback", "sso_callback", auth=False)
     route("POST", "/api/2fa/setup", "totp_setup", cookie_only=True)
     route("POST", "/api/2fa/enable", "totp_enable", cookie_only=True)
     route("POST", "/api/2fa/disable", "totp_disable", cookie_only=True)
@@ -78,6 +85,8 @@ def make_handler(pf: Platform, secure_cookies: bool):
     route("GET", "/api/org", "org_get")
     route("PATCH", "/api/org", "org_update")
     route("DELETE", "/api/org", "org_delete", cookie_only=True)
+    route("POST", "/api/org/roles", "roles_create")
+    route("DELETE", r"/api/org/roles/([a-z][a-z0-9-]{0,29})", "roles_delete")
     route("POST", "/api/org/invites", "invites_create")
     route("DELETE", r"/api/org/invites/(\d+)", "invites_revoke")
     route("PATCH", r"/api/org/members/(\d+)", "members_role")
@@ -235,7 +244,7 @@ def make_handler(pf: Platform, secure_cookies: bool):
             user, csrf = s
             out = {"user": pf.user_view(user) if user else None, "csrf": csrf, "hub": pf.hub_public, "payments": pf.stripe.configured, "docs": pf.docs_url}
             if user:
-                out.update(orgs=pf.list_orgs(user), org=user.org_id, role=user["role"], require_verified=pf.require_verified)
+                out.update(orgs=pf.list_orgs(user), org=user.org_id, role=user["role"], perms=sorted(user["perms"]), require_verified=pf.require_verified)
             self._json(200, out)
 
         def h_signup(self, g, u, s):
@@ -251,6 +260,33 @@ def make_handler(pf: Platform, secure_cookies: bool):
             except TwoFactorRequired as e:
                 return self._json(200, {"needs_2fa": True, "ticket": e.ticket})
             self._json(200, {"user": user, "csrf": csrf}, self._set_cookie(token))
+
+        def h_sso_config(self, g, u, s):
+            self._json(200, pf.sso_config())
+
+        def _redirect(self, location: str, extra: dict | None = None):
+            self.send_response(302)
+            self.send_header("Location", location)
+            self.send_header("Cache-Control", "no-store")
+            for k, v in (extra or {}).items():
+                self.send_header(k, v)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def h_sso_start(self, g, u, s):
+            self._redirect(pf.sso_start(self._ip()))
+
+        def h_sso_callback(self, g, u, s):
+            q = parse_qs(u.query)
+            try:
+                if q.get("error"):
+                    raise ApiError(401, "single sign-on was cancelled or refused by the provider")
+                token, csrf, user = pf.sso_callback((q.get("code") or [""])[0], (q.get("state") or [""])[0], self._ip(), self.headers.get("User-Agent", ""))
+            except TwoFactorRequired as e:
+                return self._redirect("/#/2fa/" + e.ticket)
+            except ApiError as e:
+                return self._redirect("/#/login?sso_error=" + urllib.parse.quote(e.message))
+            self._redirect("/#/", self._set_cookie(token))
 
         def h_login_2fa(self, g, u, s):
             d = self._data()
@@ -292,6 +328,14 @@ def make_handler(pf: Platform, secure_cookies: bool):
             pf.delete_org(s[0])
             self._json(200, {"ok": True})
 
+        def h_roles_create(self, g, u, s):
+            d = self._data()
+            self._json(201, {"role": pf.create_role(s[0], d.get("name"), d.get("perms"))})
+
+        def h_roles_delete(self, g, u, s):
+            pf.delete_role(s[0], g[0])
+            self._json(200, {"ok": True})
+
         def h_invites_create(self, g, u, s):
             d = self._data()
             self._json(201, {"invite": pf.invite(s[0], d.get("email"), d.get("role", "member"))})
@@ -326,6 +370,17 @@ def make_handler(pf: Platform, secure_cookies: bool):
 
         def h_admin_test_mail(self, g, u, s):
             self._json(200, pf.admin_test_mail(s[0], self._data().get("to")))
+
+        def h_admin_invoices(self, g, u, s):
+            self._json(200, self._page(u, pf.admin_invoices(s[0], 500), "invoices"))
+
+        def h_admin_credit(self, g, u, s):
+            d = self._data()
+            self._json(201, {"credit_note": pf.admin_credit_note(s[0], int(g[0]), d.get("amount_usd"), d.get("reason"))})
+
+        def h_credit_pdf(self, g, u, s):
+            pdf, name = pf.credit_note_pdf(s[0], int(g[0]))
+            self._send(200, pdf, "application/pdf", {"Content-Disposition": f'attachment; filename="{name}"'})
 
         def h_admin_mail(self, g, u, s):
             self._json(200, {"mail": pf.admin_mail(s[0])})
@@ -485,6 +540,11 @@ def main(argv=None):
     ap.add_argument("--smtp-from", default="no-reply@localhost")
     ap.add_argument("--smtp-ssl", action="store_true", help="implicit TLS (port 465) instead of STARTTLS")
     ap.add_argument("--smtp-no-starttls", action="store_true", help="plain SMTP, for a local relay only")
+    ap.add_argument("--oidc-issuer", help="OpenID Connect provider URL (enables 'Sign in with ...'); the client secret goes in OIDC_CLIENT_SECRET")
+    ap.add_argument("--oidc-client-id")
+    ap.add_argument("--oidc-name", default="Single sign-on", help="label of the sign-in button")
+    ap.add_argument("--oidc-domains", default="", help="comma list: only these e-mail domains may sign in this way")
+    ap.add_argument("--oidc-no-create", action="store_true", help="only existing accounts may sign in this way")
     ap.add_argument("--require-verified", choices=["auto", "yes", "no"], default="auto", help="e-mail verification before keys and jobs (auto: only when SMTP is configured)")
     ap.add_argument("--dev-outbox", action="store_true", help="expose /api/dev/outbox (reset links) for local development")
     a = ap.parse_args(argv)
@@ -501,6 +561,13 @@ def main(argv=None):
                   a.public_url or f"http://{a.host}:{a.port}", smtp=smtp, docs_url=a.docs_url,
                   require_verified={"auto": None, "yes": True, "no": False}[a.require_verified])
     pf.dev_outbox = a.dev_outbox
+    if a.oidc_issuer:
+        from .oidc import Oidc
+        secret = os.environ.get("OIDC_CLIENT_SECRET", "")
+        if not (a.oidc_client_id and secret):
+            raise SystemExit("--oidc-issuer needs --oidc-client-id and the OIDC_CLIENT_SECRET environment variable")
+        pf.oidc = Oidc(a.oidc_issuer, a.oidc_client_id, secret, f"{pf.public_url}/api/sso/callback", a.oidc_name,
+                       tuple(d.strip().lower() for d in a.oidc_domains.split(",") if d.strip()), not a.oidc_no_create)
     srv = serve(pf, a.host, a.port, a.allow_remote, a.secure_cookies)
 
     def ingest_loop():

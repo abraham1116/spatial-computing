@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS users(
   recovery TEXT NOT NULL DEFAULT '[]', personal_org INTEGER);
 CREATE TABLE IF NOT EXISTS orgs(
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, created REAL NOT NULL, personal INTEGER NOT NULL DEFAULT 0,
-  billing_name TEXT NOT NULL DEFAULT '', billing_address TEXT NOT NULL DEFAULT '', billing_country TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '');
+  billing_name TEXT NOT NULL DEFAULT '', billing_address TEXT NOT NULL DEFAULT '', billing_country TEXT NOT NULL DEFAULT '', vat_id TEXT NOT NULL DEFAULT '', vat_status TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS members(org_id INTEGER NOT NULL, user_id INTEGER NOT NULL, role TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(org_id, user_id));
+CREATE TABLE IF NOT EXISTS org_roles(org_id INTEGER NOT NULL, name TEXT NOT NULL, perms TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(org_id, name));
+CREATE TABLE IF NOT EXISTS sso_states(state_hash TEXT PRIMARY KEY, nonce TEXT NOT NULL, verifier TEXT NOT NULL, expires REAL NOT NULL, ip TEXT);
 CREATE TABLE IF NOT EXISTS invites(
   id INTEGER PRIMARY KEY, org_id INTEGER NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL, token_hash TEXT UNIQUE NOT NULL, invited_by INTEGER NOT NULL,
   created REAL NOT NULL, expires REAL NOT NULL, accepted REAL);
@@ -38,7 +40,10 @@ CREATE TABLE IF NOT EXISTS offsets(name TEXT PRIMARY KEY, value INTEGER NOT NULL
 CREATE TABLE IF NOT EXISTS invoices(
   id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, period TEXT NOT NULL, amount_usd REAL NOT NULL, status TEXT NOT NULL,
   lines TEXT NOT NULL, created REAL NOT NULL, paid REAL, provider_ref TEXT, org_id INTEGER, number TEXT, subtotal_usd REAL, tax_rate REAL, tax_usd REAL,
-  billing TEXT, seller TEXT);
+  billing TEXT, seller TEXT, payment_ref TEXT, credited_usd REAL NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS credit_notes(
+  id INTEGER PRIMARY KEY, org_id INTEGER NOT NULL, invoice_id INTEGER NOT NULL, number TEXT NOT NULL, subtotal_usd REAL NOT NULL, tax_usd REAL NOT NULL,
+  total_usd REAL NOT NULL, reason TEXT NOT NULL, created REAL NOT NULL, status TEXT NOT NULL, refund_ref TEXT, created_by INTEGER);
 CREATE TABLE IF NOT EXISTS resets(token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires REAL NOT NULL, used INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS outbox(id INTEGER PRIMARY KEY, to_addr TEXT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL, created REAL NOT NULL, sent REAL,
   attempts INTEGER NOT NULL DEFAULT 0, next_try REAL NOT NULL DEFAULT 0, last_error TEXT);
@@ -80,7 +85,9 @@ class DB:
     ADD = {"users": [("email_verified", "INTEGER NOT NULL DEFAULT 0"), ("totp_secret", "TEXT"), ("totp_enabled", "INTEGER NOT NULL DEFAULT 0"),
                      ("totp_last_step", "INTEGER NOT NULL DEFAULT 0"), ("recovery", "TEXT NOT NULL DEFAULT '[]'"), ("personal_org", "INTEGER")],
            "apps": [("org_id", "INTEGER")],
-           "invoices": [("org_id", "INTEGER"), ("number", "TEXT"), ("subtotal_usd", "REAL"), ("tax_rate", "REAL"), ("tax_usd", "REAL"), ("billing", "TEXT"), ("seller", "TEXT")],
+           "invoices": [("org_id", "INTEGER"), ("number", "TEXT"), ("subtotal_usd", "REAL"), ("tax_rate", "REAL"), ("tax_usd", "REAL"), ("billing", "TEXT"), ("seller", "TEXT"),
+                        ("payment_ref", "TEXT"), ("credited_usd", "REAL NOT NULL DEFAULT 0")],
+           "orgs": [("vat_status", "TEXT NOT NULL DEFAULT ''")],
            "outbox": [("attempts", "INTEGER NOT NULL DEFAULT 0"), ("next_try", "REAL NOT NULL DEFAULT 0"), ("last_error", "TEXT")]}
 
     def _migrate(self) -> None:

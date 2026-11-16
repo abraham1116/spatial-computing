@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0
+- Console: OpenID Connect single sign-on (PKCE, RS256 verification); custom roles built from permissions with a no-escalation rule; VAT-number validation (format and check digits, optional VIES); credit notes with PDF and Stripe refunds; operator warnings; QR code for two-factor setup (own encoder, checked against the `qrcode` library module for module).
+- Remote desktop: clipboard switch and a view-only password (`--no-clipboard`, `--view-link`), verified with a real RFB client.
+- 61 platform tests (was 33); the full suite is 242 tests.
+
 ## 0.16.0
 - Console: organizations with four roles and e-mailed invitations, an organization switcher, a Team page; two-factor sign-in (TOTP + recovery codes); e-mail verification; operator-set prices and tax in Admin (stored, validated, invoices keep issued prices); tax by customer country with a simplified reverse charge; gap-free numbered invoices with PDF; billing details; SMTP mail queue with retries; per-user and per-token rate limits; pagination; database migration of older versions.
 - Remote desktop: `spatial.runtime.desktop` runs xterm, xclock or mousepad in a container and serves it through noVNC (loopback only, one-time password, no capabilities, read-only root).

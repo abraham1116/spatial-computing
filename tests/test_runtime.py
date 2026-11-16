@@ -149,3 +149,97 @@ def test_remote_desktop_serves_a_vnc_session_on_loopback_only_and_refuses_unknow
         assert out.strip() and all(line.startswith("127.0.0.1:") for line in out.strip().splitlines())      # published on loopback only (the runtime's own report)
     finally:
         d.stop()
+
+
+class _Rfb:
+    """A minimal RFB 3.8 client over a websocket (what noVNC does): enough for VNC authentication, key and pointer events."""
+
+    def __init__(self, port):
+        import base64, os, socket
+        self.s = socket.create_connection(("127.0.0.1", port), timeout=30)
+        key = base64.b64encode(os.urandom(16)).decode()
+        self.s.sendall((f"GET /websockify HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: binary\r\n\r\n").encode())
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            buf += self.s.recv(4096)
+        self.buf = bytearray(buf.partition(b"\r\n\r\n")[2])
+
+    def _need(self, n):
+        while len(self.buf) < n:
+            chunk = self.s.recv(65536)
+            if not chunk:
+                raise ConnectionError("closed")
+            self.buf.extend(chunk)
+
+    def frame(self):
+        import struct
+        self._need(2)
+        ln, off = self.buf[1] & 0x7f, 2
+        if ln == 126:
+            self._need(4); ln, off = struct.unpack(">H", bytes(self.buf[2:4]))[0], 4
+        self._need(off + ln)
+        data = bytes(self.buf[off:off + ln]); del self.buf[:off + ln]
+        return data
+
+    def send(self, data):
+        import os, struct
+        mask = os.urandom(4)
+        hdr = bytes([0x82, 0x80 | len(data)]) if len(data) < 126 else bytes([0x82, 0x80 | 126]) + struct.pack(">H", len(data))
+        self.s.sendall(hdr + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
+
+    def login(self, password):
+        import struct
+        try:
+            from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
+        except ImportError:
+            from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
+        from cryptography.hazmat.primitives.ciphers import Cipher, modes
+        self.frame()                                                                  # "RFB 003.008\n"
+        self.send(b"RFB 003.008\n")
+        assert self.frame()[0] >= 1
+        self.send(bytes([2]))                                                         # VNC authentication
+        challenge = self.frame()
+        k = bytes(int(f"{b:08b}"[::-1], 2) for b in (password.encode() + b"\0" * 8)[:8])     # VNC reverses the bits of each key byte
+        enc = Cipher(TripleDES(k * 3), modes.ECB()).encryptor()                      # DES = 3DES with one key repeated
+        self.send(enc.update(challenge[:8]) + enc.update(challenge[8:16]))
+        if struct.unpack(">I", self.frame()[:4])[0] != 0:
+            self.s.close(); return False
+        self.send(bytes([1]))                                                         # ClientInit: shared session
+        self.frame()                                                                  # ServerInit
+        return True
+
+    def click(self, x, y):
+        import struct, time
+        for mask in (1, 0):
+            self.send(struct.pack(">BBHH", 5, mask, x, y)); time.sleep(0.2)
+
+    def type(self, text):
+        import struct, time
+        for ch in text + "\n":
+            for down in (1, 0):
+                self.send(struct.pack(">BBHI", 4, down, 0, 0xff0d if ch == "\n" else ord(ch))); time.sleep(0.02)
+
+
+@pytest.mark.skipif(_oci is None, reason="no reachable container daemon")
+def test_remote_desktop_view_only_password_and_clipboard_policy_are_enforced():
+    import subprocess, time
+    from spatial.runtime.desktop import start
+    d = start("xterm", wait_s=120, clipboard=False, view_only_link=True)
+    try:
+        assert d.view_url and "view_only=1" in d.view_url and d.view_password != d.password
+        run = lambda *a: subprocess.run([d.exe, *a], capture_output=True, text=True, env=d.env).stdout
+        args = run("exec", d.container, "ps", "-o", "args")
+        assert "-noclipboard" in args and "-nosetclipboard" in args                                             # clipboard off, both ways
+        assert not _Rfb(d.port).login("wrong-password")                                                         # a wrong password is refused
+        full, view = _Rfb(d.port), _Rfb(d.port)
+        assert full.login(d.password) and view.login(d.view_password)                                           # both connect to the same shared session
+        view.click(500, 300); view.type("touch /tmp/by-viewer"); time.sleep(1.0)                                # the watcher clicks and types...
+        assert "by-viewer" not in run("exec", d.container, "ls", "/tmp")                                       # ...and nothing happens
+        full.click(500, 300); full.type("touch /tmp/by-owner")                                                  # the owner types...
+        deadline = time.time() + 20
+        while time.time() < deadline and "by-owner" not in run("exec", d.container, "ls", "/tmp"):
+            time.sleep(0.5)
+        assert "by-owner" in run("exec", d.container, "ls", "/tmp") and "by-viewer" not in run("exec", d.container, "ls", "/tmp")      # ...and it runs
+        full.s.close(); view.s.close()
+    finally:
+        d.stop()

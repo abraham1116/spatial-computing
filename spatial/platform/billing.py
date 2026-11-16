@@ -25,11 +25,12 @@ DEFAULT_PRICING = {
     "tax_label": "VAT",
     "tax_rate_percent": 0.0,                       # default rate added to every invoice
     "tax_by_country": {},                          # {"FR": 20, "DE": 19}: overrides the default rate by the customer's billing country
+    "check_vat_with_vies": False,                  # ask the European Commission's VIES service when a customer saves a VAT id
     "no_tax_with_vat_id_abroad": False,            # simplified B2B reverse charge: a customer with a VAT id outside the seller's country pays no tax
 }
 
 PRICING_KEYS = {"currency": str, "note": str, "free_compute_hours_per_month": (int, float), "compute_usd_per_hour": (int, float), "min_invoice_usd": (int, float),
-                "tax_label": str, "tax_rate_percent": (int, float), "tax_by_country": dict, "no_tax_with_vat_id_abroad": bool}
+                "tax_label": str, "tax_rate_percent": (int, float), "tax_by_country": dict, "no_tax_with_vat_id_abroad": bool, "check_vat_with_vies": bool}
 
 
 def validate_pricing(d: dict) -> dict:
@@ -115,6 +116,17 @@ class Stripe:
         except Exception as e:
             raise PaymentError(f"payment provider error: {type(e).__name__}") from e
         return r["url"], r["id"]
+
+    def refund(self, payment_intent: str, amount_usd: float) -> str:
+        """Refund part of a card payment through Stripe. Returns the refund id."""
+        if not self.key:
+            raise PaymentError("payments are not configured on this server (no STRIPE_SECRET_KEY)")
+        form = urllib.parse.urlencode({"payment_intent": payment_intent, "amount": str(int(round(amount_usd * 100)))}).encode()
+        req = urllib.request.Request(self.base + "/v1/refunds", data=form, method="POST", headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/x-www-form-urlencoded"})
+        try:
+            return json.load(urllib.request.urlopen(req, timeout=15))["id"]
+        except Exception as e:
+            raise PaymentError(f"payment provider error: {type(e).__name__}") from e
 
     def verify_webhook(self, payload: bytes, header: str, tolerance_s: int = 300, now: float | None = None) -> dict:
         """Check the Stripe-Signature header (t=..,v1=hmac_sha256(secret, 't.payload')) and return the event."""

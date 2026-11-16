@@ -40,7 +40,7 @@ ENGINES: list[Engine] = [
            "CUDA C and HIP generated, never compiled or run; two kernel shapes (2-D map, whole-grid sum with shared memory), no tiling or tensor cores"),
     Engine("platform", "Console and account service", "spatial.platform", Status.FIRST_COMPONENTS,
            "tests/test_platform.py (14 tests, real hub and agent), a driven browser session",
-           "one process with SQLite; roles are fixed; tax is a rate table, not a compliance engine; e-mail tested against a local SMTP stand-in, payments against a fake Stripe API only"),
+           "one process with SQLite; no SAML; tax tools are not a compliance engine; e-mail tested against a local SMTP stand-in, payments against a fake Stripe API only"),
     Engine("planner", "Spatial Planner (the one objective)", "spatial.unified", Status.OPERATIONAL_PROTOTYPE,
            "tests/test_unified.py",
            "estimates come from probes and measured constants on one machine; calibration is a median of past ratios; no learned model; fleet and QPU pricing need the caller's prices"),

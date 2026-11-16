@@ -279,8 +279,8 @@ def test_reverse_charge_for_a_business_abroad_and_no_pdf_for_waived_invoices(tmp
     pf, _, clk = make(tmp_path)
     admin = user(pf, "admin@example.com"); cust = user(pf, "c@example.com"); c = pf._c(cust)
     pf.admin_set_pricing(admin, {"compute_usd_per_hour": 1.0, "free_compute_hours_per_month": 0, "tax_rate_percent": 20, "no_tax_with_vat_id_abroad": True})
-    pf.admin_set_company(admin, {"name": "Acme", "country": "FR", "vat_id": "FR1"})
-    pf.update_org(c, billing={"name": "Firma GmbH", "country": "DE", "vat_id": "DE999"})
+    pf.admin_set_company(admin, {"name": "Acme", "country": "FR", "vat_id": "FR40303265045"})
+    pf.update_org(c, billing={"name": "Firma GmbH", "country": "DE", "vat_id": "DE 136 695 976"})
     app = pf.create_app(c, "svc"); usage_month(pf, app, clk, 2)
     assert pf.billing(c)["estimate"]["tax_rate"] == 0.0                              # DE business with a VAT id, seller is in FR
     pf.update_org(c, billing={"name": "Firma GmbH", "country": "DE", "vat_id": ""})
@@ -452,3 +452,190 @@ def test_an_old_database_is_migrated_with_personal_organisations_and_nothing_is_
     pf = Platform(db)
     row = db.one("SELECT * FROM users WHERE id=1")
     assert [a["name"] for a in pf.list_apps(row)] == ["legacy"]
+
+
+# ------------------------------------------------------------------------------------------------ VAT numbers, VIES, credit notes
+def test_vat_numbers_format_and_check_digits_for_known_numbers():
+    from spatial.platform import vat
+    good = ["FR40303265045", "DE136695976", "IT00743110157", "BE0403019261", "DK13585628", "PL5260001246", "PT501964843", "ATU13585627"]
+    assert all(vat.check(g)["ok"] and vat.check(g)["checksum"] == "ok" for g in good)
+    for g in good:                                                                      # change the last digit: the check digit catches it
+        bad = g[:-1] + str((int(g[-1]) + 1) % 10)
+        assert not vat.check(bad)["ok"], bad
+    assert vat.check("nl 004495445 b01")["ok"] and vat.check("CHE-116.281.710 MWST")["ok"] and vat.check("GB333289454")["ok"]
+    assert vat.check("NL004495445B01")["checksum"] == "not checked for this country"      # format only: said plainly
+    for bad in ("", "XX123456789", "FR1", "DE12345678", "FRAB"):
+        assert not vat.check(bad)["ok"]
+
+
+def test_billing_details_reject_a_bad_vat_number_and_vies_can_overrule(tmp_path):
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    seen = []
+
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append(self.path)
+            body = json.dumps({"isValid": not self.path.endswith("40303265045")}).encode()          # pretend this one is not registered
+            self.send_response(200); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+    fake = HTTPServer(("127.0.0.1", 0), H); threading.Thread(target=fake.serve_forever, daemon=True).start()
+    pf, _, _ = make(tmp_path)
+    admin = user(pf, "admin@example.com"); c = pf._c(admin)
+    with pytest.raises(ApiError) as e:
+        pf.update_org(c, billing={"name": "X", "country": "FR", "vat_id": "FR40303265046"})
+    assert e.value.status == 400 and "check digit" in e.value.message
+    org = pf.update_org(c, billing={"name": "X", "country": "DE", "vat_id": "de136695976"})
+    assert org["billing"]["vat_id"] == "DE136695976" and org["billing"]["vat_status"] == "format and check digit ok"       # normalised, and honest about what was checked
+    pf.admin_set_pricing(admin, {"check_vat_with_vies": True})
+    pf.vies_base = f"http://127.0.0.1:{fake.server_address[1]}"
+    try:
+        assert pf.update_org(c, billing={"name": "X", "country": "DE", "vat_id": "DE136695976"})["billing"]["vat_status"] == "registered (VIES)"
+        with pytest.raises(ApiError) as e:
+            pf.update_org(c, billing={"name": "X", "country": "FR", "vat_id": "FR40303265045"})
+        assert "not registered" in e.value.message and seen
+    finally:
+        fake.shutdown()
+    pf.vies_base = "http://127.0.0.1:1"                                                 # service unreachable: not a reason to refuse a customer
+    assert "VIES unreachable" in pf.update_org(c, billing={"name": "X", "country": "DE", "vat_id": "DE136695976"})["billing"]["vat_status"]
+
+
+def invoice_for(pf, clk, hours=4, rate=1.0, tax=20):
+    admin = pf.db.one("SELECT * FROM users WHERE is_admin=1") or user(pf, "admin@example.com")
+    pf.admin_set_pricing(admin, {"compute_usd_per_hour": rate, "free_compute_hours_per_month": 0, "tax_rate_percent": tax, "min_invoice_usd": 0.5})
+    cust = user(pf, "cust@example.com"); c = pf._c(cust)
+    app = pf.create_app(c, "svc"); usage_month(pf, app, clk, hours)
+    clk.t += 40 * 86400
+    return admin, c, pf.billing(c)["invoices"][0]
+
+
+def test_credit_notes_reduce_unpaid_invoices_are_numbered_and_bounded(tmp_path):
+    pf, _, clk = make(tmp_path)
+    admin, c, inv = invoice_for(pf, clk)                                                 # 4 h x 1.00 + 20 % = 4.80
+    assert abs(inv["amount_usd"] - 4.8) < 1e-9
+    with pytest.raises(ApiError) as e:
+        pf.admin_credit_note(c, inv["id"], 1.0, "not the operator")
+    assert e.value.status == 404
+    for bad in ((0, "reason"), (-1, "reason"), ("x", "reason"), (1.0, ""), (99, "too much")):
+        with pytest.raises(ApiError):
+            pf.admin_credit_note(admin, inv["id"], *bad)
+    n1 = pf.admin_credit_note(admin, inv["id"], 1.0, "downtime on 12 Nov")               # 1.00 + 0.20 tax
+    assert n1["number"].startswith("CN-") and n1["number"].endswith("00001") and abs(n1["total_usd"] - 1.2) < 1e-9 and n1["status"] == "applied"
+    b = pf.billing(c)
+    assert abs(b["invoices"][0]["amount_usd"] - 3.6) < 1e-9 and b["credit_notes"][0]["number"] == n1["number"]       # the open invoice shrank
+    n2 = pf.admin_credit_note(admin, inv["id"], 3.0, "goodwill")                         # the rest of the subtotal
+    assert n2["number"].endswith("00002")
+    with pytest.raises(ApiError) as e:
+        pf.admin_credit_note(admin, inv["id"], 0.01, "again")
+    assert "can still be credited" in e.value.message
+    b = pf.billing(c)
+    assert b["invoices"][0]["status"] == "credited" and b["invoices"][0]["amount_usd"] == 0
+    pdf, name = pf.credit_note_pdf(c, b["credit_notes"][0]["id"])
+    assert pdf.startswith(b"%PDF") and b"CREDIT NOTE" in pdf and inv["number"].encode() in pdf and name.endswith(".pdf")
+    with pytest.raises(ApiError):
+        pf.credit_note_pdf(pf._c(user(pf, "other@example.com")), b["credit_notes"][0]["id"])       # someone else's note
+
+
+def test_credit_note_on_a_paid_invoice_refunds_through_stripe_or_stays_due(tmp_path):
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from spatial.platform.billing import Stripe
+    calls = []
+
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers["Content-Length"]); calls.append((self.path, self.rfile.read(n).decode()))
+            body = json.dumps({"id": "re_123", "url": "https://x", "payment_intent": "pi_9"}).encode()
+            self.send_response(200); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+    fake = HTTPServer(("127.0.0.1", 0), H); threading.Thread(target=fake.serve_forever, daemon=True).start()
+    pf, _, clk = make(tmp_path)
+    admin, c, inv = invoice_for(pf, clk)
+    pf.stripe = Stripe("sk_test", "whsec_x", f"http://127.0.0.1:{fake.server_address[1]}")
+    pf.pay(c, inv["id"])
+    import hashlib, hmac
+    payload = json.dumps({"type": "checkout.session.completed", "data": {"object": {"id": "cs_test_1", "payment_status": "paid", "client_reference_id": str(inv["id"]), "payment_intent": "pi_9"}}}).encode()
+    pf.db.x("UPDATE invoices SET provider_ref='cs_test_1' WHERE id=?", (inv["id"],))
+    ts = int(clk.t); sig = hmac.new(b"whsec_x", f"{ts}.".encode() + payload, hashlib.sha256).hexdigest()
+    assert pf.webhook(payload, f"t={ts},v1={sig}") is True
+    try:
+        n = pf.admin_credit_note(admin, inv["id"], 2.0, "refund half")
+        assert n["status"] == "refunded" and n["refund_ref"] == "re_123"
+        path, form = calls[-1]
+        assert path == "/v1/refunds" and "payment_intent=pi_9" in form and "amount=240" in form              # 2.00 + 20 % tax, in cents
+        assert pf.db.one("SELECT status, credited_usd FROM invoices WHERE id=?", (inv["id"],))["status"] == "paid"        # a paid invoice stays paid
+        pf.stripe = Stripe(None, None)                                                   # no provider: the note stands, the money is flagged as owed
+        assert pf.admin_credit_note(admin, inv["id"], 1.0, "second")["status"] == "refund_due"
+    finally:
+        fake.shutdown()
+
+
+def test_operator_warnings_name_what_is_missing_before_invoicing(tmp_path):
+    pf, _, _ = make(tmp_path)
+    admin = user(pf, "admin@example.com")
+    w = pf.admin_settings(admin)["warnings"]
+    assert any("example price list" in x for x in w) and any("Company name" in x for x in w)
+    pf.admin_set_pricing(admin, {"compute_usd_per_hour": 1, "tax_rate_percent": 20})
+    assert any("VAT id is empty" in x for x in pf.admin_settings(admin)["warnings"]) and any("country" in x for x in pf.admin_settings(admin)["warnings"])
+    pf.admin_set_company(admin, {"name": "Acme", "address": "1 rue X", "vat_id": "FR40303265045", "country": "FR"})
+    assert pf.admin_settings(admin)["warnings"] == []
+    pf.admin_set_company(admin, {"name": "Acme", "address": "1 rue X", "vat_id": "FR40303265046", "country": "FR"})
+    assert any("does not look valid" in x for x in pf.admin_settings(admin)["warnings"])
+
+
+# ------------------------------------------------------------------------------------------------ custom roles
+def test_custom_roles_grant_exactly_their_permissions_and_nobody_can_escalate(tmp_path):
+    from spatial.platform.service import PERMS
+    pf, _, clk = make(tmp_path)
+    owner, org = org_with(pf)
+    co = pf._c(owner, org["id"])
+    role = pf.create_role(co, "billing-clerk", ["billing.read", "billing.pay"])
+    assert role["perms"] == ["billing.pay", "billing.read"] and {r["name"] for r in pf.list_roles(co)} >= {"viewer", "member", "admin", "owner", "billing-clerk"}
+    for bad in (("Admin", ["billing.read"]), ("member", ["billing.read"]), ("x", []), ("x", ["nonsense"]), ("x", ["org.delete"]), ("x", ["members.owner"]), ("a b", ["billing.read"]), ("1x", ["billing.read"])):
+        with pytest.raises(ApiError):
+            pf.create_role(co, *bad)
+    with pytest.raises(ApiError) as e:
+        pf.create_role(co, "billing-clerk", ["billing.read"])
+    assert e.value.status == 409
+    clerk = join(pf, owner, org, "clerk@example.com", "billing-clerk")
+    app = pf.create_app(co, "svc")
+    assert clerk["perms"] == frozenset({"billing.read", "billing.pay"})
+    assert pf.billing(clerk)["org"]["role"] == "billing-clerk"                          # can see billing
+    with pytest.raises(ApiError):
+        pf.create_app(clerk, "nope")                                                    # but cannot create apps
+    with pytest.raises(ApiError):
+        pf.create_key(clerk, app["id"], "k")
+    assert [a["name"] for a in pf.list_apps(clerk)] == ["svc"]                          # everyone reads
+    # a role with member management but little else: it cannot hand out what it does not have
+    pf.create_role(co, "recruiter", ["members.manage"])
+    rec = join(pf, owner, org, "rec@example.com", "recruiter")
+    with pytest.raises(ApiError) as e:
+        pf.invite(rec, "new@example.com", "admin")
+    assert e.value.status == 403                                                        # admin has permissions the recruiter lacks
+    with pytest.raises(ApiError):
+        pf.create_role(rec, "sneaky", ["members.manage", "billing.read"])
+    assert pf.invite(rec, "new@example.com", "viewer")["role"] == "viewer"             # a role it fully covers is fine
+    with pytest.raises(ApiError):
+        pf.set_member_role(rec, clerk["id"], "owner")
+    # in use: cannot be deleted; unused: can
+    with pytest.raises(ApiError) as e:
+        pf.delete_role(co, "billing-clerk")
+    assert e.value.status == 409
+    pf.set_member_role(co, clerk["id"], "viewer")
+    pf.delete_role(co, "billing-clerk")
+    assert "billing-clerk" not in {r["name"] for r in pf.list_roles(co)}
+    with pytest.raises(ApiError):
+        pf.invite(co, "z@example.com", "billing-clerk")                                 # the role is gone
+    assert set(PERMS) >= {"billing.read", "members.owner"}
+
+
+def test_a_custom_role_is_per_organisation_and_http_exposes_roles_and_permissions(web2):
+    c, pf = web2
+    st, d, _ = c.req("POST", "/api/signup", {"email": "r@example.com", "password": PW, "name": "R"}); c.csrf = d["csrf"]
+    org = c.req("POST", "/api/orgs", {"name": "Team"})[1]["org"]
+    H = {"X-Org": str(org["id"])}
+    assert c.req("POST", "/api/org/roles", {"name": "ops", "perms": ["apps.write", "jobs.submit"]}, headers=H)[0] == 201
+    detail = c.req("GET", "/api/org", headers=H)[1]["org"]
+    assert "ops" in {r["name"] for r in detail["roles"]} and "billing.pay" in detail["permission_help"] and "members.manage" in detail["perms"]
+    assert c.req("GET", "/api/me", headers=H)[1]["perms"].count("org.delete") == 1
+    other = c.req("POST", "/api/orgs", {"name": "Other"})[1]["org"]
+    assert "ops" not in {r["name"] for r in c.req("GET", "/api/org", headers={"X-Org": str(other["id"])})[1]["org"]["roles"]}
+    assert c.req("DELETE", "/api/org/roles/ops", headers=H)[0] == 200

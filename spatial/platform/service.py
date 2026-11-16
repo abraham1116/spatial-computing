@@ -3,12 +3,16 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import secrets
 import time
 from datetime import datetime, timezone
 
 from ..core.auth import Authorizer
 from . import security as sec
 from . import totp as totp_mod
+from . import vat as vat_mod
+from .oidc import Oidc, OidcError, pkce_pair
 from .billing import DEFAULT_PRICING, PaymentError, Pricing, Stripe, validate_pricing
 from .db import DB
 from .mailer import Mailer
@@ -35,7 +39,27 @@ CATALOG = {
 }
 
 
-ROLES = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}
+ROLES = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}          # the built-in roles, lowest to highest
+# Every signed-in member can READ their organization's apps, usage, fleet and jobs. Everything else is a permission:
+PERMS = {
+    "apps.write": "create and rename apps",
+    "apps.delete": "delete apps",
+    "apps.budget": "set app budgets",
+    "keys.write": "create and revoke API keys",
+    "jobs.submit": "submit jobs",
+    "billing.read": "see usage charges, invoices and credit notes",
+    "billing.pay": "pay invoices",
+    "org.manage": "rename the organization and edit billing details",
+    "members.manage": "invite and remove members, change roles, define roles",
+    "org.delete": "delete the organization",
+    "members.owner": "appoint and remove owners",
+}
+BUILTIN = {
+    "viewer": frozenset(),
+    "member": frozenset({"apps.write", "keys.write", "jobs.submit"}),
+    "admin": frozenset({"apps.write", "apps.delete", "apps.budget", "keys.write", "jobs.submit", "billing.read", "billing.pay", "org.manage", "members.manage"}),
+    "owner": frozenset(PERMS),
+}
 
 
 class Ctx(dict):
@@ -84,6 +108,8 @@ class Platform:
         self.signup_limit = sec.RateLimiter(10, 3600, clock)
         self.login_limit = sec.RateLimiter(20, 600, clock)
         self.reset_limit = sec.RateLimiter(5, 3600, clock)
+        self.oidc: Oidc | None = None
+        self.vies_base = vat_mod.VIES
         self.token_limit = sec.RateLimiter(120, 60, clock)       # per personal access token
         self.user_limit = sec.RateLimiter(600, 60, clock)        # per signed-in user
 
@@ -118,11 +144,34 @@ class Platform:
         if not m:
             raise ApiError(404, "organization not found")
         base["org_id"], base["role"] = oid, m["role"]
+        base["perms"] = self._role_perms(oid, m["role"])
         return Ctx(base)
 
-    def _need(self, c: Ctx, role: str) -> None:
-        if ROLES[c["role"]] < ROLES[role]:
-            raise ApiError(403, f"this needs the {role} role in this organization (you are {c['role']})")
+    def _role_perms(self, org_id: int, role: str) -> frozenset:
+        if role in BUILTIN:
+            return BUILTIN[role]
+        r = self.db.one("SELECT perms FROM org_roles WHERE org_id=? AND name=?", (org_id, role))
+        return frozenset(json.loads(r["perms"])) if r else frozenset()
+
+    @staticmethod
+    def _has(c: Ctx, perm: str) -> bool:
+        return perm in c["perms"]
+
+    def _need(self, c: Ctx, perm: str) -> None:
+        if perm not in c["perms"]:
+            raise ApiError(403, f"your role ({c['role']}) cannot {PERMS.get(perm, perm)}")
+
+    def _may_grant(self, c: Ctx, role: str) -> None:
+        """Nobody can hand out more than they hold: a role can be given only if all its permissions are the giver's own."""
+        if role in BUILTIN:
+            perms = BUILTIN[role]
+        else:
+            r = self.db.one("SELECT perms FROM org_roles WHERE org_id=? AND name=?", (c.org_id, role))
+            if not r:
+                raise ApiError(400, "unknown role")
+            perms = frozenset(json.loads(r["perms"]))
+        if not perms <= c["perms"]:
+            raise ApiError(403, "you cannot give a role with permissions you do not have yourself")
 
     def _need_verified(self, c) -> None:
         if self.require_verified and not c["email_verified"] and not c["is_admin"]:
@@ -157,6 +206,63 @@ class Platform:
         self.db.event(uid, "signup")
         self._send_verification(uid, email, name)
         return self.user_view(self.db.one("SELECT * FROM users WHERE id=?", (uid,)))
+
+    # ------------------------------------------------------------------ single sign-on (OpenID Connect)
+    def sso_config(self) -> dict:
+        return {"enabled": self.oidc is not None, "name": self.oidc.name if self.oidc else ""}
+
+    def sso_start(self, ip: str = "") -> str:
+        if not self.oidc:
+            raise ApiError(404, "single sign-on is not configured")
+        if not self.login_limit.allow(f"sso|{ip}"):
+            raise ApiError(429, "too many attempts; try again in a few minutes")
+        state, nonce = sec.new_token(), sec.new_token()
+        verifier, challenge = pkce_pair()
+        self.db.x("DELETE FROM sso_states WHERE expires<?", (self.clock(),))
+        self.db.x("INSERT INTO sso_states(state_hash,nonce,verifier,expires,ip) VALUES(?,?,?,?,?)", (sec.token_hash(state), nonce, verifier, self.clock() + 600, ip))
+        try:
+            return self.oidc.authorize_url(state, nonce, challenge)
+        except Exception as e:
+            raise ApiError(502, f"the identity provider is unreachable ({type(e).__name__})")
+
+    def sso_callback(self, code: str, state: str, ip: str = "", ua: str = "") -> tuple[str, str, dict]:
+        """Returns a session like login(); raises TwoFactorRequired if the account has two-factor sign-in on (our own second factor still applies)."""
+        if not self.oidc:
+            raise ApiError(404, "single sign-on is not configured")
+        row = self.db.one("SELECT * FROM sso_states WHERE state_hash=?", (sec.token_hash(state or ""),))
+        if not row or row["expires"] < self.clock():
+            raise ApiError(400, "this sign-in attempt is unknown or expired: start again")
+        self.db.x("DELETE FROM sso_states WHERE state_hash=?", (row["state_hash"],))              # single use
+        try:
+            claims = self.oidc.verify(self.oidc.exchange(code or "", row["verifier"]), row["nonce"], self.clock())
+        except OidcError as e:
+            raise ApiError(401, f"single sign-on failed: {e}")
+        except Exception as e:
+            raise ApiError(502, f"the identity provider is unreachable ({type(e).__name__})")
+        u = self.db.one("SELECT * FROM users WHERE email=?", (claims["email"],))
+        if u is None:
+            if not self.oidc.auto_create:
+                raise ApiError(403, "no account exists for this address and automatic creation is off")
+            first = self.db.one("SELECT COUNT(*) c FROM users")["c"] == 0
+            now = self.clock()
+            uid = self.db.x("INSERT INTO users(email,name,pw_hash,created,is_admin,email_verified) VALUES(?,?,?,?,?,1)",
+                            (claims["email"], claims["name"], sec.hash_password(secrets.token_urlsafe(32)), now, 1 if first else 0))      # no usable password
+            oid = self.db.x("INSERT INTO orgs(name,created,personal) VALUES(?,?,1)", (f"{claims['name']}'s workspace", now))
+            self.db.x("INSERT INTO members(org_id,user_id,role,created) VALUES(?,?,?,?)", (oid, uid, "owner", now))
+            self.db.x("UPDATE users SET personal_org=? WHERE id=?", (oid, uid))
+            self.db.event(uid, "signup_sso")
+            u = self.db.one("SELECT * FROM users WHERE id=?", (uid,))
+        elif not u["email_verified"]:
+            self.db.x("UPDATE users SET email_verified=1 WHERE id=?", (u["id"],))                  # the provider just confirmed the address
+            u = self.db.one("SELECT * FROM users WHERE id=?", (u["id"],))
+        if u["locked_until"] > self.clock():
+            raise ApiError(429, "account temporarily locked; try again later")
+        if u["totp_enabled"]:
+            ticket = sec.new_token()
+            self.db.x("INSERT INTO challenges(token_hash,user_id,expires,ip,ua) VALUES(?,?,?,?,?)", (sec.token_hash(ticket), u["id"], self.clock() + 300, ip, (ua or "")[:200]))
+            raise TwoFactorRequired(ticket)
+        self.db.event(u["id"], "login_sso")
+        return self._new_session(u, ip, ua)
 
     # ------------------------------------------------------------------ e-mail verification
     def _send_verification(self, uid: int, email: str, name: str) -> None:
@@ -240,7 +346,9 @@ class Platform:
             raise ApiError(400, "two-factor sign-in is already on")
         secret = totp_mod.new_secret()
         self.db.x("UPDATE users SET totp_secret=? WHERE id=?", (secret, user["id"]))
-        return {"secret": secret, "uri": totp_mod.uri(secret, user["email"]), "digits": 6, "period": totp_mod.STEP}
+        from . import qr
+        uri = totp_mod.uri(secret, user["email"])
+        return {"secret": secret, "uri": uri, "qr_svg": qr.svg(uri), "digits": 6, "period": totp_mod.STEP}
 
     def totp_enable(self, user, code: str) -> dict:
         u = self.db.one("SELECT * FROM users WHERE id=?", (user["id"],))
@@ -350,15 +458,15 @@ class Platform:
         o = self.db.one("SELECT * FROM orgs WHERE id=?", (c.org_id,))
         members = [{"user_id": m["user_id"], "email": m["email"], "name": m["name"], "role": m["role"], "since": m["created"]} for m in
                    self.db.q("SELECT m.user_id, m.role, m.created, u.email, u.name FROM members m JOIN users u ON u.id=m.user_id WHERE m.org_id=? ORDER BY m.created", (c.org_id,))]
-        out = {**self.org_view(c.org_id, c), "member_list": members}
-        if ROLES[c["role"]] >= ROLES["admin"]:
+        out = {**self.org_view(c.org_id, c), "member_list": members, "perms": sorted(c["perms"]), "roles": self.list_roles(c), "permission_help": PERMS}
+        if self._has(c, "members.manage") or self._has(c, "org.manage"):
             out["invites"] = [{"id": i["id"], "email": i["email"], "role": i["role"], "expires": i["expires"]} for i in
                               self.db.q("SELECT * FROM invites WHERE org_id=? AND accepted IS NULL AND expires>? ORDER BY id DESC", (c.org_id, self.clock()))]
-            out["billing"] = {"name": o["billing_name"], "address": o["billing_address"], "country": o["billing_country"], "vat_id": o["vat_id"]}
+            out["billing"] = {"name": o["billing_name"], "address": o["billing_address"], "country": o["billing_country"], "vat_id": o["vat_id"], "vat_status": o["vat_status"]}
         return out
 
     def update_org(self, c: Ctx, name=None, billing: dict | None = None) -> dict:
-        self._need(c, "admin")
+        self._need(c, "org.manage")
         if name is not None:
             if not 1 <= len(name.strip()) <= 60:
                 raise ApiError(400, "organization name must be 1 to 60 characters")
@@ -367,11 +475,25 @@ class Platform:
             f = {"name": (billing.get("name") or "")[:120], "address": (billing.get("address") or "")[:400], "country": (billing.get("country") or "").strip().upper()[:2], "vat_id": (billing.get("vat_id") or "").strip()[:40]}
             if f["country"] and not f["country"].isalpha():
                 raise ApiError(400, "country must be a 2-letter code")
-            self.db.x("UPDATE orgs SET billing_name=?, billing_address=?, billing_country=?, vat_id=? WHERE id=?", (f["name"], f["address"], f["country"], f["vat_id"], c.org_id))
+            status = ""
+            if f["vat_id"]:
+                r = vat_mod.check(f["vat_id"])
+                if not r["ok"]:
+                    raise ApiError(400, "VAT id: " + r["reason"])
+                f["vat_id"] = r["country"] + r["number"]
+                status = "format ok" if r["checksum"] in ("ok", "not checked for this country") else "format ok"
+                if r["checksum"] == "ok":
+                    status = "format and check digit ok"
+                if self.pricing.data.get("check_vat_with_vies"):
+                    v = vat_mod.vies(f["vat_id"], self.vies_base)
+                    if v is False:
+                        raise ApiError(400, "VIES (European Commission) says this VAT number is not registered")
+                    status = "registered (VIES)" if v else status + ", VIES unreachable"
+            self.db.x("UPDATE orgs SET billing_name=?, billing_address=?, billing_country=?, vat_id=?, vat_status=? WHERE id=?", (f["name"], f["address"], f["country"], f["vat_id"], status, c.org_id))
         return self.org_detail(c)
 
     def delete_org(self, c: Ctx) -> None:
-        self._need(c, "owner")
+        self._need(c, "org.delete")
         if self.db.one("SELECT personal FROM orgs WHERE id=?", (c.org_id,))["personal"]:
             raise ApiError(400, "a personal workspace cannot be deleted; delete your account instead")
         self._drop_org(c.org_id, c)
@@ -390,13 +512,12 @@ class Platform:
         self.db.event(actor["id"], "org_deleted", str(org_id))
 
     def invite(self, c: Ctx, email: str, role: str) -> dict:
-        self._need(c, "admin")
+        self._need(c, "members.manage")
         self._need_verified(c)
         email = (email or "").strip().lower()
         if not sec.valid_email(email):
             raise ApiError(400, "enter a valid e-mail address")
-        if role not in ROLES or (role == "owner" and c["role"] != "owner") or role == "owner" and False:
-            raise ApiError(403, "only an owner can invite an owner")
+        self._may_grant(c, role)
         if self.db.one("SELECT personal FROM orgs WHERE id=?", (c.org_id,))["personal"]:
             raise ApiError(400, "a personal workspace has one member: create an organization to work with others")
         if self.db.one("SELECT COUNT(*) c FROM members WHERE org_id=?", (c.org_id,))["c"] >= 25:
@@ -412,7 +533,7 @@ class Platform:
         return {"id": iid, "email": email, "role": role}
 
     def revoke_invite(self, c: Ctx, invite_id: int) -> None:
-        self._need(c, "admin")
+        self._need(c, "members.manage")
         self.db.x("DELETE FROM invites WHERE id=? AND org_id=?", (invite_id, c.org_id))
 
     def accept_invite(self, user, token: str) -> dict:
@@ -427,27 +548,26 @@ class Platform:
         return {**self.org_view(i["org_id"]), "role": i["role"]}
 
     def set_member_role(self, c: Ctx, user_id: int, role: str) -> None:
-        self._need(c, "admin")
-        if role not in ROLES:
-            raise ApiError(400, "unknown role")
+        self._need(c, "members.manage")
         m = self.db.one("SELECT role FROM members WHERE org_id=? AND user_id=?", (c.org_id, user_id))
         if not m:
             raise ApiError(404, "member not found")
-        if (role == "owner" or m["role"] == "owner") and c["role"] != "owner":
-            raise ApiError(403, "only an owner can change owners")
+        self._may_grant(c, role)                                                    # also covers "only an owner can make an owner"
+        if m["role"] == "owner" and "members.owner" not in c["perms"]:
+            raise ApiError(403, "only an owner can change an owner")
         if m["role"] == "owner" and role != "owner" and self.db.one("SELECT COUNT(*) c FROM members WHERE org_id=? AND role='owner'", (c.org_id,))["c"] <= 1:
             raise ApiError(409, "an organization needs at least one owner")
         self.db.x("UPDATE members SET role=? WHERE org_id=? AND user_id=?", (role, c.org_id, user_id))
         self.db.event(c["id"], "member_role", f"{c.org_id} {user_id} {role}")
 
     def remove_member(self, c: Ctx, user_id: int) -> None:
-        """An admin removes someone, or anyone leaves (user_id is their own id)."""
+        """Someone with members.manage removes a member, or anyone leaves (user_id is their own id)."""
         if user_id != c["id"]:
-            self._need(c, "admin")
+            self._need(c, "members.manage")
         m = self.db.one("SELECT role FROM members WHERE org_id=? AND user_id=?", (c.org_id, user_id))
         if not m:
             raise ApiError(404, "member not found")
-        if m["role"] == "owner" and c["role"] != "owner":
+        if m["role"] == "owner" and "members.owner" not in c["perms"]:
             raise ApiError(403, "only an owner can remove an owner")
         if m["role"] == "owner" and self.db.one("SELECT COUNT(*) c FROM members WHERE org_id=? AND role='owner'", (c.org_id,))["c"] <= 1:
             raise ApiError(409, "an organization needs at least one owner: make someone else owner first")
@@ -455,6 +575,40 @@ class Platform:
             raise ApiError(400, "you cannot leave your personal workspace")
         self.db.x("DELETE FROM members WHERE org_id=? AND user_id=?", (c.org_id, user_id))
         self.db.event(c["id"], "member_removed", f"{c.org_id} {user_id}")
+
+    # ------------------------------------------------------------------ custom roles
+    def list_roles(self, c: Ctx) -> list[dict]:
+        out = [{"name": n, "builtin": True, "perms": sorted(p)} for n, p in BUILTIN.items()]
+        for r in self.db.q("SELECT * FROM org_roles WHERE org_id=? ORDER BY name", (c.org_id,)):
+            out.append({"name": r["name"], "builtin": False, "perms": sorted(json.loads(r["perms"])),
+                        "members": self.db.one("SELECT COUNT(*) c FROM members WHERE org_id=? AND role=?", (c.org_id, r["name"]))["c"]})
+        return out
+
+    def create_role(self, c: Ctx, name: str, perms: list) -> dict:
+        self._need(c, "members.manage")
+        name = (name or "").strip().lower()
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,29}", name) or name in BUILTIN:
+            raise ApiError(400, "role names are 1 to 30 lowercase letters, digits or dashes and cannot be viewer, member, admin or owner")
+        if not isinstance(perms, list) or not perms or any(p not in PERMS for p in perms):
+            raise ApiError(400, "choose permissions from: " + ", ".join(PERMS))
+        if "org.delete" in perms or "members.owner" in perms:
+            raise ApiError(400, "org.delete and members.owner belong to the owner role only")
+        if not frozenset(perms) <= c["perms"]:
+            raise ApiError(403, "you cannot define a role with permissions you do not have yourself")
+        if self.db.one("SELECT COUNT(*) c FROM org_roles WHERE org_id=?", (c.org_id,))["c"] >= 10:
+            raise ApiError(400, "limit of 10 custom roles reached")
+        try:
+            self.db.x("INSERT INTO org_roles(org_id,name,perms,created) VALUES(?,?,?,?)", (c.org_id, name, json.dumps(sorted(set(perms))), self.clock()))
+        except Exception:
+            raise ApiError(409, "this role already exists")
+        self.db.event(c["id"], "role_created", f"{c.org_id} {name}")
+        return {"name": name, "builtin": False, "perms": sorted(set(perms))}
+
+    def delete_role(self, c: Ctx, name: str) -> None:
+        self._need(c, "members.manage")
+        if self.db.one("SELECT 1 FROM members WHERE org_id=? AND role=?", (c.org_id, name)) or self.db.one("SELECT 1 FROM invites WHERE org_id=? AND role=? AND accepted IS NULL", (c.org_id, name)):
+            raise ApiError(409, "members or pending invitations still have this role")
+        self.db.x("DELETE FROM org_roles WHERE org_id=? AND name=?", (c.org_id, name))
 
     # ------------------------------------------------------------------ apps and keys (scoped to the organisation)
     def _app(self, user, app_id: int):
@@ -479,7 +633,7 @@ class Platform:
 
     def create_app(self, user, name: str, description: str = "", budget_usd=None) -> dict:
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "apps.write")
         name = (name or "").strip()
         if not 1 <= len(name) <= 60:
             raise ApiError(400, "app name must be 1 to 60 characters")
@@ -498,7 +652,7 @@ class Platform:
 
     def delete_app(self, user, app_id: int) -> None:
         c = self._c(user)
-        self._need(c, "admin")
+        self._need(c, "apps.delete")
         a = self._app(c, app_id)
         for k in self.db.q("SELECT * FROM api_keys WHERE app_id=? AND revoked IS NULL", (a["id"],)):
             self._revoke(k)
@@ -507,7 +661,7 @@ class Platform:
 
     def update_app(self, user, app_id: int, name=None, description=None, budget_usd="keep") -> dict:
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "apps.write")
         a = self._app(c, app_id)
         if name is not None:
             if not 1 <= len(name.strip()) <= 60:
@@ -518,14 +672,14 @@ class Platform:
         if budget_usd != "keep":
             if budget_usd is not None and not (isinstance(budget_usd, (int, float)) and 0 <= budget_usd <= 1e6):
                 raise ApiError(400, "budget must be a number between 0 and 1,000,000")
-            self._need(c, "admin")                                      # the spending limit belongs to the people who pay
+            self._need(c, "apps.budget")                                      # the spending limit belongs to the people who pay
             self.db.x("UPDATE apps SET budget_usd=? WHERE id=?", (budget_usd, a["id"]))
         return self.app_view(self._app(c, app_id))
 
     def create_key(self, user, app_id: int, name: str, kind: str = "client", ttl_days: int = 90) -> dict:
         """Returns the key ONCE: only a hint (last 4 characters) is stored."""
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "keys.write")
         self._need_verified(c)
         a = self._app(c, app_id)
         if kind not in KEY_KINDS:
@@ -559,7 +713,7 @@ class Platform:
 
     def revoke_key(self, user, app_id: int, key_id: int) -> None:
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "keys.write")
         a = self._app(c, app_id)
         k = self.db.one("SELECT * FROM api_keys WHERE id=? AND app_id=?", (key_id, a["id"]))
         if not k:
@@ -648,7 +802,7 @@ class Platform:
 
     def billing(self, user) -> dict:
         c = self._c(user)
-        self._need(c, "admin")
+        self._need(c, "billing.read")
         self.ingest_usage()
         self._finalize_past(c)
         cur = period_of(self.clock())
@@ -659,7 +813,9 @@ class Platform:
         inv = [{"id": i["id"], "number": i["number"], "period": i["period"], "amount_usd": i["amount_usd"], "subtotal_usd": i["subtotal_usd"], "tax_usd": i["tax_usd"],
                 "tax_rate": i["tax_rate"], "status": i["status"], "paid": i["paid"], "lines": json.loads(i["lines"])}
                for i in self.db.q("SELECT * FROM invoices WHERE org_id=? ORDER BY period DESC", (c.org_id,))]
-        return {"period": cur, "estimate": est, "pricing": self.pricing.data, "pricing_is_default": self.pricing_is_default, "invoices": inv,
+        credits = [{"id": n["id"], "number": n["number"], "invoice_id": n["invoice_id"], "total_usd": n["total_usd"], "reason": n["reason"], "created": n["created"], "status": n["status"]}
+                   for n in self.db.q("SELECT * FROM credit_notes WHERE org_id=? ORDER BY id DESC", (c.org_id,))]
+        return {"period": cur, "estimate": est, "pricing": self.pricing.data, "pricing_is_default": self.pricing_is_default, "invoices": inv, "credit_notes": credits,
                 "payments_enabled": self.stripe.configured, "org": self.org_view(c.org_id, c)}
 
     def _next_invoice_number(self, ts: float) -> str:
@@ -697,7 +853,7 @@ class Platform:
 
     def pay(self, user, invoice_id: int) -> dict:
         c = self._c(user)
-        self._need(c, "admin")
+        self._need(c, "billing.pay")
         inv = self.db.one("SELECT * FROM invoices WHERE id=? AND org_id=?", (invoice_id, c.org_id))
         if not inv:
             raise ApiError(404, "invoice not found")
@@ -713,7 +869,7 @@ class Platform:
 
     def invoice_pdf(self, user, invoice_id: int) -> tuple[bytes, str]:
         c = self._c(user)
-        self._need(c, "admin")
+        self._need(c, "billing.read")
         i = self.db.one("SELECT * FROM invoices WHERE id=? AND org_id=?", (invoice_id, c.org_id))
         if not i or not i["number"]:
             raise ApiError(404, "invoice not found")
@@ -738,11 +894,82 @@ class Platform:
                 iid = int(obj.get("client_reference_id") or obj.get("metadata", {}).get("invoice_id") or 0)
                 inv = self.db.one("SELECT * FROM invoices WHERE id=?", (iid,))
                 if inv and inv["status"] == "open" and inv["provider_ref"] == obj.get("id"):
-                    self.db.x("UPDATE invoices SET status='paid', paid=? WHERE id=?", (self.clock(), iid))
+                    self.db.x("UPDATE invoices SET status='paid', paid=?, payment_ref=? WHERE id=?", (self.clock(), obj.get("payment_intent"), iid))
                     self.db.event(inv["user_id"], "invoice_paid", str(iid))
                     return True
         return False
 
+
+    # ------------------------------------------------------------------ credit notes (operator)
+    def _next_number(self, prefix: str, ts: float) -> str:
+        year = datetime.fromtimestamp(ts, timezone.utc).year
+        with self.db.lock:
+            self.db.x("INSERT INTO counters(name,value) VALUES(?,0) ON CONFLICT(name) DO NOTHING", (f"{prefix}-{year}",))
+            self.db.x("UPDATE counters SET value=value+1 WHERE name=?", (f"{prefix}-{year}",))
+            n = self.db.one("SELECT value FROM counters WHERE name=?", (f"{prefix}-{year}",))["value"]
+        return f"{prefix}-{year}-{n:05d}"
+
+    def admin_invoices(self, user, limit: int = 100) -> list[dict]:
+        if not user["is_admin"]:
+            raise ApiError(404, "not found")
+        return [{"id": i["id"], "number": i["number"], "org": i["org_name"], "period": i["period"], "total_usd": i["amount_usd"], "credited_usd": i["credited_usd"], "status": i["status"]}
+                for i in self.db.q("SELECT i.*, o.name org_name FROM invoices i JOIN orgs o ON o.id=i.org_id WHERE i.number IS NOT NULL ORDER BY i.id DESC LIMIT ?", (max(1, min(limit, 500)),))]
+
+    def admin_credit_note(self, user, invoice_id: int, amount_usd: float, reason: str) -> dict:
+        """Credit part or all of an invoice's subtotal. Tax is credited at the invoice's own rate. An unpaid invoice is reduced; a paid one
+        gets a refund (through Stripe when the payment is known, otherwise marked refund_due for the operator to pay back by hand)."""
+        if not user["is_admin"]:
+            raise ApiError(404, "not found")
+        inv = self.db.one("SELECT * FROM invoices WHERE id=? AND number IS NOT NULL", (invoice_id,))
+        if not inv:
+            raise ApiError(404, "invoice not found")
+        reason = (reason or "").strip()
+        if not 3 <= len(reason) <= 300:
+            raise ApiError(400, "give a reason (3 to 300 characters)")
+        if not isinstance(amount_usd, (int, float)) or isinstance(amount_usd, bool) or amount_usd <= 0:
+            raise ApiError(400, "amount must be a positive number")
+        sub_left = round((inv["subtotal_usd"] or 0) - sum(r["subtotal_usd"] for r in self.db.q("SELECT subtotal_usd FROM credit_notes WHERE invoice_id=?", (inv["id"],))), 6)
+        if amount_usd > sub_left + 1e-9:
+            raise ApiError(400, f"at most {sub_left:.4f} of the subtotal can still be credited")
+        rate = inv["tax_rate"] or 0.0
+        tax = round(amount_usd * rate / 100, 4)
+        total = round(amount_usd + tax, 4)
+        number = self._next_number("CN", self.clock())
+        status = "applied"
+        ref = None
+        if inv["status"] == "paid":
+            status = "refund_due"
+            if self.stripe.configured and inv["payment_ref"]:
+                try:
+                    ref = self.stripe.refund(inv["payment_ref"], total)
+                    status = "refunded"
+                except PaymentError:
+                    status = "refund_due"                               # the credit note stands; the money still has to go back
+        cid = self.db.x("INSERT INTO credit_notes(org_id,invoice_id,number,subtotal_usd,tax_usd,total_usd,reason,created,status,refund_ref,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                        (inv["org_id"], inv["id"], number, amount_usd, tax, total, reason, self.clock(), status, ref, user["id"]))
+        credited = round(inv["credited_usd"] + total, 4)
+        if inv["status"] == "open":
+            remaining = round(inv["amount_usd"] - total, 4)
+            self.db.x("UPDATE invoices SET amount_usd=?, credited_usd=?, status=? WHERE id=?", (max(0.0, remaining), credited, "credited" if remaining <= 1e-9 else "open", inv["id"]))
+        else:
+            self.db.x("UPDATE invoices SET credited_usd=? WHERE id=?", (credited, inv["id"]))
+        self.db.event(user["id"], "credit_note", f"{number} {inv['number']} {total}")
+        return {"id": cid, "number": number, "total_usd": total, "status": status, "refund_ref": ref}
+
+    def credit_note_pdf(self, user, note_id: int) -> tuple[bytes, str]:
+        c = self._c(user)
+        self._need(c, "billing.read")
+        n = self.db.one("SELECT * FROM credit_notes WHERE id=? AND org_id=?", (note_id, c.org_id))
+        if not n:
+            raise ApiError(404, "credit note not found")
+        inv = self.db.one("SELECT * FROM invoices WHERE id=?", (n["invoice_id"],))
+        seller = json.loads(inv["seller"] or "{}")
+        cur = seller.get("currency") or "usd"
+        pdf = render_invoice({"kind": "credit", "number": n["number"], "refers_to": inv["number"], "period": inv["period"], "issued": datetime.fromtimestamp(n["created"], timezone.utc).strftime("%Y-%m-%d"),
+                              "status": n["status"], "seller": seller, "customer": json.loads(inv["billing"] or "{}"), "lines": [{"description": ("Credit: " + n["reason"])[:48], "qty": "1", "unit": f"{-n['subtotal_usd']:.2f} {cur.upper()}", "amount": -n["subtotal_usd"]}],
+                              "subtotal": -n["subtotal_usd"], "tax_rate": inv["tax_rate"] or 0.0, "tax": -n["tax_usd"], "total": -n["total_usd"], "currency": cur,
+                              "note": "This credit note reduces invoice " + inv["number"] + "." + (" Refund due to the customer." if n["status"] == "refund_due" else "")})
+        return pdf, f"{n['number']}.pdf"
 
     # ------------------------------------------------------------------ account tokens (console API) and sessions
     def create_token(self, user, name: str, scope: str = "read", ttl_days: int = 90) -> dict:
@@ -896,7 +1123,7 @@ class Platform:
 
     def submit_job(self, user, app_id: int, workload: str, params: dict) -> dict:
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "jobs.submit")
         self._need_verified(c)
         a = self._app(c, app_id)
         if self.app_view(a)["over_budget"]:
@@ -976,7 +1203,22 @@ class Platform:
         return {"pricing": self.pricing.data, "pricing_is_default": self.pricing_is_default, "company": self.company(),
                 "email": {"smtp_configured": bool(self.smtp), "require_verified": self.require_verified,
                           "unsent": self.db.one("SELECT COUNT(*) c FROM outbox WHERE sent IS NULL")["c"]},
-                "payments_enabled": self.stripe.configured}
+                "payments_enabled": self.stripe.configured, "warnings": self._warnings()}
+
+    def _warnings(self) -> list[str]:
+        co, p, w = self.company(), self.pricing.data, []
+        taxed = p["tax_rate_percent"] > 0 or any(v > 0 for v in p["tax_by_country"].values())
+        if not co["name"] or not co["address"]:
+            w.append("Company name and address are empty: they are printed on every invoice.")
+        if taxed and not co["vat_id"]:
+            w.append("Tax is charged but your company VAT id is empty: invoices with tax normally must show it.")
+        if co["vat_id"] and not vat_mod.check(co["vat_id"])["ok"]:
+            w.append("Your company VAT id does not look valid: " + vat_mod.check(co["vat_id"])["reason"])
+        if taxed and not co["country"]:
+            w.append("Set your company country: it decides when the simplified reverse charge applies.")
+        if self.pricing_is_default:
+            w.append("You are using the example price list.")
+        return w
 
     def admin_set_pricing(self, user, data: dict) -> dict:
         if not user["is_admin"]:
@@ -1055,7 +1297,7 @@ class Platform:
     def run_test_job(self, user, app_id: int) -> dict:
         """Submit a small real job to the hub with a short-lived credential of this app, wait for it, return the result."""
         c = self._c(user)
-        self._need(c, "member")
+        self._need(c, "jobs.submit")
         self._need_verified(c)
         a = self._app(c, app_id)
         if self.app_view(a)["over_budget"]:

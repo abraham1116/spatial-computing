@@ -37,7 +37,8 @@ def verify(secret: str, code: str, last_step: int = 0, now: float | None = None,
 
 
 def uri(secret: str, email: str, issuer: str = "Spatial Computing") -> str:
-    return f"otpauth://totp/{urllib.parse.quote(issuer)}:{urllib.parse.quote(email)}?secret={secret}&issuer={urllib.parse.quote(issuer)}&algorithm=SHA1&digits=6&period={STEP}"
+    # SHA-1, 6 digits and 30 s are the defaults every authenticator app assumes: leaving them out keeps the QR code small
+    return f"otpauth://totp/{urllib.parse.quote(issuer)}:{urllib.parse.quote(email)}?secret={secret}&issuer={urllib.parse.quote(issuer)}"
 
 
 def new_recovery_codes(n: int = 8) -> list[str]:
