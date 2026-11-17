@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0
+- Kernel DSL: Triton back end (`to_triton()`), generated only, like CUDA and HIP: no NVIDIA, AMD, or Intel GPU and no `triton` package here, so this source has never been passed to `triton.jit`, compiled, or run. One Triton "program" per output pixel, same shape as the CUDA back end. Integer `//` truncates toward zero via a float32 cast (Triton's own `//` floors like Python); `and`/`or` become `&`/`|` after boolifying each side (tensors have no short-circuit evaluation); no reduction variant (Triton's cross-program reduction does not map onto the single-pass shared-memory shape the other back ends use). `run()`/`reduce()` refuse `"triton"` honestly, the same way they already refused `"cuda"`/`"hip"`; `"hip"` now gets the same honest message from `run()` too (it previously fell through to a generic "unknown device"). `tl`, `triton`, `out_ptr` added to the reserved names.
+- 259 tests (was 257).
+
 ## 0.18.0
 - Invoices: legal mentions by seller country (FR, DE, ES, IT, NL, BE, GB checklist: registration number, legal form, share capital, tax number), localized reverse-charge phrase, due date and service period, payment details (IBAN validated by its check digits, BIC), payment terms, French late-payment mentions; the operator warning names what is missing for the seller's country.
 - E-invoicing: `GET /api/invoices/{id}/ubl` and `/api/credit-notes/{id}/ubl` return UBL 2.1 XML with the Peppol BIS 3.0 / EN 16931 identifiers. Generated files validate against the official OASIS UBL 2.1 schemas (in `tests/data/ubl`). Not checked against the Peppol Schematron business rules and not sent through any network (no Peppol access point, no Chorus Pro, no Factur-X).
