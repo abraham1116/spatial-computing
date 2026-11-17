@@ -172,6 +172,66 @@ def pk_batch_score_cpu(n: int, signals: int) -> int:
 def pk_batch_score_metal(n: int, signals: int) -> int:
     return _pk("batch_score", "metal", n, signals=signals)
 
+def pk_rtb_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a real-time ad-bid score (RTB-shaped), on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_rtb_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+def pk_credit_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a credit/loan application score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_credit_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+def pk_claims_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): an insurance claim score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_claims_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+def pk_alerts_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a security alert score (SIEM-shaped), on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_alerts_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+def pk_moderation_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a content moderation score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_moderation_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+def pk_telecom_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a telecom billing/fraud score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_telecom_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
 
 def montecarlo_pi(samples: int, seed: int = 0) -> float:
     rng = np.random.default_rng(seed)
@@ -268,6 +328,18 @@ REGISTRY = {
     "pk_collatz_metal": pk_collatz_metal,
     "pk_batch_score_cpu": pk_batch_score_cpu,
     "pk_batch_score_metal": pk_batch_score_metal,
+    "pk_rtb_cpu": pk_rtb_cpu,
+    "pk_rtb_metal": pk_rtb_metal,
+    "pk_credit_cpu": pk_credit_cpu,
+    "pk_credit_metal": pk_credit_metal,
+    "pk_claims_cpu": pk_claims_cpu,
+    "pk_claims_metal": pk_claims_metal,
+    "pk_alerts_cpu": pk_alerts_cpu,
+    "pk_alerts_metal": pk_alerts_metal,
+    "pk_moderation_cpu": pk_moderation_cpu,
+    "pk_moderation_metal": pk_moderation_metal,
+    "pk_telecom_cpu": pk_telecom_cpu,
+    "pk_telecom_metal": pk_telecom_metal,
     "heat_numpy": heat_numpy,
     "heat_numba": heat_numba,
     "nbody": nbody,

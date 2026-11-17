@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.0
+- Kernel DSL: six named planner families (`pk_rtb`, `pk_credit`, `pk_claims`, `pk_alerts`, `pk_moderation`, `pk_telecom`) and console catalogue entries, each a presentation name over the one `batch_score` kernel (0.20.0) — real-time ad-bid scoring, credit/loan applications, insurance claims, SIEM security alerts, content moderation, telecom billing/fraud. No per-vertical model, no real data, no duplicated logic: a parametrized test checks each name returns bit-for-bit the same result as `pk_batch_score` for the same inputs.
+- Positioning: this is the software side; the hardware/placement side (CPU/Metal/CUDA/HIP/Triton/ARM64) was already shared across all of them since 0.21.0.
+- 274 tests (was 268).
+
 ## 0.21.0
 - Runtime: the `container` route offers a foreign architecture (ARM64 from this x86_64 Mac, the common case for robotics/automotive/edge hardware) through QEMU user-mode emulation (binfmt_misc), when the OCI daemon has it registered — probed with a real tiny container run, never guessed; the reason text always distinguishes "emulated" from native and never claims to be native. Same isolation flags (read-only root, no network, no capabilities, 256 MiB) on the emulated path as the native one.
 - Fleet: the remote runner (`spatial/runtime/runner.py`, protocol SWP/1) now gates on the node's own real architecture (`platform.machine()`) instead of a hardcoded `x86_64`, so a future ARM64 node (a Jetson, a Raspberry Pi) could in principle join a fleet; its micro-VM sandbox is still x86_64-only (no aarch64 kernel/busybox vendored — a separate piece of work, needs real ARM hardware to validate). `spatial/runtime/microvm.py` now explicitly reports itself unavailable on a non-x86_64 host instead of silently looking for an x86_64 emulator it cannot use as a same-architecture VM.

@@ -124,6 +124,21 @@ def test_planner_offers_portable_kernel_families():
     assert ex.result == int(collatz.run("cpu", 64, limit=100).astype("uint64").sum())
 
 
+@pytest.mark.parametrize("vertical", ["rtb", "credit", "claims", "alerts", "moderation", "telecom"])
+def test_vertical_families_are_the_same_kernel_as_batch_score_under_a_market_name(vertical):
+    """rtb/credit/claims/alerts/moderation/telecom are presentation names for ONE kernel (batch_score):
+    same math, same code, no per-vertical model. A result that differs would mean someone duplicated and
+    drifted the logic instead of reusing it."""
+    from spatial.compute import workloads as w
+    from spatial.unified import Job, Objective, Planner
+    direct = getattr(w, f"pk_{vertical}_cpu")(64, 16)
+    assert direct == batch_score.run("cpu", 64, signals=16).astype("uint64").sum()
+    pl = Planner()
+    plan = pl.plan(Job.compute(f"pk_{vertical}", n=64, signals=16), Objective())
+    assert "cpu" in {o.name for o in plan.options} and plan.chosen is not None
+    assert pl.execute(plan).result == direct
+
+
 @needs_metal
 def test_int32_overflow_matches_between_cpu_and_metal():
     # the 3x+1 map overflows 32 bits for large starts: CPU must wrap like the GPU does
