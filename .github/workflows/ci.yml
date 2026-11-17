@@ -24,5 +24,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[quantum,dev]"
+      - name: Set up QEMU (cross-architecture container tests: runtime's ARM64-via-emulation route)
+        if: matrix.os == 'ubuntu-latest'
+        uses: docker/setup-qemu-action@v3
       - name: Test
         run: pytest -q

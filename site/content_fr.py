@@ -53,7 +53,7 @@ def docs():
 <a href="roadmap.html"><b>Feuille de route</b><span>Ce qui est construit, ce qui demande matériel ou personnes.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.20.0. Quatre moteurs sont opérationnels et testés (260 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.21.0. Quatre moteurs sont opérationnels et testés (268 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -202,7 +202,7 @@ print(st.stats())</code></pre>
 <tr><td><code>native</code></td><td>Même système et même processeur</td><td>Aucune</td></tr>
 <tr><td><code>microvm-hvf</code></td><td>ELF Linux x86_64 sur hôte x86_64</td><td>VM matérielle, sans réseau ni disque</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Autre processeur, en émulation logicielle</td><td>VM émulée</td></tr>
-<tr><td><code>container</code></td><td>ELF Linux statique dans Docker ou Podman</td><td>Racine en lecture seule, sans réseau, sans capacités, non-root, 256 Mio ; réseau et dossier partagé seulement sur demande</td></tr>
+<tr><td><code>container</code></td><td>ELF Linux statique dans Docker ou Podman, même architecture que l'hôte, ou une architecture étrangère (ARM64) par émulation QEMU si enregistrée</td><td>Racine en lecture seule, sans réseau, sans capacités, non-root, 256 Mio ; réseau et dossier partagé seulement sur demande</td></tr>
 <tr><td><code>desktop</code></td><td><code>spatial desktop xterm</code> (ou xclock, mousepad) : une application Linux graphique dans un conteneur, utilisée depuis votre navigateur via noVNC</td><td>Boucle locale seulement, mot de passe à usage unique, sans capacités, racine en lecture seule, 512 Mio</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>Modules WASM</td><td>Bac à sable WASI</td></tr>
 <tr><td><code>wine</code></td><td>Binaires Windows (programme console testé)</td><td>Processus hôte (faible)</td></tr></tbody></table>

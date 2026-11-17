@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import microvm
+from .arch import host_arch
 from .inspect import Artifact, inspect
 
 
@@ -78,7 +79,7 @@ def find_oci() -> tuple[str, str, dict] | None:
 def host_caps(node=None) -> dict:
     import platform
     caps = {"os": {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(platform.system(), "?"),
-            "arch": {"AMD64": "x86_64", "arm64": "aarch64"}.get(platform.machine(), platform.machine()),
+            "arch": host_arch(),
             "node": shutil.which("node"), "wine": find_wine(),
             "docker": (find_oci() or (None,))[0],           # only a daemon that answers counts
             "qemu_x86": shutil.which("qemu-system-x86_64"),
@@ -112,9 +113,24 @@ def plan(art: Artifact, caps: dict | None = None) -> list[Route]:
                        "software emulation (works without HVF or across CPU families)" if tcg else
                        "no kernel/emulator available for this guest architecture",
                        "5-30x slower CPU", "emulated VM"))
-        R.append(Route("container", bool(caps["docker"]) and same_arch,
-                       f"{caps['docker']} reachable" if caps["docker"] else "no Docker/Podman with a running daemon",
-                       "Linux VM shared by containers on macOS", "container: no network, read-only root, no capabilities, 256 MiB, shares the VM kernel"))
+        if same_arch:
+            R.append(Route("container", bool(caps["docker"]),
+                           f"{caps['docker']} reachable" if caps["docker"] else "no Docker/Podman with a running daemon",
+                           "Linux VM shared by containers on macOS", "container: no network, read-only root, no capabilities, 256 MiB, shares the VM kernel"))
+        else:
+            plat = _oci_platform(art.arch)
+            if not plat:
+                emulated, reason = False, f"unrecognised architecture {art.arch} for container emulation"
+            elif not caps["docker"]:
+                emulated, reason = False, "no Docker/Podman with a running daemon"
+            else:
+                oci = find_oci()
+                emulated = bool(oci) and _cross_arch_runnable(oci[1], oci[2], plat)
+                reason = (f"{caps['docker']} reachable, {plat} binary run through QEMU user-mode emulation (binfmt_misc)" if emulated
+                          else f"Docker/Podman reachable but no QEMU binfmt_misc handler registered for linux/{plat}")
+            R.append(Route("container", emulated, reason,
+                           "Linux VM shared by containers on macOS, PLUS QEMU user-mode emulation: 5-20x slower, not measured here" if emulated else "none",
+                           "container: no network, read-only root, no capabilities, 256 MiB, shares the VM kernel, emulated CPU" if emulated else ""))
     elif art.format == "pe":
         R.append(Route("native", caps["os"] == "windows" and same_arch,
                        "same OS" if caps["os"] == "windows" else "host is not Windows", "none", "none"))
@@ -138,6 +154,34 @@ def plan(art: Artifact, caps: dict | None = None) -> list[Route]:
 
 
 OCI_IMAGE = "alpine:3.20"
+
+# ELF/Mach-O/PE architecture name (see inspect.py) -> the --platform suffix the OCI daemon expects
+_OCI_PLATFORM = {"x86_64": "amd64", "aarch64": "arm64"}
+_BINFMT_CACHE: dict[tuple[str, str], bool] = {}
+
+
+def _oci_platform(arch: list[str]) -> str | None:
+    for a in arch:
+        if a in _OCI_PLATFORM:
+            return _OCI_PLATFORM[a]
+    return None
+
+
+def _cross_arch_runnable(exe: str, env: dict, plat: str) -> bool:
+    """True if this OCI daemon can run a foreign-architecture ("amd64"/"arm64"...) container RIGHT NOW: QEMU
+    user-mode emulation registered via binfmt_misc inside the daemon's Linux VM (standard Docker/Podman
+    mechanism). This is a real, tiny container run, cached per (daemon, platform) for this process:
+    binfmt_misc lives inside the daemon's own VM, which we cannot inspect as a file from macOS, so we test
+    it instead of guessing."""
+    key = (exe, env.get("DOCKER_HOST", ""), plat)
+    if key not in _BINFMT_CACHE:
+        try:
+            r = subprocess.run([exe, "run", "--rm", "--platform", f"linux/{plat}", OCI_IMAGE, "true"],
+                               capture_output=True, timeout=60, env=env)
+            _BINFMT_CACHE[key] = r.returncode == 0
+        except Exception:
+            _BINFMT_CACHE[key] = False
+    return _BINFMT_CACHE[key]
 
 
 MAX_SHARE_BYTES = 64 * 2 ** 20
@@ -171,12 +215,14 @@ def _untar_into(data: bytes, d: str) -> int:
     return n
 
 
-def _run_container(path: str, args: list[str], timeout_s: float, t0: float, allow_network: bool = False, share_dir: str | None = None) -> Execution:
+def _run_container(path: str, args: list[str], timeout_s: float, t0: float, allow_network: bool = False, share_dir: str | None = None, platform: str | None = None) -> Execution:
     """Run a static Linux ELF in a locked-down container. The file is streamed in through stdin (works with remote
     daemons such as Colima) into a small exec tmpfs; the root filesystem stays read-only. No network, no capabilities,
     non-root user, 256 MiB, 64 processes. Network and a writable shared folder are OFF unless asked for:
     `allow_network`, and `share_dir`, a host folder that is copied into a volume mounted at /work before the run and
-    whose changes are copied back afterwards (a copy, not a live mount: it works with remote daemons)."""
+    whose changes are copied back afterwards (a copy, not a live mount: it works with remote daemons).
+    `platform` ("amd64"/"arm64"...) runs a foreign architecture through QEMU user-mode emulation (binfmt_misc);
+    leave it None for the host's own architecture."""
     oci = find_oci()
     if oci is None:
         return Execution("container", False, "", 0.0, {"not_runnable": "no container daemon reachable"})
@@ -194,7 +240,8 @@ def _run_container(path: str, args: list[str], timeout_s: float, t0: float, allo
             subprocess.run([exe, "run", "--rm", "-i", "--network", "none", "-v", f"{vol}:/work", OCI_IMAGE, "sh", "-c", "cd /work && tar x && chmod -R a+rwX ."],
                            input=_tar_dir(d), capture_output=True, check=True, timeout=120, env=env)
             mounts = ["-v", f"{vol}:/work:rw", "-w", "/work"]
-        cmd = [exe, "run", "--rm", "-i", "--network", "bridge" if allow_network else "none", *mounts, "--read-only", "--tmpfs", "/app:rw,exec,nosuid,mode=1777,size=64m",
+        cmd = [exe, "run", "--rm", "-i", *(["--platform", f"linux/{platform}"] if platform else []),
+               "--network", "bridge" if allow_network else "none", *mounts, "--read-only", "--tmpfs", "/app:rw,exec,nosuid,mode=1777,size=64m",
                "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--memory", "256m", "--pids-limit", "64", "--user", "65534:65534",
                OCI_IMAGE, "sh", "-c", f"cat > /app/{prog} && chmod +x /app/{prog} && exec /app/{prog} \"$@\"", "sh", *args]
         try:
@@ -256,7 +303,8 @@ def execute(path: str, args: list[str] | None = None, route: str | None = None, 
         return Execution(chosen.name, r.returncode == 0, r.stdout.strip(), time.perf_counter() - t0,
                          {"stderr": r.stderr[-300:]})
     if chosen.name == "container":
-        return _run_container(path, args, timeout_s, t0, allow_network, share_dir)
+        plat = None if host_arch() in art.arch else _oci_platform(art.arch)
+        return _run_container(path, args, timeout_s, t0, allow_network, share_dir, platform=plat)
     if chosen.name == "wine":
         env = {**os.environ, "WINEDEBUG": "-all", "WINEPREFIX": str(Path.home() / ".local/share/spatial/wineprefix")}
         r = subprocess.run([find_wine(), path, *args], capture_output=True, text=True, timeout=timeout_s, env=env)

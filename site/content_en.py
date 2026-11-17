@@ -50,7 +50,7 @@ def docs():
 <a href="roadmap.html"><b>Roadmap</b><span>What is built, what needs hardware or people.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.20.0. Four engines are operational and tested (260 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.21.0. Four engines are operational and tested (268 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine, a data-center GPU or a QPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
@@ -199,7 +199,7 @@ print(st.stats())</code></pre>
 <tr><td><code>native</code></td><td>Same system and same CPU</td><td>None</td></tr>
 <tr><td><code>microvm-hvf</code></td><td>Linux x86_64 ELF on an x86_64 host</td><td>Hardware VM, no network, no disk</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Other CPU, software emulation</td><td>Emulated VM</td></tr>
-<tr><td><code>container</code></td><td>Static Linux ELF in Docker or Podman</td><td>Read-only root, no network, no capabilities, non-root, 256 MiB; network and a shared folder only if asked</td></tr>
+<tr><td><code>container</code></td><td>Static Linux ELF in Docker or Podman, same architecture as the host, or a foreign one (ARM64) through QEMU emulation if registered</td><td>Read-only root, no network, no capabilities, non-root, 256 MiB; network and a shared folder only if asked</td></tr>
 <tr><td><code>desktop</code></td><td><code>spatial desktop xterm</code> (or xclock, mousepad): a graphical Linux app in a container, used from your browser through noVNC</td><td>Loopback only, one-time password, no capabilities, read-only root, 512 MiB</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>WASM modules</td><td>WASI sandbox</td></tr>
 <tr><td><code>wine</code></td><td>Windows binaries (console program tested)</td><td>Host process (weak)</td></tr></tbody></table>

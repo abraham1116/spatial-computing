@@ -17,6 +17,7 @@ from pathlib import Path
 from ..core.auth import authorizer_from_file, require
 from ..core.protocol import RpcClient, RpcServer
 from . import microvm
+from .arch import host_arch
 from .inspect import inspect
 
 MAX_ELF = 64 * 1024 * 1024
@@ -40,8 +41,9 @@ def _handler(h: dict, blob: bytes):
         path = f.name
     try:
         art = inspect(path)
-        if art.format != "elf" or "x86_64" not in art.arch:
-            raise ValueError(f"runner only accepts Linux x86_64 ELF binaries, got {art.format}/{art.arch}")
+        harch = host_arch()
+        if art.format != "elf" or harch not in art.arch:
+            raise ValueError(f"runner only accepts Linux {harch} ELF binaries (this node's own architecture), got {art.format}/{art.arch}")
         accel = "hvf" if h.get("accel", "hvf") == "hvf" else "tcg"
         r = microvm.run_elf(path, args, accel=accel, mem_mb=min(int(h.get("mem_mb", 256)), 1024),
                             timeout_s=min(float(h.get("timeout_s", 120)), MAX_TIMEOUT))

@@ -6,7 +6,7 @@
 <tr><td><code>native</code></td><td>Même système et même processeur</td><td>Aucune</td></tr>
 <tr><td><code>microvm-hvf</code></td><td>ELF Linux x86_64 sur hôte x86_64</td><td>VM matérielle, sans réseau ni disque</td></tr>
 <tr><td><code>microvm-tcg</code></td><td>Autre processeur, en émulation logicielle</td><td>VM émulée</td></tr>
-<tr><td><code>container</code></td><td>ELF Linux statique dans Docker ou Podman</td><td>Racine en lecture seule, sans réseau, sans capacités, non-root, 256 Mio ; réseau et dossier partagé seulement sur demande</td></tr>
+<tr><td><code>container</code></td><td>ELF Linux statique dans Docker ou Podman, même architecture que l'hôte, ou une architecture étrangère (ARM64) par émulation QEMU si enregistrée</td><td>Racine en lecture seule, sans réseau, sans capacités, non-root, 256 Mio ; réseau et dossier partagé seulement sur demande</td></tr>
 <tr><td><code>desktop</code></td><td><code>spatial desktop xterm</code> (ou xclock, mousepad) : une application Linux graphique dans un conteneur, utilisée depuis votre navigateur via noVNC</td><td>Boucle locale seulement, mot de passe à usage unique, sans capacités, racine en lecture seule, 512 Mio</td></tr>
 <tr><td><code>wasm-node-wasi</code></td><td>Modules WASM</td><td>Bac à sable WASI</td></tr>
 <tr><td><code>wine</code></td><td>Binaires Windows (programme console testé)</td><td>Processus hôte (faible)</td></tr></tbody></table>

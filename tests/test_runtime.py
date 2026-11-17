@@ -1,4 +1,6 @@
 import shutil
+import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -6,8 +8,10 @@ import pytest
 from spatial.compute import workloads
 from spatial.runtime import execute, inspect, plan
 from spatial.runtime import microvm
+from spatial.runtime.arch import host_arch
 from spatial.runtime.envs import IsolatedEnv, detect_interpreters
-from spatial.runtime.planner import find_wine, host_caps
+from spatial.runtime.inspect import Artifact
+from spatial.runtime.planner import find_oci, find_wine, host_caps
 
 BUILD = Path(__file__).resolve().parents[1] / "benchmarks" / "build"
 needs_build = pytest.mark.skipif(not (BUILD / "bench.wasm").exists(),
@@ -277,3 +281,106 @@ def test_remote_desktop_moves_single_files_both_ways_with_a_size_limit_and_safe_
             d.upload(str(big))
     finally:
         d.stop()
+
+
+# ------------------------------------------------------------------------------------------------ ARM64 / cross-arch (robotics, automotive, consoles: mostly ARM edge hardware)
+needs_docker = pytest.mark.skipif(find_oci() is None, reason="no reachable container daemon")
+_ELF_MACHINE_CODE = {"x86_64": 0x3E, "aarch64": 0xB7}
+
+
+def _foreign_arch() -> str:
+    """An architecture this host is NOT, so the cross-arch branch is exercised rather than the native one."""
+    return "x86_64" if host_arch() == "aarch64" else "aarch64"
+
+
+def _fake_elf(machine_code: int) -> bytes:
+    """Just enough of an ELF header for inspect() to report format='elf' and this machine code: no real
+    code, so it only exercises the architecture gate, never an actual execution."""
+    import struct
+    b = bytearray(20)
+    b[0:4] = b"\x7fELF"
+    b[4], b[5], b[6], b[7] = 2, 1, 1, 0                      # 64-bit, little-endian, version 1, SYSV (-> linux)
+    b[16:18] = struct.pack("<H", 2)                          # e_type (unused by inspect())
+    b[18:20] = struct.pack("<H", machine_code)               # e_machine
+    return bytes(b)
+
+
+def test_cross_arch_elf_is_refused_without_a_daemon_with_a_clear_reason():
+    art = Artifact(path="x", format="elf", os="linux", arch=[_foreign_arch()])
+    r = next(x for x in plan(art, {**host_caps(), "docker": None}) if x.name == "container")
+    assert not r.feasible and "no Docker/Podman" in r.reason
+
+
+def test_unrecognised_cross_arch_is_named_not_silently_refused_or_allowed():
+    art = Artifact(path="x", format="elf", os="linux", arch=["riscv"])
+    r = next(x for x in plan(art, {**host_caps(), "docker": "docker"}) if x.name == "container")   # recognised-arch check comes first: no daemon probe needed
+    assert not r.feasible and "unrecognised architecture" in r.reason
+
+
+def test_cross_arch_reason_never_claims_native_and_distinguishes_emulated_from_same_arch():
+    foreign, native = Artifact(path="x", format="elf", os="linux", arch=[_foreign_arch()]), Artifact(path="x", format="elf", os="linux", arch=[host_arch()])
+    rf, rn = next(x for x in plan(foreign) if x.name == "container"), next(x for x in plan(native) if x.name == "container")
+    assert "emulat" not in rn.reason.lower()                                           # same-arch route never mentions emulation
+    assert "same CPU" not in rf.reason and "native" not in rf.reason.lower()            # cross-arch route never claims to be native
+    if rf.feasible:
+        assert "emulat" in rf.isolation.lower() and "emulat" in rf.expected_overhead.lower()
+
+
+@needs_docker
+def test_cross_arch_route_against_the_real_daemon_is_emulated_or_names_the_missing_handler():
+    art = Artifact(path="x", format="elf", os="linux", arch=[_foreign_arch()])
+    r = next(x for x in plan(art) if x.name == "container")
+    assert r.feasible == ("emulat" in r.reason.lower())
+    assert r.feasible or "binfmt_misc handler" in r.reason                             # daemon reachable, arch recognised: must be one or the other
+
+
+@needs_docker
+def test_cross_arch_container_run_passes_the_same_lockdown_flags_as_the_native_route():
+    from spatial.runtime import planner as _p
+    art = Artifact(path="x", format="elf", os="linux", arch=[_foreign_arch()])
+    r = next(x for x in plan(art) if x.name == "container")
+    if not r.feasible:
+        pytest.skip("no QEMU binfmt_misc handler registered for " + _foreign_arch())
+    calls = []
+    real_run = subprocess.run
+    def spy(cmd, *a, **k):
+        calls.append(cmd)
+        return real_run(cmd, *a, **k)
+    subprocess.run = spy
+    try:
+        _p._run_container(str(Path(__file__)), [], 30, time.perf_counter(), platform=_p._oci_platform([_foreign_arch()]))
+    finally:
+        subprocess.run = real_run
+    run_cmd = next(c for c in calls if len(c) > 2 and c[1:3] == ["run", "--rm"])
+    for flag in ("--read-only", "--cap-drop", "ALL", "--platform", f"linux/{_p._oci_platform([_foreign_arch()])}"):
+        assert flag in run_cmd
+    assert "--network" in run_cmd and "none" in run_cmd[run_cmd.index("--network") + 1]
+
+
+# ------------------------------------------------------------------------------------------------ fleet node architecture (runner.py no longer hardcodes x86_64)
+def test_runner_refuses_an_elf_of_a_foreign_architecture_and_names_its_own():
+    from spatial.runtime.runner import _handler
+    foreign = _foreign_arch()
+    with pytest.raises(ValueError) as e:
+        _handler({"op": "run_elf"}, _fake_elf(_ELF_MACHINE_CODE[foreign]))
+    msg = str(e.value)
+    assert host_arch() in msg and foreign in msg and "this node's own architecture" in msg
+
+
+def test_runner_passes_the_arch_gate_for_its_own_architecture(monkeypatch):
+    from spatial.runtime import runner as _r
+    # stop short of actually booting a micro-VM: the gate under test is the arch check, not execution
+    def stub(*a, **k):
+        raise RuntimeError("stub: arch gate passed")
+    monkeypatch.setattr(_r.microvm, "run_elf", stub)
+    with pytest.raises(RuntimeError, match="stub: arch gate passed"):
+        _r._handler({"op": "run_elf"}, _fake_elf(_ELF_MACHINE_CODE[host_arch()]))
+
+
+def test_microvm_is_correctly_unavailable_on_a_non_x86_64_host(monkeypatch):
+    """This micro-VM only ever vendored x86_64 (busybox, kernel, qemu-system-x86_64): on any other host
+    architecture it must say so, not silently look for an x86_64 emulator it cannot use as a same-arch VM."""
+    from spatial.runtime import microvm as _m
+    monkeypatch.setattr(_m, "host_arch", lambda: "aarch64")
+    avail = _m.available()
+    assert not avail["qemu"] and not avail["kernel"] and not avail["busybox"]

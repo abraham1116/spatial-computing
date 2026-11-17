@@ -18,6 +18,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .arch import host_arch
+
 VENDOR = Path(__file__).resolve().parents[2] / "vendor"
 KERNEL = VENDOR / "vmlinuz-virt"
 BUSYBOX = VENDOR / "busybox-x86_64"
@@ -77,7 +79,12 @@ class VmResult:
 
 
 def available() -> dict:
-    return {"qemu": shutil.which("qemu-system-x86_64"), "kernel": KERNEL.exists(), "busybox": BUSYBOX.exists()}
+    """This micro-VM is x86_64-only (vendored kernel and busybox, qemu-system-x86_64): on a different host
+    architecture it is correctly unavailable, not silently wrong (there is no aarch64 kernel/busybox vendored
+    here, so a host_arch() == "aarch64" node would otherwise look for an x86_64 emulator it cannot use as a
+    same-architecture micro-VM)."""
+    x86 = host_arch() == "x86_64"
+    return {"qemu": x86 and shutil.which("qemu-system-x86_64"), "kernel": x86 and KERNEL.exists(), "busybox": x86 and BUSYBOX.exists()}
 
 
 def run_elf(elf_path: str, args: list[str] | None = None, accel: str = "hvf", mem_mb: int = 256,

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.0
+- Runtime: the `container` route offers a foreign architecture (ARM64 from this x86_64 Mac, the common case for robotics/automotive/edge hardware) through QEMU user-mode emulation (binfmt_misc), when the OCI daemon has it registered — probed with a real tiny container run, never guessed; the reason text always distinguishes "emulated" from native and never claims to be native. Same isolation flags (read-only root, no network, no capabilities, 256 MiB) on the emulated path as the native one.
+- Fleet: the remote runner (`spatial/runtime/runner.py`, protocol SWP/1) now gates on the node's own real architecture (`platform.machine()`) instead of a hardcoded `x86_64`, so a future ARM64 node (a Jetson, a Raspberry Pi) could in principle join a fleet; its micro-VM sandbox is still x86_64-only (no aarch64 kernel/busybox vendored — a separate piece of work, needs real ARM hardware to validate). `spatial/runtime/microvm.py` now explicitly reports itself unavailable on a non-x86_64 host instead of silently looking for an x86_64 emulator it cannot use as a same-architecture VM.
+- New shared `spatial/runtime/arch.py` (`host_arch()`), used by `planner.py`, `microvm.py` and `runner.py` instead of three copies of the same `platform.machine()` mapping.
+- CI: `docker/setup-qemu-action` registers QEMU binfmt handlers on the Linux runner, so the cross-architecture container tests actually run there, not just offer a plausible-looking skip.
+- Positioning: this closes the concrete gap (hardcoded `"x86_64"` checks, found by reading our own code, not a market claim) that stood between this runtime and robotics/automotive/console edge hardware, which is overwhelmingly ARM. No ARM hardware has been tested; only x86_64-hosted emulation.
+- 268 tests (was 260).
+
 ## 0.20.0
 - Kernel DSL: `batch_score`, a batch-scoring kernel (planner family `pk_batch_score`) — the same per-element placement problem as `mandelbrot`/`collatz`, applied to a batch-scoring shape (fraud/risk, ranking, recommendation, anomaly detection: any software that scores many independent items in a batch or a stream). Synthetic signals and weights, no trained model, no real data: it demonstrates that the planner places and measures a batch-scoring job exactly like it places a scientific kernel, on CPU and Metal, generated for CUDA/HIP/Triton too. Added to the console's curated job catalogue (`pk_batch_score_cpu`).
 - Positioning: the planner's "one job, lowest measured cost" placement is not scientific-kernel-only; it is the same placement problem for any software that scores items in batch, independent of what domain the numbers represent.
