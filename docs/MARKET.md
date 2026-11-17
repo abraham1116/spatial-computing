@@ -6,15 +6,27 @@ hardware, no money spent: this module only reads.
 
 ```bash
 spatial market --gpu H100
-spatial market --gpu H100 --neocloud-usd-per-hour 4.0   # arbitrage spread against your own reference price
+spatial market --gpu H100 --neocloud-usd-per-hour 4.0        # arbitrage spread against your own reference price
+spatial market --vertical render --neocloud-usd-per-hour 1.5 # a preset list of GPUs instead of one chip
 ```
 
 ```python
-from spatial.market import fetch_offers, cheapest, spread_vs
+from spatial.market import fetch_offers, cheapest, cheapest_for, spread_vs, spread_for, VERTICALS
 offers = fetch_offers()
 cheapest(offers, "H100")                                # the cheapest reliable (>= 0.5) H100 listing right now
 spread_vs(offers, "H100", neocloud_usd_per_hour=4.0)     # {"market_usd_h", "neocloud_usd_h", "spread_usd_h", "spread_pct", "offer"}
+cheapest_for(offers, "render")                            # cheapest among VERTICALS["render"] (RTX 4090/5090/PRO 6000/A6000...)
+spread_for(offers, "render", neocloud_usd_per_hour=1.5)
 ```
+
+## Verticals
+
+Same pattern as the `pk_rtb`/`pk_credit`/... presets over `batch_score` (`spatial.kernel`): a
+name over the SAME mechanism (`cheapest_among`/`spread_among`), never a different algorithm —
+only the list of GPU names differs. Today: `VERTICALS["render"]` groups the cards 3D rendering
+and VFX render farms are commonly priced against (RTX 4090/5090/4080/5080, RTX PRO 6000/5000,
+RTX A6000, RTX 6000 Ada) — consumer/prosumer cards, not the datacenter chips (H100/A100/B200)
+the rest of this module defaults to.
 
 ## What this proves, and what it does not
 

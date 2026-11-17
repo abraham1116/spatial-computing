@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.0
+- `spatial.market`: `--vertical render` (`VERTICALS["render"]`, `cheapest_among()`/`spread_among()`/`cheapest_for()`/`spread_for()`) applies the same GPU-arbitrage mechanism to 3D rendering/VFX render-farm cards (RTX 4090/5090/4080/5080, RTX PRO 6000/5000, RTX A6000, RTX 6000 Ada) instead of one datacenter chip — the consumer-GPU market NVIDIA also sells into, reached here without owning any hardware. Confirmed live on 17 Nov 2026: cheapest reliable render card was an RTX 5090 at 0.213 $/h. Same pattern as `pk_rtb`/`pk_credit`/... over `batch_score`: a preset name over one mechanism, zero duplicated logic (tested: `cheapest_for("render")` returns exactly `cheapest_among(VERTICALS["render"])`).
+- Live-market test stabilized: one real network call per test module instead of two in quick succession (was flaky on a shared runner).
+- 236 tests (was 232).
+
 ## 0.24.0
 - New `spatial.market` (`docs/MARKET.md`): reads real, live GPU prices from Vast.ai's public marketplace — no API key, no account, no money spent, read-only. `spatial market --gpu H100 [--neocloud-usd-per-hour X]` prints the cheapest sufficiently-reliable (>= 0.5 by default) listing, or the arbitrage spread against a reference price the caller supplies. Confirmed by a real call on 17 Nov 2026: cheapest reliable H100 was 2.336 $/h. RunPod's equivalent catalog endpoint needs an API key (confirmed: unauthenticated request returns HTTP 401), so only Vast.ai is read for now.
 - This makes the GPU-arbitrage pricing idea checkable against live numbers instead of a cited blog figure; it does not rent hardware or run a job — that stays a separate, later, money-spending step needing explicit go-ahead each time.

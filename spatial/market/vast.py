@@ -67,8 +67,24 @@ def cheapest(offers: list[Offer], gpu_name_contains: str, min_reliability: float
     """The lowest per-whole-GPU price among offers whose name contains `gpu_name_contains`
     (case-insensitive) and whose reliability is at least `min_reliability` (default 0.5: an
     unreliable host is not a fair price to quote as THE price). None if nothing matches."""
-    cand = [o for o in offers if gpu_name_contains.lower() in o.gpu_name.lower() and o.reliability >= min_reliability]
+    return cheapest_among(offers, (gpu_name_contains,), min_reliability)
+
+
+def cheapest_among(offers: list[Offer], gpu_names: tuple[str, ...], min_reliability: float = 0.5) -> Offer | None:
+    """Like `cheapest()`, but matches ANY of several GPU names (case-insensitive substring): for a
+    market made of several interchangeable models — e.g. render/VFX render-farm cards — rather
+    than one specific chip. None if nothing matches."""
+    cand = [o for o in offers if any(n.lower() in o.gpu_name.lower() for n in gpu_names) and o.reliability >= min_reliability]
     return min(cand, key=lambda o: o.usd_per_hour_per_gpu) if cand else None
+
+
+def _spread(c: Offer | None, neocloud_usd_per_hour: float) -> dict | None:
+    if c is None:
+        return None
+    spread = neocloud_usd_per_hour - c.usd_per_hour_per_gpu
+    return {"market_usd_h": c.usd_per_hour_per_gpu, "neocloud_usd_h": neocloud_usd_per_hour,
+            "spread_usd_h": spread, "spread_pct": (spread / neocloud_usd_per_hour * 100) if neocloud_usd_per_hour else None,
+            "offer": c}
 
 
 def spread_vs(offers: list[Offer], gpu_name_contains: str, neocloud_usd_per_hour: float,
@@ -76,10 +92,33 @@ def spread_vs(offers: list[Offer], gpu_name_contains: str, neocloud_usd_per_hour
     """The arbitrage spread: the gap between the cheapest sufficiently-reliable marketplace price
     for this GPU and a 'neocloud'/list price the CALLER supplies (never invented here). None if no
     offer matches. `min_reliability` defaults to 0.5: an unreliable host is not a fair price to quote."""
-    c = cheapest(offers, gpu_name_contains, min_reliability)
-    if c is None:
-        return None
-    spread = neocloud_usd_per_hour - c.usd_per_hour_per_gpu
-    return {"market_usd_h": c.usd_per_hour_per_gpu, "neocloud_usd_h": neocloud_usd_per_hour,
-            "spread_usd_h": spread, "spread_pct": (spread / neocloud_usd_per_hour * 100) if neocloud_usd_per_hour else None,
-            "offer": c}
+    return _spread(cheapest(offers, gpu_name_contains, min_reliability), neocloud_usd_per_hour)
+
+
+def spread_among(offers: list[Offer], gpu_names: tuple[str, ...], neocloud_usd_per_hour: float,
+                  min_reliability: float = 0.5) -> dict | None:
+    """The arbitrage spread over `cheapest_among()` instead of one specific chip."""
+    return _spread(cheapest_among(offers, gpu_names, min_reliability), neocloud_usd_per_hour)
+
+
+# Presentation presets, same pattern as pk_rtb/pk_credit/... over batch_score (spatial.kernel):
+# a name over the SAME mechanism (cheapest_among/spread_among), not a different one. No code is
+# duplicated per vertical; only the list of GPU names differs.
+VERTICALS: dict[str, tuple[str, ...]] = {
+    # 3D rendering / VFX render farms: the cards render engines (Octane, Redshift, V-Ray) are
+    # commonly benchmarked and sold against. Not the datacenter chips (H100/A100/B200).
+    "render": ("RTX 4090", "RTX 5090", "RTX 4080", "RTX 5080", "RTX PRO 6000", "RTX PRO 5000", "RTX A6000", "RTX 6000 Ada"),
+}
+
+
+def cheapest_for(offers: list[Offer], vertical: str, min_reliability: float = 0.5) -> Offer | None:
+    """`vertical` is a key of VERTICALS (currently: "render")."""
+    if vertical not in VERTICALS:
+        raise MarketError(f"unknown vertical {vertical!r}; known: {', '.join(VERTICALS)}")
+    return cheapest_among(offers, VERTICALS[vertical], min_reliability)
+
+
+def spread_for(offers: list[Offer], vertical: str, neocloud_usd_per_hour: float, min_reliability: float = 0.5) -> dict | None:
+    if vertical not in VERTICALS:
+        raise MarketError(f"unknown vertical {vertical!r}; known: {', '.join(VERTICALS)}")
+    return spread_among(offers, VERTICALS[vertical], neocloud_usd_per_hour, min_reliability)

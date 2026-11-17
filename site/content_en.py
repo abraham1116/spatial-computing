@@ -46,7 +46,7 @@ def docs():
 <a href="roadmap.html"><b>Roadmap</b><span>What is built, what needs hardware or people.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.24.0. Four engines are operational and tested (232 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine or a data-center GPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version 0.25.0. Four engines are operational and tested (236 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine or a data-center GPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>

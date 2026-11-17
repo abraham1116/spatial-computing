@@ -240,25 +240,34 @@ def cmd_devices(a):
 
 
 def cmd_market(a):
-    from .market import MarketError, cheapest, fetch_offers, spread_vs
+    from .market import MarketError, cheapest, cheapest_for, fetch_offers, spread_for, spread_vs
     try:
         offers = fetch_offers()
     except MarketError as e:
         print(f"spatial: {e}", file=sys.stderr)
         return 1
+    label = f"vertical {a.vertical!r}" if a.vertical else a.gpu
+    try:
+        if a.neocloud_usd_per_hour is not None:
+            r = spread_for(offers, a.vertical, a.neocloud_usd_per_hour, a.min_reliability) if a.vertical else \
+                spread_vs(offers, a.gpu, a.neocloud_usd_per_hour, a.min_reliability)
+        else:
+            r = None
+            c = cheapest_for(offers, a.vertical, a.min_reliability) if a.vertical else cheapest(offers, a.gpu, a.min_reliability)
+    except MarketError as e:
+        print(f"spatial: {e}", file=sys.stderr)
+        return 1
     if a.neocloud_usd_per_hour is not None:
-        r = spread_vs(offers, a.gpu, a.neocloud_usd_per_hour, a.min_reliability)
         if r is None:
-            print(f"spatial: no Vast.ai offer for {a.gpu!r} at reliability >= {a.min_reliability} right now", file=sys.stderr)
+            print(f"spatial: no Vast.ai offer for {label} at reliability >= {a.min_reliability} right now", file=sys.stderr)
             return 1
         o = r["offer"]
-        print(f"cheapest {a.gpu} on Vast.ai right now: {r['market_usd_h']:.3f} $/h (reliability {o.reliability:.3f}, {o.geolocation})")
+        print(f"cheapest {label} on Vast.ai right now: {r['market_usd_h']:.3f} $/h ({o.gpu_name}, reliability {o.reliability:.3f}, {o.geolocation})")
         print(f"your neocloud reference: {r['neocloud_usd_h']:.3f} $/h")
         print(f"spread: {r['spread_usd_h']:+.3f} $/h ({r['spread_pct']:+.1f} %)")
         return 0
-    c = cheapest(offers, a.gpu, a.min_reliability)
     if c is None:
-        print(f"spatial: no Vast.ai offer for {a.gpu!r} at reliability >= {a.min_reliability} right now", file=sys.stderr)
+        print(f"spatial: no Vast.ai offer for {label} at reliability >= {a.min_reliability} right now", file=sys.stderr)
         return 1
     print(f"{c.gpu_name}: {c.usd_per_hour_per_gpu:.3f} $/h per whole GPU (listing {c.usd_per_hour:.3f} $/h at frac {c.gpu_frac:g}), "
           f"reliability {c.reliability:.3f}, {c.geolocation}")
@@ -341,7 +350,8 @@ def main(argv=None):
     p.set_defaults(fn=cmd_optimize)
     sub.add_parser("devices", help="compute devices the planner can use on this machine (CPU, Metal GPU, NVIDIA GPU)").set_defaults(fn=cmd_devices)
     p = sub.add_parser("market", help="live GPU prices from Vast.ai's public marketplace (read-only, no account, no money spent)")
-    p.add_argument("--gpu", default="H100", help="substring to match in the GPU name, e.g. H100, RTX 4090, A100")
+    p.add_argument("--gpu", default="H100", help="substring to match in the GPU name, e.g. H100, RTX 4090, A100 (ignored if --vertical is given)")
+    p.add_argument("--vertical", choices=["render"], help="a preset list of interchangeable GPUs for a market instead of one chip (currently: render = 3D rendering/VFX render-farm cards)")
     p.add_argument("--min-reliability", type=float, default=0.5, help="Vast.ai's own 0..1 host score; a low-reliability offer is excluded by default")
     p.add_argument("--neocloud-usd-per-hour", type=float, default=None, help="your reference 'neocloud' price for this GPU: if given, prints the arbitrage spread instead of just the price")
     p.set_defaults(fn=cmd_market)

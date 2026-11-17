@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from spatial.market import MarketError, cheapest, fetch_offers, parse_offers, spread_vs
+from spatial.market import VERTICALS, MarketError, cheapest, cheapest_among, cheapest_for, fetch_offers, parse_offers, spread_among, spread_for, spread_vs
 
 FIXTURE = json.loads((Path(__file__).parent / "data" / "vast_bundles_sample.json").read_text())
 
@@ -55,18 +55,54 @@ def test_spread_vs_computes_the_arbitrage_gap_against_a_caller_supplied_price():
     assert spread_vs(offers, "H100", 0.0) is not None and spread_vs(offers, "H100", 0.0)["spread_pct"] is None  # no division by zero
 
 
-def _vast_reachable():
-    try:
-        fetch_offers(timeout_s=5.0)
-        return True
-    except MarketError:
-        return False
+def test_cheapest_among_matches_any_of_several_gpu_names():
+    offers = parse_offers(FIXTURE)
+    c = cheapest_among(offers, ("RTX 4090", "RTX 5090"))
+    assert c is not None and c.gpu_name in ("RTX 4090", "RTX 5090", "RTX 4090D")   # substring match: "RTX 4090" also matches "RTX 4090D"
+    assert cheapest_among(offers, ("no such gpu",)) is None
 
 
-@pytest.mark.skipif(not _vast_reachable(), reason="Vast.ai's public marketplace is not reachable from here right now")
+def test_render_vertical_is_the_same_mechanism_as_cheapest_among():
+    offers = parse_offers(FIXTURE)
+    assert "render" in VERTICALS and len(VERTICALS["render"]) > 1
+    direct = cheapest_among(offers, VERTICALS["render"])
+    via_name = cheapest_for(offers, "render")
+    assert direct == via_name       # cheapest_for("render") is NOT a different algorithm, just this preset
+    with pytest.raises(MarketError, match="unknown vertical"):
+        cheapest_for(offers, "no-such-vertical")
+
+
+def test_spread_for_render_matches_spread_among_the_same_preset():
+    offers = parse_offers(FIXTURE)
+    a = spread_among(offers, VERTICALS["render"], neocloud_usd_per_hour=1.5)
+    b = spread_for(offers, "render", neocloud_usd_per_hour=1.5)
+    assert a == b
+    with pytest.raises(MarketError, match="unknown vertical"):
+        spread_for(offers, "no-such-vertical", 1.5)
+
+
+# One real network call for the whole module (not one per test): avoids the flakiness of hitting
+# a live third-party endpoint twice in quick succession, which happened in practice (TLS handshake
+# timeouts under load). Every "live" assertion below reuses this single fetch.
+try:
+    _LIVE_OFFERS = fetch_offers(timeout_s=20.0)
+except MarketError:
+    _LIVE_OFFERS = None
+
+needs_live_market = pytest.mark.skipif(_LIVE_OFFERS is None, reason="Vast.ai's public marketplace is not reachable from here right now")
+
+
+@needs_live_market
 def test_fetch_offers_is_a_real_live_call_with_plausible_prices():
-    offers = fetch_offers()
+    offers = _LIVE_OFFERS
     assert len(offers) > 0
     assert all(o.usd_per_hour >= 0 and 0.0 <= o.reliability <= 1.0 for o in offers)
     gpu_names = {o.gpu_name for o in offers}
     assert any("RTX" in n or "A100" in n or "H100" in n or "L4" in n or "4090" in n for n in gpu_names)   # a real marketplace, not an empty shell
+
+
+@needs_live_market
+def test_render_vertical_finds_a_real_live_offer():
+    c = cheapest_for(_LIVE_OFFERS, "render")
+    if c is not None:                                        # a real marketplace can genuinely have none in stock right now
+        assert c.usd_per_hour_per_gpu > 0 and c.reliability >= 0.5
