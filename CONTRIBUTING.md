@@ -15,13 +15,13 @@ Thanks for helping. This is a research prototype with one rule: **no claim witho
 ```bash
 git clone https://github.com/abraham1116/spatial-computing && cd spatial-computing
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[quantum,dev]"
+pip install -e ".[dev]"
 pytest
 ```
 
 ## Where help is most useful
 
-See [ROADMAP.md](ROADMAP.md). Good first areas: a Linux/NVIDIA port of `spatial audit`, English translations of the reports in `docs/`, QIR export for SPATIAL Q, more workloads for the compute scheduler, and tests on a second real machine.
+See [ROADMAP.md](ROADMAP.md). Good first areas: a Linux/NVIDIA port of `spatial audit`, English translations of the reports in `docs/`, more workloads for the compute scheduler, and tests on a second real machine.
 
 ## Pull requests
 

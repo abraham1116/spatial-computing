@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BENCHES = {"cpu": "bench_cpu", "memory": "bench_memory", "gpu": "bench_gpu",
-           "runtime": "bench_runtime", "q": "bench_q"}
+           "runtime": "bench_runtime"}
 
 
 def cmd_audit(a):
@@ -62,13 +62,6 @@ def cmd_run(a):
           + (f"reason: {e.extra.get('not_runnable')}" if not e.ok and e.extra.get("not_runnable") else ""),
           file=sys.stderr)
     return 0 if e.ok else 1
-
-
-def cmd_q(a):
-    from .q import runtime
-    sys.argv = ["spatialq", *a.rest]
-    runtime.main()
-    return 0
 
 
 def cmd_bench(a):
@@ -211,17 +204,14 @@ def cmd_fleet(a):
 def cmd_optimize(a):
     import json as _json
     from .unified import Job, Objective, Planner, PlanError, Prices
-    prices = Prices(local_usd_per_hour=a.local_usd_per_hour, qpu_usd_per_shot=a.qpu_usd_per_shot, qpu_usd_per_task=a.qpu_usd_per_task,
-                    ram_usd_gb_hour=a.ram_usd_gb_hour, storage_usd_gb_hour=a.storage_usd_gb_hour)
+    prices = Prices(local_usd_per_hour=a.local_usd_per_hour, ram_usd_gb_hour=a.ram_usd_gb_hour, storage_usd_gb_hour=a.storage_usd_gb_hour)
     obj = Objective(minimize=a.objective, deadline_s=a.deadline, max_ram_bytes=int(a.max_ram_gib * 2**30) if a.max_ram_gib else None,
-                    require_isolation=a.isolated, allow_qpu=a.allow_qpu, require_hardware=a.require_hardware)
+                    require_isolation=a.isolated)
     hub = _hub_client(a) if a.hub else None
     if a.job == "compute":
         job = Job.compute(a.family, **_json.loads(a.params))
     elif a.job == "binary":
         job = Job.binary(a.file, a.args, a.est_native_s)
-    elif a.job == "quantum":
-        job = Job.quantum(Path(a.file).read_text(), a.kernel, _json.loads(a.kargs), a.shots)
     elif a.job == "dataset":
         job = Job.dataset(int(a.gib * 2**30), a.accesses, a.locality, a.hot_fraction)
     else:
@@ -292,9 +282,6 @@ def main(argv=None):
     p.add_argument("--route")
     p.add_argument("--timeout", type=float, default=300)
     p.set_defaults(fn=cmd_run)
-    p = sub.add_parser("q", help="SPATIAL Q: run|check|qasm|ir <file.sq>")
-    p.add_argument("rest", nargs=argparse.REMAINDER)
-    p.set_defaults(fn=cmd_q)
     p = sub.add_parser("bench", help="run benchmarks and regenerate docs/RESULTATS.md")
     p.add_argument("name", choices=[*BENCHES, "all"])
     p.set_defaults(fn=cmd_bench)
@@ -308,22 +295,20 @@ def main(argv=None):
     p.add_argument("--allow-remote", action="store_true", help="explicit consent to accept LAN connections")
     p.set_defaults(fn=cmd_worker)
     p = sub.add_parser("optimize", help="ONE objective for every engine: price each way to do a job, pick the cheapest, optionally run and check")
-    p.add_argument("job", choices=["compute", "binary", "quantum", "dataset", "kv"])
-    p.add_argument("--family", default="mandel", help="compute: mandel|heat|nbody|hologram|option|ode")
+    p.add_argument("job", choices=["compute", "binary", "dataset", "kv"])
+    p.add_argument("--family", default="mandel", help="compute: mandel|collatz|waves|batch_score|pk_mandel|pk_collatz|pk_batch_score|pk_rtb|pk_credit|pk_claims|pk_alerts|pk_moderation|pk_telecom")
     p.add_argument("--params", default="{}", help="compute: JSON parameters, e.g. '{\"n\":800,\"iters\":300}'")
-    p.add_argument("--file", help="binary: path; quantum: .sq file")
+    p.add_argument("--file", help="binary: path")
     p.add_argument("args", nargs="*", help="binary: arguments")
     p.add_argument("--est-native-s", type=float, default=1.0, help="binary: expected run time when native")
-    p.add_argument("--kernel", help="quantum: kernel name"); p.add_argument("--kargs", default="[]"); p.add_argument("--shots", type=int, default=1000)
     p.add_argument("--gib", type=float, default=1.0, help="dataset: size in GiB"); p.add_argument("--accesses", type=int, default=100000)
     p.add_argument("--locality", type=float, default=0.8); p.add_argument("--hot-fraction", type=float, default=0.2)
     p.add_argument("--prefix-tokens", type=int, default=1000); p.add_argument("--reuse", type=float, default=0.5); p.add_argument("--horizon-h", type=float, default=1.0)
     p.add_argument("--objective", choices=["cost", "time"], default="cost")
     p.add_argument("--deadline", type=float); p.add_argument("--max-ram-gib", type=float)
-    p.add_argument("--isolated", action="store_true"); p.add_argument("--allow-qpu", action="store_true"); p.add_argument("--require-hardware", action="store_true")
+    p.add_argument("--isolated", action="store_true")
     p.add_argument("--local-usd-per-hour", type=float, default=0.134, help="price of this machine (default is an assumption)")
     p.add_argument("--ram-usd-gb-hour", type=float, default=0.0); p.add_argument("--storage-usd-gb-hour", type=float, default=0.0)
-    p.add_argument("--qpu-usd-per-shot", type=float, default=0.0); p.add_argument("--qpu-usd-per-task", type=float, default=0.0)
     p.add_argument("--hub", help="host:port of a fleet hub: nodes become options"); p.add_argument("--token-file")
     p.add_argument("--execute", action="store_true", help="run the chosen option and compare with the estimate")
     p.set_defaults(fn=cmd_optimize)

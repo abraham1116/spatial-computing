@@ -1,11 +1,9 @@
 """Providers: how each engine turns a job into priced, comparable options.
 
-compute   numerical families (Compute, Simulation, Scientific, Holographic engines): each variant is probed
-          on a reduced problem, checked against the others, and extrapolated
+compute   numerical families: each variant is probed on a reduced problem, checked against the others, and extrapolated
 fleet     the same compute job on each node of a fleet hub, priced at the node's own rate
 memory    a dataset: all in RAM, or tiered over SSD, with tier latencies measured on this machine
 runtime   a binary: every route (native, WASM, micro-VM, Wine) with its isolation and measured overhead
-quantum   a circuit: exact simulator, Qiskit Aer, or real hardware (only if asked for and priced)
 kv        an inference cache prefix: recompute it, or keep and restore it (toy model, measured)
 """
 from __future__ import annotations
@@ -44,11 +42,6 @@ FAMILIES = {
     "pk_alerts": dict(variants={"cpu": "pk_alerts_cpu", "gpu_metal": "pk_alerts_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "pk_moderation": dict(variants={"cpu": "pk_moderation_cpu", "gpu_metal": "pk_moderation_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "pk_telecom": dict(variants={"cpu": "pk_telecom_cpu", "gpu_metal": "pk_telecom_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
-    "heat": dict(variants={"numpy": "heat_numpy", "numba": "heat_numba"}, scale="steps", exp=1.0, min=2, exact=False),
-    "nbody": dict(variants={"cpu": "nbody"}, scale="steps", exp=1.0, min=2, exact=False),
-    "hologram": dict(variants={"cpu": "hologram_peak"}, scale="n", exp=2.0, min=32, exact=True),
-    "option": dict(variants={"cpu": "option_mc"}, scale="paths", exp=1.0, min=1000, exact=False),
-    "ode": dict(variants={"cpu": "harmonic_rk4"}, scale="steps", exp=1.0, min=10, exact=False),
 }
 
 
@@ -310,50 +303,6 @@ class RuntimeProvider(Provider):
         return e.stdout
 
 
-# ------------------------------------------------------------------------------------- quantum
-class QuantumProvider(Provider):
-    kinds = ("quantum",)
-
-    def options(self, job, obj, planner, so_far):
-        from ..q import compile_kernel, parse
-        from ..q import backends as B
-        sp = job.spec
-        prog = parse(sp["source"])
-        c, _ = compile_kernel(prog.kernels[sp["kernel"]], sp["args"], kernels=prog.kernels)
-        est = c.estimate()
-        P, shots = planner.prices, sp["shots"]
-        out = []
-        for name in ("statevector", "aer"):
-            o = Option("quantum", name, True, isolated=None, rate_usd_h=P.local_usd_per_hour, est_ram_bytes=est.statevector_bytes)
-            if obj.require_hardware:
-                o.reject("real hardware required by this objective")
-            elif est.statevector_bytes > 0.5 * psutil.virtual_memory().available:
-                o.reject(f"{est.qubits} qubits need {est.statevector_bytes / 2**30:.1f} GiB for an exact state vector")
-            else:
-                try:
-                    b = B.get(name)
-                    b.sample(c, 10, 0)                                   # warm-up
-                    o.est_time_s = _best_of(lambda: b.sample(c, 10, 0))[0] * (1 + shots / 5000)
-                    o.basis = "probe (10 shots)"
-                    o.run = (lambda b=b: b.sample(c, shots, 0))
-                except B.BackendUnavailable as e:
-                    o.reject(str(e))
-            out.append(planner.calibrate("quantum", o))
-        q = Option("quantum", "qpu", True, isolated=None, est_ram_bytes=None, basis="provider tariff supplied by the caller; queue time unknown")
-        tok = B._ibm_token()
-        if not obj.allow_qpu:
-            q.reject("real hardware is only used when the objective allows it (allow_qpu)")
-        elif tok is None:
-            q.reject("no IBM Quantum token configured")
-        elif not P.qpu_priced():
-            q.reject("no QPU price given: refusing to guess a tariff")
-        else:
-            q.fixed_usd = c.shot_cost(shots, P.qpu_usd_per_shot, P.qpu_usd_per_task, P.qpu_usd_per_second, P.qpu_seconds_per_shot)["usd"]
-            q.run = (lambda: B.QpuBackend().sample(c, shots, 0))
-        out.append(q)
-        return out
-
-
 # ------------------------------------------------------------------------------------- kv cache
 _KV: dict = {}
 
@@ -433,4 +382,4 @@ class KvProvider(Provider):
 
 
 def default_providers() -> list[Provider]:
-    return [ComputeProvider(), FleetProvider(), MemoryProvider(), RuntimeProvider(), QuantumProvider(), KvProvider()]
+    return [ComputeProvider(), FleetProvider(), MemoryProvider(), RuntimeProvider(), KvProvider()]

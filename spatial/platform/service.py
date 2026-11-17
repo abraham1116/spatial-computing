@@ -39,11 +39,6 @@ CATALOG = {
     "pk_moderation_cpu": dict(title="Portable kernel: Content moderation score", doc="Content-moderation-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "pk_telecom_cpu": dict(title="Portable kernel: Telecom fraud/billing score", doc="Telecom-fraud/billing-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "matmul": dict(title="Matrix multiply", doc="Dense float64 matrix product of size n.", params={"n": (600, 16, 1500)}),
-    "heat_numba": dict(title="Heat diffusion", doc="2-D heat diffusion from a hot square (simulation engine, Numba).", params={"n": (200, 16, 800), "steps": (500, 1, 5000)}),
-    "nbody": dict(title="N-body", doc="Leapfrog N-body integration; returns the relative energy drift.", params={"bodies": (100, 2, 300), "steps": (400, 1, 2000)}),
-    "option_mc": dict(title="Option pricing (Monte Carlo)", doc="European call price by Monte Carlo (scientific engine).", params={"paths": (1_000_000, 1000, 5_000_000)}),
-    "harmonic_rk4": dict(title="Harmonic oscillator (RK4)", doc="Runge-Kutta solution of x'' = -omega^2 x, compared with the exact answer.", params={"omega": (1.0, 0.01, 100.0), "t_end": (6.0, 0.1, 1000.0), "steps": (2000, 10, 1_000_000)}),
-    "hologram_peak": dict(title="Hologram synthesis", doc="Synthesise a one-point hologram and reconstruct it (holographic engine).", params={"n": (256, 32, 1024)}),
     "sha256_chain": dict(title="SHA-256 chain", doc="Hash-bound workload: memory bandwidth and SHA throughput.", params={"rounds": (200, 1, 2000)}),
 }
 

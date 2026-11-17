@@ -11,4 +11,4 @@ Please use GitHub's private vulnerability reporting (Security tab, "Report a vul
 An independent review, certificate-based peer identity, a *signed* (not just hash-chained) audit log, durable revocation and usage counters, and hardening of the sandbox against a malicious binary are not done. They are listed in [ROADMAP.md](ROADMAP.md).
 
 ## Hardening tests (v0.12.1)
-`tests/test_hardening.py`: random bytes before and after the handshake, tampered and malformed records, oversized frames, replayed handshakes, silent peers, connection cap, 100 simultaneous clients, random requests to the hub and 1,500 mutated SPATIAL Q programs. Seeded random tests, not coverage-guided fuzzing and not an independent review.
+`tests/test_hardening.py`: random bytes before and after the handshake, tampered and malformed records, oversized frames, replayed handshakes, silent peers, connection cap, 100 simultaneous clients, and random requests to the hub. Seeded random tests, not coverage-guided fuzzing and not an independent review.

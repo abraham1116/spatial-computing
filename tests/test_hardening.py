@@ -1,4 +1,4 @@
-"""D5 / G-8: hostile input against the wire protocol, the hub and the SPATIAL Q parser. Pass = no crash,
+"""D5 / G-8: hostile input against the wire protocol and the hub. Pass = no crash,
 no hang, the server keeps answering honest clients."""
 import os
 import random
@@ -9,10 +9,6 @@ import time
 import pytest
 
 from spatial.core.protocol import RpcClient, RpcServer, _mac
-from spatial.q import parse
-from spatial.q.compiler import SQCompileError
-from spatial.q.lexer import SQSyntaxError
-from spatial.q.runtime import SQRuntimeError
 
 TOKEN = b"k" * 32
 
@@ -130,30 +126,6 @@ def test_hub_survives_random_requests_from_an_authenticated_client():
         except Exception:
             bad += 1                                                                   # the server turns these into {"ok": false}
     assert bad > 0 and isinstance(hub.tenants(), list)                                  # raised cleanly, state still readable
-
-
-def test_sq_parser_only_ever_fails_with_its_own_errors_and_never_hangs():
-    base = ("quantum bell() { qubit q[2]; h q[0]; cx q[0], q[1]; measure q; } "
-            "main { r = bell(); print(r); for i in range(3) { } }")
-    rng = random.Random(3)
-    alphabet = "{}()[];,.=+-*/<>!&|\"' \n\t0123456789abcxyzhqubit#@$%^~\\"
-    t0 = time.time()
-    for _ in range(1500):
-        s = list(base)
-        for _ in range(rng.randrange(1, 6)):
-            op = rng.random()
-            i = rng.randrange(len(s)) if s else 0
-            if op < 0.4 and s:
-                s[i] = rng.choice(alphabet)
-            elif op < 0.7 and s:
-                del s[i]
-            else:
-                s.insert(i, rng.choice(alphabet))
-        try:
-            parse("".join(s))
-        except (SQSyntaxError, SQCompileError, SQRuntimeError):
-            pass
-    assert time.time() - t0 < 60
 
 
 def test_a_burst_of_simultaneous_connections_all_succeed():

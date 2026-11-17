@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spatial-computing"
-version = "0.22.0"
-description = "Spatial Computing: open-source infrastructure efficiency toolkit. Measure, decide, prove (compute, tiered memory, runtime routing, hybrid quantum language)"
+version = "0.23.0"
+description = "Spatial Computing: open-source infrastructure efficiency toolkit. Measure, decide, prove (compute, tiered memory, runtime routing, fleet)"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -15,9 +15,7 @@ requires-python = ">=3.10"
 dependencies = ["numpy>=1.26,<2.2", "psutil>=5.9", "numba>=0.59,<0.62", "lz4>=4.3", "cryptography>=42"]
 
 [project.optional-dependencies]
-quantum = ["qiskit>=2.0", "qiskit-aer>=0.17", "qiskit-qasm3-import>=0.5", "pyqir>=0.10"]
 build = ["ziglang>=0.13"]
-qpu = ["qiskit>=2.0", "qiskit-ibm-runtime>=0.40"]
 dev = ["pytest>=8", "lxml>=5"]
 
 [project.urls]
@@ -26,7 +24,6 @@ Repository = "https://github.com/abraham1116/spatial-computing"
 
 [project.scripts]
 spatial = "spatial.cli:main"
-spatialq = "spatial.q.runtime:main"
 
 [tool.setuptools.packages.find]
 include = ["spatial*"]

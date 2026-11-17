@@ -1,9 +1,7 @@
 """Tests for the v0.2 additions: encrypted protocol, chained ledger, task queue,
-encrypted/replicated far tier, micro-VM input files, SPATIAL Q sub-kernels, noise, QIR."""
+encrypted/replicated far tier, micro-VM input files."""
 import json
-import math
 import socket
-import struct
 
 import numpy as np
 import pytest
@@ -16,9 +14,6 @@ from spatial.core.model import Measurement
 from spatial.core.protocol import RpcClient, RpcServer
 from spatial.memory import FileBackend, TieredStore
 from spatial.memory.secure import EncryptedBackend, PageIntegrityError, ReplicatedBackend
-from spatial.q import compile_kernel, parse, run_source, sim
-from spatial.q.compiler import SQCompileError
-from spatial.q.qir import QirExportError, lower, to_qir
 from spatial.runtime import microvm
 
 PAGE = 16384
@@ -180,65 +175,6 @@ def test_microvm_sees_only_the_files_it_is_given():
     assert r.stdout.split() == ["a.txt", "b.txt"]
     with pytest.raises(ValueError):
         microvm.build_initramfs(b"", [], "/dev/null", files={"../etc/passwd": b"x"})
-
-
-# ---------------------------------------------------------------- SPATIAL Q
-SUB = """
-quantum entangle(a: qubit, b: qubit) { h a; cx a, b; }
-quantum rot(r: qubit, t: angle) { ry(t) r; }
-quantum ghz4() {
-    qubit q[4];
-    entangle(q[0], q[1]);
-    for i in 1..3 { cx q[i], q[i + 1]; }
-    rot(q, 0.0);
-}
-quantum loop(a: qubit) { loop(a); }
-quantum bad() { qubit q[1]; loop(q[0]); }
-main { let c = sample ghz4() shots 400; }
-"""
-
-
-def test_sub_kernels_inline_on_the_callers_qubits():
-    p = parse(SUB)
-    c, _ = compile_kernel(p.kernels["ghz4"], [], kernels=p.kernels)
-    assert [o.name for o in c.ops][:2] == ["h", "cx"] and c.n_qubits == 4
-    env, _ = run_source(SUB, seed=1, out=lambda *a: None)
-    assert set(env["c"]) == {"0000", "1111"}
-    with pytest.raises(SQCompileError, match="only be called from another kernel"):
-        compile_kernel(p.kernels["entangle"], [], kernels=p.kernels)
-    with pytest.raises(SQCompileError, match="recursion"):
-        compile_kernel(p.kernels["bad"], [], kernels=p.kernels)
-    with pytest.raises(SQCompileError, match="unknown kernel"):
-        compile_kernel(parse("quantum k() { qubit q[1]; nope(q[0]); } main { }").kernels["k"], [])
-
-
-def test_depolarising_noise_matches_theory():
-    k = parse("quantum k() { qubit q[1]; x q[0]; } main { }").kernels["k"]
-    c, _ = compile_kernel(k, [])
-    assert sim.sample(c, 500, seed=1) == {"1": 500}
-    p, shots = 0.3, 20000
-    counts = sim.sample(c, shots, seed=2, noise=p)
-    # an X or Y error (2/3 of errors) flips the outcome: P(1) = 1 - 2p/3
-    assert counts["1"] / shots == pytest.approx(1 - 2 * p / 3, abs=0.012)
-    with pytest.raises(ValueError):
-        sim.sample(c, 10, noise=1.5)
-
-
-def test_qir_lowering_is_exact_up_to_global_phase_and_parses():
-    src = """quantum k(t) { qubit q[3]; h q; sx q[0]; p(t) q[1]; cp(t) q[0], q[2]; crz(0.7) q[1], q[2];
-             ccx q[0], q[1], q[2]; sdg q[2]; } main { }"""
-    c, _ = compile_kernel(parse(src).kernels["k"], [0.9], opt=False)
-    a, b = sim.run_static(c).vector(), sim.run_static(lower(c)).vector()
-    assert abs(np.vdot(a, b)) ** 2 == pytest.approx(1.0, abs=1e-12)
-    ir = to_qir(c)
-    assert '"required_num_qubits"="3"' in ir and "__quantum__qis__cnot__body" in ir
-    assert struct.unpack(">d", bytes.fromhex(ir.split("double 0x")[1][:16]))[0] == pytest.approx(math.pi / 2)
-    pyqir = pytest.importorskip("pyqir")
-    m = pyqir.Module.from_ir(pyqir.Context(), ir)
-    assert m.verify() is None
-    entry = next(f for f in m.functions if pyqir.is_entry_point(f))
-    assert pyqir.required_num_qubits(entry) == 3 and pyqir.required_num_results(entry) == 3
-    assert '"qir_profiles"="base_profile"' in ir
 
 
 def test_ledger_chain_survives_concurrent_writers(tmp_path):

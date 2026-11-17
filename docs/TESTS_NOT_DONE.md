@@ -59,17 +59,6 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | NVMe-over-Fabrics backend | NVMe-oF target | Same |
 | Rewrite of hot paths in Rust or C++ | Rust toolchain (not installed) | At least 10 times lower per-access overhead than the Python version, same results |
 
-## B. Quantum tests
-
-| Id | Test | State | Needs |
-|---|---|---|---|
-| B1 | More devices and more days; per-qubit-pair noise; error mitigation | design | IBM Quantum plan with time (the open plan has a small monthly quota) |
-| B2 | Cost per shot from real prices | partly done: the function exists and refuses to run without caller-supplied prices | The provider's actual tariff |
-| B3 | QIR executed on a QIR runtime (Quantinuum, Azure Quantum): exports are only parsed by `pyqir` | design | Provider account |
-| B4 | OpenQASM 2 and 3 round trips with Cirq, PennyLane, Q# and CUDA-Q (only Qiskit's parser has been used) | ready to write | `pip install cirq pennylane`; Q# and CUDA-Q need their toolchains |
-| B5 | Simulation above about 27 qubits, GPU state vector | design | A GPU with enough memory |
-| B6 | Any claim of quantum advantage | **not claimed, not tested** | Out of scope |
-
 ## H. Planner tests (the one objective)
 
 | Id | Test | State |
@@ -77,9 +66,8 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | H-1 | Decision quality on a second and third machine (estimates are per machine; does the planner still pick the fastest?) | ready: `python benchmarks/bench_unified.py` and `HELDOUT=1 ...` on each machine |
 | H-2 | Real billed money: run on a rented node and compare the planner's dollar estimate with the invoice | design, needs a cloud account |
 | H-3 | NVIDIA GPU as a planner option on a real GPU, with its price per hour (the Metal GPU path is tested; the CUDA path is not) | design, needs an NVIDIA machine |
-| H-4 | Many more job families and sizes (the 25 cases are numerical kernels and circuit simulation only) | design |
+| H-4 | Many more job families and sizes (the 25 cases are numerical kernels and circuit simulation only, predating the removal of the quantum engine) | design |
 | H-5 | A learned runtime model instead of probes plus a median correction; compare accuracy and probe cost | design |
-| H-6 | Real QPU option priced with the provider's tariff and compared with simulators on cost and fidelity | design, needs tariff and QPU time |
 | H-7 | Fleet node speed: measure per-node speed instead of assuming it equals this machine's | design, needs several machines |
 | H-8 | Real LLM KV-cache policy against a real inference server | **measured in v0.15.0** (`benchmarks/bench_llm.py`, `llm_kvcache.json`): a 946-token prompt, five questions, prefix caching on or off. Recompute 28 to 175 s (median 36 s; noisy: the 2-vCPU VM shared the machine with other work), cached 0.35 to 0.69 s, so reuse saved at least ×41 on the prompt phase (best recompute against worst cached); the 939 shared tokens were reused and the answers were identical in 5 of 5. One small model, CPU, one prompt length. The planner's KV policy is **not** yet calibrated from these numbers; no GPU |
 
@@ -128,7 +116,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | D2 | Soak test: hours of continuous use, memory growth, connection leaks | **partly done in v0.14.0** (`benchmarks/soak.py`): hub, 3 agents, a client submitting a task every 0.5 s with connection churn, and a dashboard polling, 15 then 12 minutes on one Mac. No errors (1,758 then 1,419 tasks), file descriptors and threads flat, agents flat at 64 MiB. First run: hub RSS grew +12.5 MiB/h because finished tasks were kept forever; fixed with a cap (`--max-finished`, default 5,000, and a cap on cache-affinity keys). Second run with a cap of 300: RSS 64 to 65 MiB, slope +5 MiB/h which 12 minutes cannot tell from noise. **Minutes, not hours or days** |
 | D3 | Many concurrent clients on the servers (hundreds) | **partly done in v0.12.1**: 100, 300 and 1,000 simulated agents against one hub ([scale.json](../benchmarks/results/scale.json)); found and fixed a listen backlog of 5 that refused simultaneous reconnects. Agents were threads of one process on the same 2-core Mac; one thread per connection remains |
 | D4 | Independent security review of SWP/2 (forward secrecy was added in v0.8, not reviewed by anyone else) | external |
-| D5 | Fuzzing the wire format and the SPATIAL Q parser | **partly done in v0.12.1**: random bytes and tampered records against the server, malformed authenticated plaintext, random requests to the hub handler, 1,500 mutated SPATIAL Q programs; no crash. Seeded random tests, not coverage-guided fuzzing |
+| D5 | Fuzzing the wire format | **partly done in v0.12.1**: random bytes and tampered records against the server, malformed authenticated plaintext, random requests to the hub handler; no crash. Seeded random tests, not coverage-guided fuzzing. The SPATIAL Q parser fuzz test was removed along with that engine |
 | D6 | Verifying every benchmark again after each release | **done in v0.14.0**: `benchmarks/verify.py` re-checks the properties behind the saved results (exact collectives, decision regret, kernel parity, 100-agent load, security tests) and `.github/workflows/verify.yml` runs it every Monday on Linux and macOS. Shared runners are noisy: a failure means look, not that the claim is false |
 
 ## E. Other engines
@@ -136,10 +124,7 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 | Id | Test | State |
 |---|---|---|
 | E1 | AI: a real language model, model routing, vLLM / llm-d integration | **partly done in v0.15.0**: a real model (Qwen2.5-0.5B Q4, llama.cpp server in a container, CPU, 2 vCPUs) behind `spatial.ai.llm`; see H-8. Not done: model routing, vLLM / llm-d, a GPU, a larger model |
-| E2 | Scientific: domain solvers against reference codes (OpenFOAM, LAMMPS, ...) | design, needs those codes and HPC time |
-| E3 | Simulation: multiphysics, digital twin validated against real sensor data | design, needs data |
 | E4 | Intelligence: predictor tested on unseen machines and many workload families | design, needs a second machine and more workloads |
-| E5 | Holographic: a physical spatial light modulator; real-time hologram synthesis on a GPU; optical measurement | design, needs hardware |
 
 ## F. Business and legal validation (not code)
 
@@ -158,4 +143,3 @@ Same benchmark on AC and battery, and cold versus after 10 minutes of load. Earl
 - **A2 (GPU)** decides whether the commercial thesis holds. Nothing else matters as much.
 - **A1 and A3** turn estimates into measurements for distribution and energy.
 - **D4 and C5** are required before exposing any service to a network you do not control.
-- **B-tests** do not affect the business thesis; they affect the credibility of SPATIAL Q.

@@ -21,7 +21,7 @@ Everything that needs hardware or people is tracked, with how to run it, in [`do
 - [ ] First run on a real NVIDIA GPU; more job families; host-to-device transfer model; AMD (ROCm) and remote GPUs
 
 ## Planner (one objective)
-- [x] Planner with providers for compute, fleet, memory, runtime, SPATIAL Q and the AI cache; probes, constraints, execution, estimate-versus-actual proof, calibration (v0.10)
+- [x] Planner with providers for compute, fleet, memory, runtime and the AI cache; probes, constraints, execution, estimate-versus-actual proof, calibration (v0.10)
 - [ ] Per-node speed measurement, GPU options, real invoices, a learned runtime model
 
 ## Fleet
@@ -54,25 +54,12 @@ Everything that needs hardware or people is tracked, with how to run it, in [`do
 - [ ] Head-to-head comparison with Docker Desktop, UTM, Parallels, CrossOver
 
 ## SPATIAL Q
-- [x] QIR export, base profile, validated with pyqir (v0.2)
-- [x] OpenQASM 2 export for Cirq / PennyLane importers (v0.3; checked with Qiskit's parser only)
-- [x] QIR adaptive profile for dynamic circuits, verified with pyqir (v0.5)
-- [ ] Verified round-trips with Cirq, PennyLane, Q#, CUDA-Q
-- [x] Real QPU backend: IBM Quantum through qiskit-ibm-runtime (v0.6)
-- [x] A first circuit executed on real quantum hardware: Bell pair on ibm_marrakesh, 90 % correlated (`benchmarks/results/qpu_bell.json`)
-- [x] Noisy simulator compared with real hardware on 5 circuits; asymmetric readout error added (v0.7, `docs/QPU.md`)
-- [ ] Repeat on other devices and days; noise that depends on the qubit pair
-- [x] Sub-kernels with qubit parameters (v0.2)
-- [x] Compiled classical part (to Python bytecode, v0.5)
-- [ ] Native compilation of the classical part
-- [x] Depolarising noise in the built-in simulator (v0.2)
-- [x] Cost estimation per shot from caller-supplied prices (v0.3)
-- [ ] Richer noise models
+
+**Removed in v0.22.0** (with the scientific/simulation/holographic engines): the market this project targets — ad-tech, credit, insurance, security, content moderation, telecom, gaming, automotive, robotics compute placement — has no use for a quantum language, and the engine added surface area without serving that direction. See CHANGELOG.
 
 ## Other engines
 - [x] AI: toy transformer with a real KV cache, restore-versus-recompute measured through the tiered store (v0.4)
 - [ ] AI: real LLM inference, KV-cache routing, vLLM / llm-d integration (needs hardware)
-- [x] Scientific: second validated job (RK4 ODE); Simulation: N-body; Intelligence: predictor wired to the scheduler; Holographic: hologram synthesis + numerical reconstruction (v0.4)
-- [ ] Scientific: domain solvers and HPC connectors
-- [ ] Simulation / Intelligence: multiphysics, digital twins, learned models
-- [ ] Holographic: real-time rendering, display hardware
+- [x] Intelligence: predictor wired to the scheduler (v0.4)
+- [ ] Intelligence: tested on unseen machines and many workload families
+- [x] Market-vertical kernel presets over the portable kernel DSL: RTB, credit, insurance, security alerts, content moderation, telecom (v0.20), ARM64 container route via emulation (v0.21)

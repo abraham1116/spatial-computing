@@ -8,7 +8,7 @@ import pages_console
 NAV_GROUPS = [
     ("Démarrer", [("index", "Vue d'ensemble"), ("quickstart", "Démarrage rapide")]),
     ("Console", [("console", "Console et comptes"), ("api", "API REST")]),
-    ("Moteurs", [("planner", "Planificateur"), ("fleet", "Flotte"), ("compute", "Compute Engine"), ("memory", "Mémoire à étages"), ("runtime", "Runtime Engine"), ("spatialq", "SPATIAL Q"), ("accelerators", "Accélérateurs"), ("interconnect", "Interconnexion")]),
+    ("Moteurs", [("planner", "Planificateur"), ("fleet", "Flotte"), ("compute", "Compute Engine"), ("memory", "Mémoire à étages"), ("runtime", "Runtime Engine"), ("accelerators", "Accélérateurs"), ("interconnect", "Interconnexion")]),
     ("Exploitation", [("operations", "Exploitation")]),
     ("Référence", [("cli", "Commandes"), ("security", "Sécurité"), ("results", "Résultats"), ("limits", "Limitations"), ("roadmap", "Feuille de route"), ("changelog", "Versions")]),
 ]
@@ -16,24 +16,21 @@ UI = {"start": "Commencer", "signin": "Connexion", "nav_label": "Principal", "pr
 
 # ---------------------------------------------------------------- landing
 INSTALL = """python3 -m venv .venv && source .venv/bin/activate
-pip install "spatial-computing[quantum]"
+pip install spatial-computing
 spatial audit
 spatial status"""
 
 RUN_FLEET = 'spatial token init --master-key-file hub.key\nspatial serve hub --master-key-file hub.key --port 7700\nspatial token issue --master-key-file hub.key --name node-1 --scopes fleet:report,fleet:work > node-1.tok\nspatial token issue --master-key-file hub.key --name ops --scopes fleet:read,fleet:submit > ops.tok\n# on every machine\nspatial agent --hub HUB:7700 --token-file node-1.tok --usd-per-hour 1.5\n# the operator\nspatial fleet status --hub HUB:7700 --token-file ops.tok\nspatial fleet advise --hub HUB:7700 --token-file ops.tok\nspatial fleet submit --hub HUB:7700 --token-file ops.tok --workload mandel_numba --params \'{"n":1400,"iters":300}\''
 FLEET_STATUS = 'node     up  cores cpu% ramfree%\nagent-0  yes     4   48       43\nagent-1  yes     4   50       43\nagent-2  yes     4   52       43\nfleet: 3 nodes, 12 cores,\nCPU utilization 50.1%\n(last 6 s)'
 
-PLAN_CMDS = 'spatial optimize compute --family heat --params \'{"n":100,"steps":600}\' --execute\nspatial optimize dataset --gib 24 --accesses 200000 --max-ram-gib 2\nspatial optimize kv --prefix-tokens 2000 --reuse 0.8 --execute\nspatial optimize quantum --file examples/01_bell.sq --kernel bell --shots 1000\nspatial optimize binary --file app.elf --isolated 64 50'
-PLAN_HEAT = "job: compute heat {'n': 100, 'steps': 600}\nobjective: minimize cost (0.134 $/h)\n>> compute/numba    0.0106 s   chosen\n   compute/numpy    0.0733 s   ok\nexecuted: 0.0114 s (estimated 0.0106 s, +8%)"
+PLAN_CMDS = 'spatial optimize compute --family pk_batch_score --params \'{"n":512,"signals":16}\' --execute\nspatial optimize dataset --gib 24 --accesses 200000 --max-ram-gib 2\nspatial optimize kv --prefix-tokens 2000 --reuse 0.8 --execute\nspatial optimize binary --file app.elf --isolated 64 50'
+PLAN_HEAT = "job: compute {'family': 'pk_batch_score', 'params': {'n': 512, 'signals': 16}}\nobjective: minimize cost   (local price 0.134 $/h)\n>> compute/cpu    0.02183 s   chosen\n   compute/gpu_metal    0.06099 s   ok\nexecuted compute/cpu: 0.03646 s (estimated 0.02183 s, error +67%)"
 PLAN_DATA = 'job: dataset 24 GiB, 200000 accesses\nobjective: minimize cost, RAM <= 2 GiB\n>> memory/tiered_ssd  41.4 s   chosen\n   memory/in_ram      -        rejected: 24.0 GiB does\n                      not fit the 2.0 GiB RAM budget'
-
-BELL = open(ROOT.parent / "examples/01_bell.sq").read().strip()
-
 
 def landing():
     import landing_new
     from spatial import __version__
-    landing_new.render("fr", {"INSTALL": INSTALL, "PLAN": PLAN_HEAT, "FLEET": FLEET_STATUS, "BELL": BELL, "Q_OUT": OUT["q_bell"]}, __version__)
+    landing_new.render("fr", {"INSTALL": INSTALL, "PLAN": PLAN_HEAT, "FLEET": FLEET_STATUS}, __version__)
 
 
 def docs():
@@ -46,14 +43,13 @@ def docs():
 <a href="compute.html"><b>Compute Engine</b><span>Détecter, surveiller, comparer des stratégies, déporter.</span></a>
 <a href="memory.html"><b>Mémoire à étages</b><span>Chaud, compressé, lointain : un échange chiffré, pas de la RAM.</span></a>
 <a href="runtime.html"><b>Runtime Engine</b><span>Inspecter un binaire, choisir une route, l'exécuter isolé.</span></a>
-<a href="spatialq.html"><b>SPATIAL Q</b><span>Langage, compilateur, OpenQASM 3, backends.</span></a>
 <a href="accelerators.html"><b>Accélérateurs et noyaux</b><span>Un travail sur CPU, Metal, NVIDIA ou AMD ; noyaux écrits une fois.</span></a>
 <a href="interconnect.html"><b>Interconnexion</b><span>Collectives chiffrées avec un modèle de coût mesuré.</span></a>
 <a href="operations.html"><b>Exploitation</b><span>Bascule, tableau de bord, alertes, échelle.</span></a>
 <a href="roadmap.html"><b>Feuille de route</b><span>Ce qui est construit, ce qui demande matériel ou personnes.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.22.0. Quatre moteurs sont opérationnels et testés (274 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine, un GPU de centre de données ou un QPU. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version 0.23.0. Quatre moteurs sont opérationnels et testés (226 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine ou un GPU de centre de données. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
@@ -65,16 +61,15 @@ def docs():
         f'''<h2>Voie la plus rapide : la console</h2>
 <ol><li>Ouvrez la console (<code>http://127.0.0.1:8090</code> si vous la lancez vous-même, voir <a href="console.html">Console et comptes</a>) et <b>créez un compte</b>.</li>
 <li>Sur l'Overview, appuyez sur <b>New app</b>, puis créez une <b>clé nœud</b> et une <b>clé client</b> (API keys). Chacune n'est affichée qu'une fois : enregistrez-la.</li>
-<li>Sur une machine : <code>pip install "spatial-computing[quantum]"</code>, puis <code>spatial agent --hub HUB:7700 --token-file node.tok</code>. Elle apparaît dans <b>Fleet</b>.</li>
+<li>Sur une machine : <code>pip install spatial-computing</code>, puis <code>spatial agent --hub HUB:7700 --token-file node.tok</code>. Elle apparaît dans <b>Fleet</b>.</li>
 <li>Ouvrez <b>Jobs</b>, choisissez <code>montecarlo_pi</code>, soumettez. Voyez le résultat, l'usage et la charge estimée dans <b>Usage &amp; billing</b>.</li></ol>
 <p>Vous préférez les scripts ? Les mêmes étapes sont dans l'<a href="api.html">API REST</a>.</p>
 <h2>Ligne de commande seule</h2>
 <div class="callout"><b>Python 3.10 ou plus récent</b>Testé sur macOS 13 (Intel) avec Python 3.13.</div>
-<div class="callout"><b>Sur PyPI</b>Publié sous le nom <code>spatial-computing</code>. Pour travailler sur le code, clone le dépôt GitHub et lance <code>pip install -e ".[quantum,dev]"</code>.</div>
+<div class="callout"><b>Sur PyPI</b>Publié sous le nom <code>spatial-computing</code>. Pour travailler sur le code, clone le dépôt GitHub et lance <code>pip install -e ".[dev]"</code>.</div>
 <h2>1. Environnement</h2>
 <pre id="q1"><code>{E(INSTALL.splitlines()[0])}
 {E(INSTALL.splitlines()[1])}</code></pre>
-<p>L'extra <code>quantum</code> ajoute Qiskit, Qiskit Aer et l'importeur OpenQASM 3. Sans lui, SPATIAL Q fonctionne avec son simulateur intégré mais pas avec le backend <code>aer</code>.</p>
 <p>Les versions de <code>numpy</code> (&lt; 2.2) et <code>numba</code> (&lt; 0.62) sont bornées : Numba 0.62 et plus a besoin d'un <code>llvmlite</code> qui ne se compile pas sur ce Mac.</p>
 <h2>2. Vérifier</h2>
 <pre><code>spatial audit
@@ -88,22 +83,21 @@ curl -o busybox-x86_64 https://busybox.net/downloads/binaries/1.35.0-x86_64-linu
 shasum -a 256 -c SHA256SUMS</code></pre>
 <h2>4. Binaires de test (facultatif)</h2>
 <p>Pour reproduire les tests du runtime, installe l'extra <code>build</code> (compilateur croisé <code>ziglang</code>) puis lance <code>spatial bench runtime</code> : il compile le même programme C pour macOS, Linux, Windows et WASM dans <code>benchmarks/build/</code>.</p>''',
-        [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\nSPATIAL Q                       operational-prototype\n…</span>'),
-         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">196 passed, 1 skipped</span>\n<span class="d"># le test ignoré demande un outil non installé</span>')])
+        [("Vérification", f'<span class="k">$ spatial status</span>\n<span class="d">Spatial Compute Engine          operational-prototype\nSpatial Resource Engine         operational-prototype\nSpatial Runtime Engine          operational-prototype\n…</span>'),
+         ("Tests", '<span class="k">$ pytest</span>\n<span class="g">274 tests</span>\n<span class="d"># quelques-uns ignorés si un outil manque (ex. Docker)</span>')])
 
     doc("planner", "Planificateur", "Un seul objectif pour tous les moteurs : réaliser chaque travail correctement au moindre coût, et le prouver.",
         f'''<div class="callout"><b>L'objectif</b>Réaliser le travail <b>correctement</b> au plus bas <b>coût en dollars</b>, dans les contraintes que tu fixes (délai, RAM, isolation, matériel autorisé), et le <b>prouver</b> : l'estimation est consignée à côté de ce qui s'est réellement passé, et les estimations suivantes sont corrigées par cet historique.</div>
 <h2>Comment les moteurs s'assemblent</h2>
 <p>Chaque moteur a un fournisseur qui transforme un travail en options chiffrées. Une seule fonction les classe. Un seul registre garde la décision puis, après exécution, la mesure.</p>
 <table><thead><tr><th>Moteur</th><th>Options proposées</th></tr></thead><tbody>
-<tr><td>Compute, Simulation, Scientifique, Holographique</td><td>Chaque variante d'un calcul numérique (Python pur, NumPy, Numba, multi-cœurs), sondée sur des problèmes réduits et comparée aux autres</td></tr>
+<tr><td>Compute</td><td>Chaque variante d'un calcul numérique ou d'un score en lot (Python pur, NumPy, Numba, multi-cœurs, ou un noyau portable sur CPU/Metal), sondée sur des problèmes réduits et comparée aux autres</td></tr>
 <tr><td>Flotte</td><td>Le même travail sur chaque nœud en ligne, au prix horaire du nœud</td></tr>
 <tr><td>Fabric d'accélérateurs</td><td>Le même travail sur le CPU, un GPU Metal ou un GPU NVIDIA (le chemin NVIDIA est écrit, jamais exécuté sur du vrai matériel) ; sur le Mac de référence le planificateur a choisi le périphérique le plus rapide pour 7 tailles sur 7</td></tr>
 <tr><td>Noyaux portables</td><td>Une source de noyau, exécutée sur le CPU ou un GPU Metal (le C CUDA est généré, jamais exécuté) ; le noyau entier est identique au bit près sur les deux ; bon choix de périphérique dans 4 cas sur 6, erreurs au point de croisement</td></tr>
 <tr><td>Interconnexion virtuelle</td><td>All-reduce chiffré entre processus (anneau, halving-doubling, arbre), algorithme choisi par un modèle de coût mesuré ; sur une seule machine, environ 3 000 fois sous NVLink 5 en bande passante : c'est une couche logicielle, pas un remplaçant</td></tr>
 <tr><td>Mémoire à étages</td><td>Un jeu de données en RAM ou en étages sur SSD, avec les latences mesurées sur cette machine</td></tr>
 <tr><td>Runtime</td><td>Chaque route pour un binaire (natif, WASM, micro-VM, Wine) avec son isolation et son surcoût</td></tr>
-<tr><td>SPATIAL Q</td><td>Simulateur exact, Aer, ou matériel réel (seulement si autorisé et chiffré)</td></tr>
 <tr><td>IA</td><td>Un préfixe en cache : le recalculer, ou le garder et le restaurer</td></tr></tbody></table>
 <h2>L'utiliser</h2>
 <pre><code>{E(PLAN_CMDS)}</code></pre>
@@ -115,7 +109,7 @@ shasum -a 256 -c SHA256SUMS</code></pre>
 <tr><td>+ meilleur de plusieurs sondes</td><td>13</td><td>12 (92 %)</td><td>7 %</td></tr>
 <tr><td>Idem sur 12 cas jamais utilisés pendant la mise au point</td><td>12</td><td>12 (100 %)</td><td>5 %</td></tr></tbody></table>
 <p>Les premières versions classaient mal la variante multi-cœurs sur les travaux moyens : les sondes de quelques microsecondes étaient dominées par le bruit de démarrage des fils d'exécution. Garder le meilleur de plusieurs essais l'a corrigé.</p>
-<div class="callout warn"><b>Limites</b>Une seule machine, 25 cas, noyaux numériques et simulation de circuits seulement. Les estimations sont propres à la machine (le planificateur resonde à chaque fois). L'étalonnage est une médiane des écarts passés, pas un modèle appris. Les coûts en dollars utilisent les prix que tu donnes : le prix local par défaut (0,134 $/h) est une hypothèse, un nœud sans prix est refusé, et un tarif de QPU n'est jamais deviné. Le moteur IA est un modèle jouet. Détails : <code>docs/OBJECTIVE.md</code>.</div>''',
+<div class="callout warn"><b>Limites</b>Une seule machine, 25 cas, noyaux numériques, antérieurs au retrait des moteurs quantique et de simulation scientifique. Les estimations sont propres à la machine (le planificateur resonde à chaque fois). L'étalonnage est une médiane des écarts passés, pas un modèle appris. Les coûts en dollars utilisent les prix que tu donnes : le prix local par défaut (0,134 $/h) est une hypothèse, et un nœud sans prix est refusé. Le moteur IA est un modèle jouet. Détails : <code>docs/OBJECTIVE.md</code>.</div>''',
         [("Exemple : calcul", f'<span class="d">{E(PLAN_HEAT)}</span>'), ("Exemple : données", f'<span class="d">{E(PLAN_DATA)}</span>')])
 
     doc("fleet", "Flotte", "Un agent sur chaque machine, un hub qui voit toute la flotte : mesurer, placer, recommander, auditer.",
@@ -218,55 +212,15 @@ print(st.stats())</code></pre>
         [("Binaire Windows", f'<span class="k">$ spatial plan bench-windows.exe</span>\n<span class="d">{out_block("plan_exe")}</span>'),
          ("ELF Linux", f'<span class="k">$ spatial plan bench-linux.elf</span>\n<span class="d">{out_block("plan_elf")}</span>\n\n<span class="k">$ spatial run bench-linux.elf 300 200</span>\n<span class="g">{out_block("run_elf")}</span>')])
 
-    doc("spatialq", "SPATIAL Q", "Un langage de flux hybride : classique, distribué et quantique, avec choix de backend par estimation de ressources.",
-        '''<div class="callout"><b>Honnêteté</b>Tout ce qui s'exécute est de la <b>simulation classique</b>. Aucun QPU n'est connecté et aucune accélération quantique n'est mesurée.</div>
-<h2>Un programme</h2>
-<pre><code>quantum bell() {
-    qubit q[2];
-    h q[0];
-    cx q[0], q[1];
-}
-
-task heavy(n: int) on any {
-    return workload("mandel_numba", n = n, iters = 200);
-}
-
-main {
-    let counts = sample bell() shots 2000;
-    print counts, expect "ZZ" of bell();
-}</code></pre>
-<h2>Noyaux, tâches, main</h2>
-<ul><li><code>quantum</code> : circuit spécialisé pour ses arguments au moment de l'appel. Boucles et <code>if</code> classiques évalués à la compilation ; <code>measure</code> et rétroaction (<code>if m { x q[2]; }</code>) pour les circuits dynamiques.</li>
-<li>Un noyau peut appeler des sous-noyaux à paramètres qubits : <code>quantum entangle(a: qubit, b: qubit) { h a; cx a, b; }</code>.</li>
-<li><code>task … on cpu|worker|any</code> : travail classique, local ou déporté.</li>
-<li><code>main</code> : orchestration ; <code>parallel { … }</code> lance des branches simultanées.</li></ul>
-<h2>Portes</h2>
-<p><code>h x y z s sdg t tdg sx</code> · <code>rx ry rz p</code> · <code>cx cz swap cp crz</code> · <code>ccx</code>. Les chaînes de bits suivent la convention de Qiskit (qubit 0 à droite).</p>
-<h2>Chaîne de compilation</h2>
-<p>Source → AST → circuit SQIR (représentation intermédiaire JSON) → optimiseur (annulation de paires inverses, fusion de rotations) → backend, ou export <b>OpenQASM 3</b>.</p>
-<table><thead><tr><th>Backend</th><th>État</th></tr></thead><tbody>
-<tr><td><code>statevector</code></td><td>Simulateur exact NumPy intégré</td></tr>
-<tr><td><code>aer</code></td><td>Qiskit Aer (extra <code>quantum</code>)</td></tr>
-<tr><td><code>qasm3</code></td><td>Export OpenQASM 3, rechargé avec succès par Qiskit dans un test</td></tr>
-<tr><td><code>qir</code></td><td>Export QIR (profil de base) des circuits statiques, validé avec pyqir</td></tr>
-<tr><td><code>qpu</code></td><td>IBM Quantum via <code>qiskit-ibm-runtime</code> (extra <code>qpu</code>). Demande un jeton et une instance ; sinon refuse en donnant la raison, sans repli silencieux. Une paire de Bell a tourné sur ibm_marrakesh : 90 % de résultats corrélés, le reste est du bruit matériel.</td></tr></tbody></table>
-<h2>Refus de l'orchestrateur</h2>
-<p>Un circuit dont le vecteur d'état (16 × 2<sup>n</sup> octets) dépasse la moitié de la RAM disponible est refusé avec un message explicite. Sur ce Mac : environ 27 qubits.</p>
-<p>La grammaire complète est dans <code>docs/06_SPATIAL_Q_SPEC.md</code>.</p>''',
-        [("Exécuter", f'<span class="k">$ spatial q run examples/01_bell.sq --seed 1</span>\n<span class="g">{out_block("q_bell")}</span>'),
-         ("Exporter en OpenQASM 3", f'<span class="k">$ spatial q qasm examples/04_teleport.sq --args \'[1.0]\'</span>\n<span class="d">{out_block("q_qasm")}</span>'),
-         ("Boucle hybride (VQE)", f'<span class="k">$ spatial q run examples/03_vqe_hybrid.sq</span>\n<span class="g">{out_block("q_vqe")}</span>\n<span class="d"># énergie exacte : -1.851199124123644</span>')])
-
     doc("cli", "Commandes", "Toutes les commandes de la ligne de commande <code>spatial</code>.",
         '''<table><thead><tr><th>Commande</th><th>Rôle</th></tr></thead><tbody>
 <tr><td><code>spatial audit [--json]</code></td><td>Matériel, usage courant, limites de cette machine</td></tr>
 <tr><td><code>spatial status</code></td><td>Statut réel de chaque moteur et ce qui n'est pas fait</td></tr>
 <tr><td><code>spatial plan &lt;fichier&gt;</code></td><td>Format détecté et routes d'exécution, avec raisons</td></tr>
 <tr><td><code>spatial run &lt;fichier&gt; [args] [--route R] [--timeout S]</code></td><td>Exécute via la première route réalisable ; code de sortie 1 si impossible</td></tr>
-<tr><td><code>spatial q run|check|qasm|qasm2|qir|ir &lt;fichier.sq&gt; [--noise p] [--compiled]</code></td><td>Exécute (avec bruit dépolarisant en option), vérifie, exporte en OpenQASM 3, OpenQASM 2, QIR ou SQIR</td></tr>
-<tr><td><code>spatial bench cpu|memory|gpu|runtime|q|all</code></td><td>Refait les mesures et régénère <code>docs/RESULTATS.md</code></td></tr>
+<tr><td><code>spatial bench cpu|memory|gpu|runtime|all</code></td><td>Refait les mesures et régénère <code>docs/RESULTATS.md</code></td></tr>
 <tr><td><code>spatial serve compute|memory|runtime --token-file F | --master-key-file F</code></td><td>Lance un worker, un serveur de pages ou un exécuteur de binaires en bac à sable, en boucle locale ; avec une clé maître, les locataires reçoivent des identifiants à portée limitée</td></tr>
-<tr><td><code>spatial optimize compute|binary|quantum|dataset|kv [--objective cost|time --deadline S --max-ram-gib G --isolated --allow-qpu --execute]</code></td><td>L'objectif unique : chiffre toutes les options d'un travail, choisit la moins chère, l'exécute si demandé et compare à l'estimation</td></tr>
+<tr><td><code>spatial optimize compute|binary|dataset|kv [--objective cost|time --deadline S --max-ram-gib G --isolated --execute]</code></td><td>L'objectif unique : chiffre toutes les options d'un travail, choisit la moins chère, l'exécute si demandé et compare à l'estimation</td></tr>
 <tr><td><code>spatial devices</code></td><td>Périphériques de calcul que le planificateur peut utiliser sur cette machine</td></tr>
 <tr><td><code>spatial agent --hub H:P --token-file F [--usd-per-hour X]</code></td><td>Lance un agent de flotte : mesure cette machine, rapporte à un hub, exécute des tâches autorisées</td></tr>
 <tr><td><code>spatial fleet status|advise|submit|result --hub H:P --token-file F</code></td><td>Voir la flotte, obtenir des recommandations avec leurs preuves, soumettre et lire des tâches</td></tr>
@@ -275,8 +229,7 @@ main {
 <tr><td><code>spatial watch --hub H:P --token-file F [--webhook URL]</code></td><td>Affiche les alertes quand elles apparaissent et disparaissent</td></tr>
 <tr><td><code>spatial token init|issue --master-key-file F [--name N --scopes S --ttl T --max-ops N --max-bytes B]</code></td><td>Crée une clé maître ; délivre un identifiant à portée, durée et quotas limités</td></tr></tbody></table>
 <p>Une erreur affiche une seule ligne <code>spatial: Type: message</code> et renvoie le code 1.</p>''',
-        [("Erreur propre", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>'),
-         ("Vérifier un programme", f'<span class="k">$ spatial q check examples/05_ghz_qft.sq</span>\n<span class="g">{out_block("q_qpu")}</span>')])
+        [("Erreur propre", f'<span class="k">$ spatial run /nonexistent</span>\n<span class="d">{out_block("unknown")}</span>')])
 
     doc("security", "Sécurité", "Ce que le prototype protège, et ce qu'il ne protège pas encore.",
         '''<h2>En place</h2>
@@ -305,26 +258,23 @@ main {
 <tr><td>Mémoire du système</td><td>macOS tient 7,3 Gio de pages dans 2,1 Gio (taux 3,4)</td></tr>
 <tr><td>Étages + SSD</td><td>33,5 Mo de RAM locale pour 134 Mo ; 80,5 µs/accès contre 0,76 µs</td></tr>
 <tr><td>Jeu de données plus grand que la RAM</td><td>24 Gio avec un budget de 512 Mio sur un Mac de 16 Gio : 0 page corrompue sur 2 648 vérifiées, pic de RAM du processus 578 Mio, environ 5 ms par accès aléatoire (sur disque, une seule exécution)</td></tr>
-<tr><td>Micro-VM Linux (HVF)</td><td>Démarrage 0,88 s ; calcul à 1,04× le natif</td></tr>
-<tr><td>SPATIAL Q</td><td>Fidélité 1,000 face à Qiskit jusqu'à 16 qubits ; VQE à l'énergie exacte</td></tr>
-<tr><td>SPATIAL Q sur matériel réel</td><td>5 circuits sur ibm_marrakesh ; le simulateur avec erreur de lecture asymétrique réduit de moitié l'écart avec la machine (un seul jeu de paramètres)</td></tr></tbody></table>
+<tr><td>Micro-VM Linux (HVF)</td><td>Démarrage 0,88 s ; calcul à 1,04× le natif</td></tr></tbody></table>
 <h2>Reproduire</h2>
 <pre><code>spatial bench all</code></pre>
 <p>Le tableau complet, avec les hypothèses de coût, est généré dans <code>docs/RESULTATS.md</code>. Les coûts sont des estimations : aucune ressource cloud n'a été louée et l'énergie n'a pas pu être mesurée.</p>''',
-        [("Reproduire", '<span class="k">$ spatial bench cpu</span>\n<span class="k">$ spatial bench memory</span>\n<span class="k">$ spatial bench runtime</span>\n<span class="k">$ spatial bench q</span>\n<span class="d"># écrit benchmarks/results/*.json\n# puis docs/RESULTATS.md</span>')])
+        [("Reproduire", '<span class="k">$ spatial bench cpu</span>\n<span class="k">$ spatial bench memory</span>\n<span class="k">$ spatial bench runtime</span>\n<span class="d"># écrit benchmarks/results/*.json\n# puis docs/RESULTATS.md</span>')])
 
     doc("limits", "Limitations", "Ce qui manque, dit sans détour.",
         '''<table><thead><tr><th>Limite</th><th>Conséquence</th></tr></thead><tbody>
 <tr><td>Une seule machine</td><td>Déport et mémoire distante validés en boucle locale ou lien émulé ; aucun gain de capacité démontré</td></tr>
 <tr><td>2 cœurs, GPU intégré sans float64</td><td>Parallélisme borné à ~2× ; pas d'inférence de modèle</td></tr>
-<tr><td>Pas de CXL, RDMA, NPU, QPU</td><td>Étudiés sur documents seulement</td></tr>
+<tr><td>Pas de CXL, RDMA, NPU</td><td>Étudiés sur documents seulement</td></tr>
 <tr><td>Énergie non mesurable</td><td>Coûts énergétiques estimés</td></tr>
 <tr><td>Windows</td><td>Un programme console exécuté sous Wine ; applications graphiques non testées</td></tr>
 <tr><td>Protocole sans revue indépendante ; pas de certificats</td><td>Ne pas exposer à un réseau non maîtrisé</td></tr>
-<tr><td>Simulation quantique exacte</td><td>~27 qubits ici, bornés par la RAM</td></tr>
-<tr><td>Domaines AI, scientifique, simulation, intelligence, holographie</td><td>Premiers composants seulement (modèle jouet, petits solveurs, optique numérique)</td></tr></tbody></table>
+<tr><td>Domaines AI, intelligence</td><td>Premiers composants seulement (modèle jouet, prédicteur par moindres carrés)</td></tr></tbody></table>
 <p>La liste détaillée et à jour est dans <code>docs/LIMITATIONS.md</code> (en anglais) ; chaque test non fait, avec la façon de le lancer, est dans <code>docs/TESTS_NOT_DONE.md</code>.</p>''',
-        [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime / SPATIAL Q\n  operational-prototype\nAI / scientifique / simulation /\nintelligence / holographique\n  first-components</span>')])
+        [("Statut des moteurs", '<span class="k">$ spatial status</span>\n<span class="d">compute / mémoire / runtime\n  operational-prototype\nAI / intelligence\n  first-components</span>')])
 
     pages_new.fr()
     pages_console.render("fr")

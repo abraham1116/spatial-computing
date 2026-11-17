@@ -44,7 +44,7 @@ T = {
   desc="The control layer for your compute infrastructure: it prices every way to run a job, runs the cheapest correct one, and proves the result.",
   eyebrow="Compute infrastructure · v{v} · open source",
   h1a="Run every job where it", h1b="costs least.",
-  sub="Spatial Computing is the control layer for your compute infrastructure. It measures your machines, prices every way to run a job — CPU, GPU, a fleet, memory tiers, quantum — runs the cheapest one that stays correct, and records the estimate next to what really happened.",
+  sub="Spatial Computing is the control layer for your compute infrastructure. It measures your machines, prices every way to run a job — CPU, GPU, a fleet, memory tiers — runs the cheapest one that stays correct, and records the estimate next to what really happened.",
   start="Get started", docs="Read the docs", frame="Fleet dashboard · live view of a 4-node fleet",
   eyeproof="Measured", proof_h="Numbers from the repository, not slides.",
   proof_lead="Each figure comes from a test or benchmark you can run yourself with <code>pytest</code> and <code>spatial bench all</code>.",
@@ -62,7 +62,7 @@ T = {
   tour=[
    ("Planner","Ask once. See every option, priced.",
     "Describe a job and your limits. The planner proposes every way to run it across engines, ranks them with one formula, explains each refusal, and records its estimate next to the real result.",
-    ["Compute, memory, runtime, quantum, AI and fleet options in one table","Calibrated by history: estimates improve with each run"],"docs/planner.html","PLAN"),
+    ["Compute, memory, runtime, AI and fleet options in one table","Calibrated by history: estimates improve with each run"],"docs/planner.html","PLAN"),
    ("Fleet","See every machine. Place work where it fits.",
     "An agent on each machine, a hub that sees them all. Work is placed by eligibility and load, shared fairly between teams, and recommendations come with their evidence.",
     ["Fair share between tenants, all-or-nothing gangs, cache-affinity routing","A read-only dashboard and alerts when a node goes quiet"],"docs/fleet.html","FLEET"),
@@ -79,10 +79,7 @@ T = {
   more_h="And the rest of the platform",
   more=[("Tiered memory","Work on data larger than RAM with a measured, priced latency trade-off.","docs/memory.html"),
         ("Runtime","Run software built for another system — Linux micro-VM, WebAssembly, Wine — isolated, with the route explained.","docs/runtime.html"),
-        ("SPATIAL Q","One language for classical, distributed and quantum steps; simulators, Qiskit Aer and IBM hardware.","docs/spatialq.html"),
-        ("AI","Reuse inference context instead of recomputing it, restored byte for byte.","docs/index.html"),
-        ("Scientific and simulation","Numerical jobs checked against exact solutions; N-body energy drift under 0.1 %.","docs/index.html"),
-        ("Holographic","Hologram synthesis and reconstruction, in focus on the emitted points.","docs/index.html")],
+        ("AI","Reuse inference context instead of recomputing it, restored byte for byte.","docs/index.html")],
   prod_eye="Built for production", prod_h="Secure, observable, recoverable.",
   prod=[("Encrypted and authenticated","AES-256-GCM, forward-secret key exchange, scoped credentials with expiry, quotas and revocation; teams with roles and two-factor sign-in in the console."),
         ("Tamper-evident audit","Every decision and request goes into a hash-chained ledger you can verify."),
@@ -90,10 +87,8 @@ T = {
         ("Scale","1,000 agents on one hub, status in 36 ms, hub memory 109 MiB."),
         ("Hardware-neutral","CPU, Metal, CUDA and HIP generation, remote nodes: one job description, many devices."),
         ("Reproducible","Every claim has a test or benchmark. A weekly workflow re-checks them.")],
-  q_eye="SPATIAL Q", q_h="A language for hybrid workflows.",
-  q_lead="Classical, distributed and quantum steps in one program. The orchestrator picks a backend from a resource estimate.",
   band_h="Start in three minutes.", band_p="Install, run the audit, ask the planner. Open source under Apache-2.0.",
-  oc_eye="Open core", oc_h="The core is open.", oc_p="The CLI, planner, fleet, SPATIAL Q, runtime and tiered-memory library are published under Apache-2.0. Advanced placement and cost policies are developed in a private package.",
+  oc_eye="Open core", oc_h="The core is open.", oc_p="The CLI, planner, fleet, runtime and tiered-memory library are published under Apache-2.0. Advanced placement and cost policies are developed in a private package.",
   gh="GitHub", more_link="Learn more", lim="Limitations", measured="Measured on 14–15 November 2026 · 2017 MacBook Pro (i7-7660U, 2 cores, 16 GB)"),
  "fr": dict(
   title="Spatial Computing — Chaque travail là où il coûte le moins",
@@ -135,10 +130,7 @@ T = {
   more_h="Et le reste de la plateforme",
   more=[("Mémoire hiérarchisée","Travaillez sur des données plus grandes que la RAM avec un compromis de latence mesuré et chiffré.","docs/memory.html"),
         ("Runtime","Exécutez un logiciel conçu pour un autre système — micro-VM Linux, WebAssembly, Wine — isolé, avec la route expliquée.","docs/runtime.html"),
-        ("SPATIAL Q","Un langage pour les étapes classiques, distribuées et quantiques ; simulateurs, Qiskit Aer et matériel IBM.","docs/spatialq.html"),
-        ("IA","Réutilisez le contexte d'inférence au lieu de le recalculer, restauré octet pour octet.","docs/index.html"),
-        ("Scientifique et simulation","Des travaux numériques vérifiés contre des solutions exactes ; dérive d'énergie N-corps sous 0,1 %.","docs/index.html"),
-        ("Holographique","Synthèse et reconstruction d'hologrammes, nettes sur les points émis.","docs/index.html")],
+        ("IA","Réutilisez le contexte d'inférence au lieu de le recalculer, restauré octet pour octet.","docs/index.html")],
   prod_eye="Conçu pour la production", prod_h="Sûr, observable, récupérable.",
   prod=[("Chiffré et authentifié","AES-256-GCM, échange de clés à confidentialité persistante, identifiants à portée limitée avec expiration, quotas et révocation ; équipes avec rôles et double authentification dans la console."),
         ("Audit infalsifiable","Chaque décision et chaque requête entre dans un registre chaîné par hachage que vous pouvez vérifier."),
@@ -146,10 +138,8 @@ T = {
         ("Passage à l'échelle","1 000 agents sur un hub, état en 36 ms, mémoire du hub 109 Mio."),
         ("Neutre vis-à-vis du matériel","CPU, Metal, génération CUDA et HIP, nœuds distants : une description de travail, plusieurs périphériques."),
         ("Reproductible","Chaque affirmation a un test ou un benchmark. Un workflow hebdomadaire les revérifie.")],
-  q_eye="SPATIAL Q", q_h="Un langage pour les workflows hybrides.",
-  q_lead="Étapes classiques, distribuées et quantiques dans un seul programme. L'orchestrateur choisit un moteur d'après une estimation de ressources.",
   band_h="Démarrez en trois minutes.", band_p="Installez, lancez l'audit, interrogez le planificateur. Open source sous Apache-2.0.",
-  oc_eye="Open core", oc_h="Le cœur est ouvert.", oc_p="La CLI, le planificateur, la flotte, SPATIAL Q, le runtime et la bibliothèque de mémoire hiérarchisée sont publiés sous Apache-2.0. Les politiques avancées de placement et de coût sont développées dans un paquet privé.",
+  oc_eye="Open core", oc_h="Le cœur est ouvert.", oc_p="La CLI, le planificateur, la flotte, le runtime et la bibliothèque de mémoire hiérarchisée sont publiés sous Apache-2.0. Les politiques avancées de placement et de coût sont développées dans un paquet privé.",
   gh="GitHub", more_link="En savoir plus", lim="Limitations", measured="Mesuré les 14 et 15 novembre 2026 · MacBook Pro 2017 (i7-7660U, 2 cœurs, 16 Go)"),
 }
 
@@ -198,13 +188,6 @@ def render(lang: str, ctx: dict, version: str) -> str:
 <h3 style="font-size:32px;margin:44px 0 16px">{t["more_h"]}</h3><div class="minis">{minis}</div></div></section>''')
     prod = "".join(f'<div><h4>{E(h)}</h4><p>{E(b)}</p></div>' for h, b in t["prod"])
     p.append(f'''<section><div class="wrap"><p class="eyebrow">{t["prod_eye"]}</p><h2>{t["prod_h"]}</h2><div class="minis">{prod}</div></div></section>''')
-    p.append(f'''<section><div class="wrap split">
-<div><p class="eyebrow">{t["q_eye"]}</p><h2>{t["q_h"]}</h2><p class="lead">{t["q_lead"]}</p><a class="btn ghost" href="docs/spatialq.html">{t["more_link"]}</a></div>
-<div class="term"><div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">examples/01_bell.sq</span></div><pre>{E(ctx["BELL"])}
-
-<span class="d">$ spatial q run examples/01_bell.sq</span>
-<span class="g">{E(ctx["Q_OUT"])}</span></pre></div>
-</div></section>''')
     p.append(f'''<div class="band"><div class="wrap"><div><h2>{t["band_h"]}</h2><p>{t["band_p"]}</p>
 <a class="btn" href="{start_href}">{t["start"]}</a> <a class="btn ghost" href="{REPO}" rel="noopener">{t["gh"]}</a></div>
 <pre class="install" tabindex="0" style="margin:0">{E(ctx["INSTALL"])}</pre></div></div>''')

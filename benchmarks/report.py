@@ -203,39 +203,6 @@ def main():
               f"- Environnement Python isolé avec une dépendance épinglée : créé en {f(ie['create_and_install_s'])} s.",
               "- Comparaison avec Docker Desktop, UTM, Parallels, CrossOver : non faite, aucun n'est installé.", ""]
 
-    # ------------------------------------------------------------------ Q
-    q = load("spatialq")
-    if q:
-        L += ["## Test 5 — SPATIAL Q", "", ctx_line(q), "",
-              "Tout ce qui suit est de la **simulation classique** de circuits quantiques. Aucun QPU n'a été utilisé ; aucune accélération quantique n'est mesurée.", "",
-              "### Simulateur intégré contre Qiskit (mêmes circuits, 1000 tirs)", "",
-              "| Qubits | Portes | Compilation (s) | Vecteur d'état (Mo) | SPATIAL Q NumPy (s) | Qiskit Aer (s) | SPATIAL Q / Aer | Fidélité vs Qiskit |",
-              "|---|---|---|---|---|---|---|---|"]
-        for r in q["scaling"]:
-            fid = f"{r['fidelity_vs_qiskit']:.12f}" if "fidelity_vs_qiskit" in r else "non calculée"
-            L.append(f"| {r['qubits']} | {r['ops']} | {f(r['compile_s'])} | {f(r['statevector_MB'])} | {f(r['spatialq_numpy_s'])} | "
-                     f"{f(r['aer_s'])} | {f(r['ratio_spatialq_over_aer'])} | {fid} |")
-        d, v = q["dynamic"], q["vqe"]
-        L += ["", f"Avec {f(q['ram_available_GB'])} Go disponibles au moment du test, la limite de simulation exacte sur ce Mac est d'environ "
-              f"**{q['max_qubits_exact_here']} qubits** (16 × 2ⁿ octets, en gardant la moitié de la RAM libre).", "",
-              "Lecture : résultats numériquement identiques à Qiskit. Le simulateur NumPy est plus rapide qu'Aer sous 12 qubits "
-              "(Aer a un coût fixe de lancement) et 6 à 8 fois plus lent à 20-22 qubits. Pour des circuits sérieux, le backend `aer` est le bon choix ; "
-              "le simulateur intégré sert de référence indépendante.", "",
-              "### Optimiseur", "", "| Noyau | Portes avant | Portes après | Passes | Compilation (s) |", "|---|---|---|---|---|"]
-        for o in q["optimizer"]:
-            L.append(f"| {o['kernel']} | {o['ops_before']} | {o['ops_after']} | {o['passes']} | {f(o['compile_s'])} |")
-        L += ["", "Ce cas (QFT suivie de son inverse) est construit pour s'annuler entièrement ; il vérifie l'optimiseur, il ne dit rien de son efficacité sur des circuits réels.", "",
-              "### Circuits dynamiques (téléportation, 4000 tirs)", "",
-              "| Méthode | Durée (s) |", "|---|---|",
-              f"| Simulation tir par tir (première version) | {f(d['per_shot_s'])} |",
-              f"| Énumération des branches de mesure (après optimisation) | {f(d['branch_enumeration_s'])} |",
-              f"| Qiskit Aer | {f(d['aer_s'])} |", "",
-              f"Gain de l'optimisation : ×{f(d['speedup_branch_vs_per_shot'])}. Probabilité mesurée que le qubit téléporté vaille 1 : "
-              f"{f(d['p_q2_is_1'])} ; attendue : {f(d['expected'])}.", "",
-              "### Programme hybride (VQE)", "",
-              f"Énergie trouvée : {v['energy']:.9f} ; diagonalisation exacte : {v['exact']:.9f} ; écart : {v['abs_error']:.1e}. "
-              f"{v['quantum_evaluations']} évaluations de noyau quantique pilotées par la boucle classique, en {f(v['wall_s'])} s.", ""]
-
     # ------------------------------------------------------------------ costs
     L += ["## Test 6 — Coûts", "",
           "**Aucun coût n'a été mesuré directement.** L'énergie n'a pas pu l'être (jauge de batterie figée, voir Limitations) et aucune ressource "

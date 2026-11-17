@@ -101,14 +101,14 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
     doc("roadmap", "Roadmap and open tests",
         "What is built, what needs hardware, and what needs people. Every item not yet tested is listed with how to run it.",
         '''<h2>Built and measured on one machine</h2>
-<p>Planner (one objective, estimate against reality), console (accounts, organizations and roles, two-factor sign-in, API keys, jobs, usage, tax, numbered invoices with PDF, REST API), remote desktop for three Linux apps, fleet (agent, hub, fair share, gangs, affinity, persistence, failover, dashboard, alerts), accelerator fabric (CPU, Metal), portable kernels, virtual interconnect, compute, tiered memory, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulator, compiler, IBM hardware run), security hardening.</p>
+<p>Planner (one objective, estimate against reality), console (accounts, organizations and roles, two-factor sign-in, API keys, jobs, usage, tax, numbered invoices with PDF, REST API), remote desktop for four Linux apps, fleet (agent, hub, fair share, gangs, affinity, persistence, failover, dashboard, alerts), accelerator fabric (CPU, Metal), portable kernels (incl. ARM64 via emulation), virtual interconnect, compute, tiered memory, runtime (micro-VM, WASM, Wine), security hardening.</p>
 <h2>Needs hardware</h2>
 <table><thead><tr><th>Item</th><th>Why it matters</th></tr></thead><tbody>
 <tr><td>An NVIDIA GPU</td><td>Run the generated CUDA C and the <code>numba.cuda</code> path; price a GPU as a planner option. <b>Decides whether the commercial thesis holds.</b></td></tr>
 <tr><td>Two or more real machines</td><td>Agents on real hosts, all-reduce on a real network, per-node speed instead of an assumption</td></tr>
 <tr><td>A power meter (<code>sudo powermetrics</code>)</td><td>Energy per run is estimated today, not measured</td></tr>
 <tr><td>An AMD GPU</td><td>Compile and run the generated HIP source</td></tr>
-<tr><td>CXL, RDMA, Apple Silicon, more quantum hardware time</td><td>Studied on paper or tested once</td></tr></tbody></table>
+<tr><td>CXL, RDMA, Apple Silicon</td><td>Studied on paper or tested once</td></tr></tbody></table>
 <h2>Needs people or accounts</h2>
 <ul><li>Independent security review of the SWP/2 protocol and an adversarial test of the micro-VM sandbox.</li>
 <li>A billed cloud run, to compare the planner's dollar estimate with an invoice.</li>
@@ -235,7 +235,7 @@ print(collatz.to_cuda_c(), collatz.to_hip())</code></pre>
     doc("roadmap", "Feuille de route et tests ouverts",
         "Ce qui est construit, ce qui demande du matériel, ce qui demande des gens. Chaque test non fait est listé avec la façon de le lancer.",
         '''<h2>Construit et mesuré sur une machine</h2>
-<p>Planificateur (un objectif, estimation contre réalité), console (comptes, organisations et rôles, double authentification, clés d'API, jobs, usage, taxe, factures numérotées avec PDF, API REST), bureau distant pour trois applications Linux, flotte (agent, hub, équité, groupes, affinité, persistance, bascule, tableau de bord, alertes), fabric d'accélérateurs (CPU, Metal), noyaux portables, interconnexion virtuelle, calcul, mémoire hiérarchisée, runtime (micro-VM, WASM, Wine), SPATIAL Q (simulateur, compilateur, exécution sur matériel IBM), durcissement de la sécurité.</p>
+<p>Planificateur (un objectif, estimation contre réalité), console (comptes, organisations et rôles, double authentification, clés d'API, jobs, usage, taxe, factures numérotées avec PDF, API REST), bureau distant pour quatre applications Linux, flotte (agent, hub, équité, groupes, affinité, persistance, bascule, tableau de bord, alertes), fabric d'accélérateurs (CPU, Metal), noyaux portables (dont ARM64 par émulation), interconnexion virtuelle, calcul, mémoire hiérarchisée, runtime (micro-VM, WASM, Wine), durcissement de la sécurité.</p>
 <h2>Demande du matériel</h2>
 <table><thead><tr><th>Élément</th><th>Pourquoi c'est important</th></tr></thead><tbody>
 <tr><td>Un GPU NVIDIA</td><td>Exécuter le C CUDA généré et le chemin <code>numba.cuda</code> ; chiffrer un GPU comme option du planificateur. <b>Décide si la thèse commerciale tient.</b></td></tr>

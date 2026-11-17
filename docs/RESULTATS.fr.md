@@ -153,51 +153,6 @@ Lecture :
 - Environnement Python isolé avec une dépendance épinglée : créé en 3.45 s.
 - Comparaison avec Docker Desktop, UTM, Parallels, CrossOver : non faite, aucun n'est installé.
 
-## Test 5 — SPATIAL Q
-
-*Mesuré le 2026-11-14 23:56:15 +0100 — MacBookPro14,1, Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz, macOS 13.7.8 — Now drawing from 'AC Power' (-InternalBattery-0	21%; charging; 2:21 remaining present: true).*
-
-Tout ce qui suit est de la **simulation classique** de circuits quantiques. Aucun QPU n'a été utilisé ; aucune accélération quantique n'est mesurée.
-
-### Simulateur intégré contre Qiskit (mêmes circuits, 1000 tirs)
-
-| Qubits | Portes | Compilation (s) | Vecteur d'état (Mo) | SPATIAL Q NumPy (s) | Qiskit Aer (s) | SPATIAL Q / Aer | Fidélité vs Qiskit |
-|---|---|---|---|---|---|---|---|
-| 4 | 44 | 0.000632 | 0.000256 | 0.00149 | 0.00512 | 0.291 | 1.000000000000 |
-| 8 | 92 | 0.00126 | 0.0041 | 0.00274 | 0.00682 | 0.401 | 1.000000000000 |
-| 12 | 140 | 0.00254 | 0.0655 | 0.00767 | 0.012 | 0.637 | 1.000000000000 |
-| 16 | 188 | 0.00272 | 1.05 | 0.0659 | 0.0395 | 1.67 | 1.000000000000 |
-| 20 | 236 | 0.00351 | 16.8 | 1.82 | 0.286 | 6.37 | non calculée |
-| 22 | 260 | 0.00381 | 67.1 | 10.6 | 1.30 | 8.12 | non calculée |
-
-Avec 7.14 Go disponibles au moment du test, la limite de simulation exacte sur ce Mac est d'environ **27 qubits** (16 × 2ⁿ octets, en gardant la moitié de la RAM libre).
-
-Lecture : résultats numériquement identiques à Qiskit. Le simulateur NumPy est plus rapide qu'Aer sous 12 qubits (Aer a un coût fixe de lancement) et 6 à 8 fois plus lent à 20-22 qubits. Pour des circuits sérieux, le backend `aer` est le bon choix ; le simulateur intégré sert de référence indépendante.
-
-### Optimiseur
-
-| Noyau | Portes avant | Portes après | Passes | Compilation (s) |
-|---|---|---|---|---|
-| qft_roundtrip(4) | 20 | 0 | 7 | 0.00049 |
-| qft_roundtrip(8) | 72 | 0 | 15 | 0.00178 |
-| qft_roundtrip(12) | 156 | 0 | 23 | 0.00528 |
-
-Ce cas (QFT suivie de son inverse) est construit pour s'annuler entièrement ; il vérifie l'optimiseur, il ne dit rien de son efficacité sur des circuits réels.
-
-### Circuits dynamiques (téléportation, 4000 tirs)
-
-| Méthode | Durée (s) |
-|---|---|
-| Simulation tir par tir (première version) | 0.9 |
-| Énumération des branches de mesure (après optimisation) | 0.000348 |
-| Qiskit Aer | 0.03 |
-
-Gain de l'optimisation : ×2 587. Probabilité mesurée que le qubit téléporté vaille 1 : 0.227 ; attendue : 0.23.
-
-### Programme hybride (VQE)
-
-Énergie trouvée : -1.851199124 ; diagonalisation exacte : -1.851199124 ; écart : 0.0e+00. 905 évaluations de noyau quantique pilotées par la boucle classique, en 0.167 s.
-
 ## Test 6 — Coûts
 
 **Aucun coût n'a été mesuré directement.** L'énergie n'a pas pu l'être (jauge de batterie figée, voir Limitations) et aucune ressource cloud n'a été louée. Le tableau applique le modèle de `spatial/compute/cost.py` aux durées mesurées, avec des hypothèses explicites.
@@ -240,9 +195,5 @@ Lecture :
 | Spatial Compute Engine | operational-prototype | tests/test_compute.py, benchmarks/bench_cpu.py, bench_gpu.py | no real second machine tested (offload validated over loopback only); no GPU scheduling |
 | Spatial Resource Engine (memory tiering) | operational-prototype | tests/test_memory.py, benchmarks/bench_memory.py | user-space object store only; not kernel paging; no RDMA/CXL hardware |
 | Spatial Runtime Engine | operational-prototype | tests/test_runtime.py, benchmarks/bench_runtime.py | Windows apps not demonstrated (no Wine / Windows image); no GUI streaming |
-| SPATIAL Q | operational-prototype | tests/test_q.py, benchmarks/bench_q.py | no real QPU executed (export to OpenQASM 3 only); simulator limited by RAM |
 | Spatial AI Engine | first-components | tests/test_domains.py (placement planner) | no model inference executed; planner only |
-| Spatial Scientific & Industrial Engine | first-components | tests/test_domains.py (Monte Carlo job via compute engine) | one reference job; no domain solvers |
-| Spatial Simulation Engine | first-components | tests/test_domains.py (heat diffusion step) | single toy solver; no multiphysics |
 | Spatial Intelligence Engine | first-components | tests/test_domains.py (runtime predictor) | least-squares runtime model only |
-| Spatial Holographic Engine | interface-only | tests/test_domains.py (voxel data model) | no display hardware, no hologram synthesis; data model only |

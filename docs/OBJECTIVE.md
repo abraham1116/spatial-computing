@@ -1,6 +1,6 @@
 # One objective for the whole infrastructure
 
-Every engine used to answer its own question: Compute asked "which strategy is fastest", Memory "does it fit", Runtime "which route runs", SPATIAL Q "which simulator", the AI engine "recompute or restore", the Fleet "which node". They now answer **one** question:
+Every engine used to answer its own question: Compute asked "which strategy is fastest", Memory "does it fit", Runtime "which route runs", the AI engine "recompute or restore", the Fleet "which node". They now answer **one** question:
 
 > **Get the job done correctly at the lowest cost in dollars, within the constraints you state, and prove it.**
 
@@ -13,33 +13,31 @@ Every engine used to answer its own question: Compute asked "which strategy is f
                        |
                    [ Planner ]   one ranking function, one cost formula, one ledger
                        |
-   +-----------+-------+-------+-----------+-----------+-----------+
-   compute     fleet   memory   runtime     quantum     kv (AI)
-   provider    provider provider provider    provider    provider
-   mandel      each    in RAM   native      statevector recompute
-   heat        alive   vs       WASM        Aer         vs restore
-   nbody       node    tiered   micro-VM    real QPU    from tier
-   hologram    at its  over     Wine        (only if
-   option      own     SSD                  allowed and
-   ode         price                         priced)
+   +-----------+-------+-------+-----------+-----------+
+   compute     fleet   memory   runtime     kv (AI)
+   provider    provider provider provider    provider
+   mandel      each    in RAM   native      recompute
+   collatz     alive   vs       WASM        vs restore
+   batch_score node    tiered   micro-VM    from tier
+   + verticals at its  over     Wine
+               own     SSD
+               price
 ```
 
 | Engine | What its provider contributes |
 |---|---|
-| Compute, Simulation, Scientific, Holographic | Numerical families. Each variant is probed on reduced problems (best of several runs, two sizes, affine fit: fixed cost + cost per unit of work), checked against the other variants, then extrapolated. |
+| Compute (incl. portable kernels) | Numerical and batch-scoring families. Each variant is probed on reduced problems (best of several runs, two sizes, affine fit: fixed cost + cost per unit of work), checked against the other variants, then extrapolated. |
 | Fleet | The same job on each live node, priced at the node's own rate (`--usd-per-hour`), executed through the hub. A node with no price is rejected, not guessed. |
 | Tiered memory | A dataset kept in RAM or tiered over SSD, with tier latencies measured on this machine and a locality model for the hit ratio. Validated by running the real store at reduced scale. |
 | Runtime | Every route for a binary with its isolation and measured overhead. |
-| SPATIAL Q | Exact simulator, Qiskit Aer, or real hardware, which is used only when the objective allows it **and** a price is supplied. |
 | AI | A cached prefix: recompute, or keep and restore. Validated by checking the restored cache gives exactly the recomputed logits. |
 
 ## Use
 
 ```bash
-spatial optimize compute --family heat --params '{"n":100,"steps":600}' --execute
+spatial optimize compute --family pk_batch_score --params '{"n":512,"signals":16}' --execute
 spatial optimize dataset --gib 24 --accesses 200000 --max-ram-gib 2
 spatial optimize kv --prefix-tokens 2000 --reuse 0.8 --execute
-spatial optimize quantum --file examples/01_bell.sq --kernel bell --shots 1000
 spatial optimize binary --file app.elf --isolated 64 50
 ```
 
@@ -63,10 +61,10 @@ Each case: the planner chooses from its estimates, then **every feasible option 
 How it improved: the first versions mis-ranked the multi-core variant on mid-size jobs because microsecond probes were dominated by thread start-up noise; taking the best of several runs fixed it. Earlier results are kept in `benchmarks/results/unified_v1_single_probe.json` and `unified_v2_affine_single_run.json`.
 
 ## Limits
-- One machine, 25 cases, one family of numerical jobs plus two simulators. The Aer/NumPy crossover (about 14 to 16 qubits) is thin: the one miss on the tuning set was a 9 % regret there.
+- One machine, 25 cases, one family of numerical jobs. These cases predate the removal of the quantum and scientific-simulation engines (see CHANGELOG) and have not been rerun against the current, smaller set of providers.
 - Estimates come from probes and measured constants on **this** machine; they are not portable to another one without re-probing (the planner re-probes at each plan).
 - Calibration is a median of past actual/estimate ratios, not a learned model.
-- Dollar costs use the prices you give. The default local price (0.134 $/h) is an assumption. Fleet nodes need their own price; QPU tariffs are never guessed.
+- Dollar costs use the prices you give. The default local price (0.134 $/h) is an assumption. Fleet nodes need their own price.
 - Fleet execution assumes a node runs at this machine's speed, slowed by the node's load: an assumption, not a measurement.
 - The AI engine is a toy NumPy model; its restore-versus-recompute numbers say nothing about real LLMs or GPUs.
 - Not tested: more than one real machine, GPUs, real money.

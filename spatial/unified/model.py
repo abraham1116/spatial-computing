@@ -26,13 +26,6 @@ class Prices:
     ram_usd_gb_hour: float = 0.0          # cost of holding a GB in RAM for an hour (0 = not charged)
     storage_usd_gb_hour: float = 0.0      # same for SSD/object storage
     device_usd_h: dict = field(default_factory=dict)   # price per hour of a specific device/variant, e.g. {"gpu_cuda": 1.2}
-    qpu_usd_per_shot: float = 0.0         # provider tariff, supplied by the caller
-    qpu_usd_per_task: float = 0.0
-    qpu_seconds_per_shot: float = 0.0
-    qpu_usd_per_second: float = 0.0
-
-    def qpu_priced(self) -> bool:
-        return bool(self.qpu_usd_per_shot or self.qpu_usd_per_task or self.qpu_usd_per_second)
 
 
 @dataclass
@@ -41,8 +34,6 @@ class Objective:
     deadline_s: float | None = None
     max_ram_bytes: int | None = None
     require_isolation: bool = False       # binaries: only routes that isolate the program from the host
-    allow_qpu: bool = False               # real quantum hardware is never used unless asked for
-    require_hardware: bool = False        # quantum: refuse simulators
     allow_remote: bool = True             # fleet nodes
 
     def __post_init__(self):
@@ -52,7 +43,7 @@ class Objective:
 
 @dataclass
 class Job:
-    kind: str                              # compute | binary | quantum | dataset | kv
+    kind: str                              # compute | binary | dataset | kv
     spec: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -63,10 +54,6 @@ class Job:
     @classmethod
     def binary(cls, path: str, args: list[str] | None = None, est_native_s: float = 1.0) -> "Job":
         return cls("binary", {"path": path, "args": args or [], "est_native_s": est_native_s})
-
-    @classmethod
-    def quantum(cls, source: str, kernel: str, args: list | None = None, shots: int = 1000) -> "Job":
-        return cls("quantum", {"source": source, "kernel": kernel, "args": args or [], "shots": shots})
 
     @classmethod
     def dataset(cls, total_bytes: int, accesses: int, locality: float = 0.8, hot_fraction: float = 0.2,
@@ -103,7 +90,7 @@ class Option:
     reason: str = ""
     est_time_s: float | None = None
     rate_usd_h: float = 0.0               # what the resource costs per hour while this option runs
-    fixed_usd: float = 0.0                # costs that do not depend on time (a QPU task fee, shot fees)
+    fixed_usd: float = 0.0                # costs that do not depend on time
     est_ram_bytes: int | None = None
     isolated: bool | None = None
     basis: str = ""                       # where the time estimate comes from: probe, measured constants, assumption
