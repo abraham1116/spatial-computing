@@ -20,8 +20,6 @@ class ResourceKind(str, Enum):
     FAR_MEMORY = "far_memory"   # compressed / remote / storage-backed. Never reported as RAM.
     STORAGE = "storage"
     NETWORK = "network"
-    QPU = "qpu"
-    QSIM = "qsim"               # classical simulator of a quantum device
 
 
 @dataclass

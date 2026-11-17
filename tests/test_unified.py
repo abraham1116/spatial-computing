@@ -42,7 +42,7 @@ def test_compute_plan_prefers_the_cheapest_correct_variant_and_estimates_hold(pl
 
 
 def test_calibration_loop_corrects_future_estimates(planner):
-    job = Job.compute("mandel", n=40, iters=50)
+    job = Job.compute("pk_batch_score", n=64, signals=16)
     first = planner.plan(job).chosen
     assert "calibrated" not in first.basis
     for _ in range(3):

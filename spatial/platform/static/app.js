@@ -223,7 +223,7 @@ async function appView(id, tab) {
       h("div", {class: "card"}, h("h2", {}, "Send work"), h("p", {class: "small mute"}, "Hub address: ", h("span", {class: "mono"}, hub)),
         h("pre", {class: "code"}, `# put a client key in app.tok, then:\nspatial fleet submit --hub ${hub} \\\n  --token-file app.tok \\\n  --workload montecarlo_pi \\\n  --params '{"samples": 1000000}'\n\nspatial fleet status --hub ${hub} --token-file app.tok`)),
       h("div", {class: "card"}, h("h2", {}, "Add a machine"), h("p", {class: "small mute"}, "Create a node key (Keys tab), save it to node.tok on the machine, then:"),
-        h("pre", {class: "code"}, `pip install "spatial-computing[quantum]"\nspatial agent --hub ${hub} --token-file node.tok`), h("p", {class: "small mute"}, "The machine appears in ", h("a", {href: "#/fleet"}, "Fleet"), " within seconds."))),
+        h("pre", {class: "code"}, `pip install spatial-computing\nspatial agent --hub ${hub} --token-file node.tok`), h("p", {class: "small mute"}, "The machine appears in ", h("a", {href: "#/fleet"}, "Fleet"), " within seconds."))),
       h("div", {class: "card"}, h("h2", {}, "From Python"), h("pre", {class: "code"}, `from spatial.core.protocol import RpcClient\nc = RpcClient("${hub.split(":")[0]}", ${hub.split(":")[1] || 7700}, open("app.tok","rb").read().strip())\ntid = c.call({"op": "submit", "workload": "montecarlo_pi", "params": {"samples": 1000000}})[0]["task_id"]\nprint(c.call({"op": "task", "task_id": tid})[0]["task"]["state"])`),
         h("p", {class: "small mute"}, docLink("docs/fleet.html", "Fleet documentation"), " · ", docLink("docs/api.html", "REST API for the console")))];
   } else if (tab === "jobs") {
