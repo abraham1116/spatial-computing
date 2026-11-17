@@ -1,9 +1,11 @@
 """Portable kernel language: write a per-pixel kernel ONCE in a small, typed subset of Python and run
-it on the CPU (Numba), a Metal GPU (generated Metal Shading Language) or an NVIDIA GPU (generated
-CUDA C, never compiled or run here).
+it on the CPU (Numba), a Metal GPU (generated Metal Shading Language), or emit CUDA C, HIP, or
+**Triton** (OpenAI's Python GPU language) source for NVIDIA, AMD, or Triton's own targets.
 
 This is not a translator of CUDA and uses nothing from NVIDIA: the source language is ours, the
-back ends are generated from its AST. Same idea as Triton or SYCL at a much smaller scale.
+back ends are generated from its AST. Same idea as Triton or SYCL at a much smaller scale; the
+Triton back end itself is generated-only here (section "Triton" below) since no GPU Triton can
+target is available on this machine.
 
 Kernel shape:   def k(i: int, j: int, n: int, <params>) -> int      (i, j = row, column; n = grid size)
 Params          annotated int or float; floats are float32, ints are 32-bit on every back end
@@ -99,7 +101,8 @@ class Kernel:
             self._err(e, f"unknown function '{f}'")
         self._err(e, f"unsupported expression ({type(e).__name__})")
 
-    RESERVED = {"out", "partial", "gid", "lid", "tgid", "ngroups", "blockIdx", "blockDim", "threadIdx", "gridDim", "total"}
+    RESERVED = {"out", "partial", "gid", "lid", "tgid", "ngroups", "blockIdx", "blockDim", "threadIdx", "gridDim", "total",
+                "tl", "triton", "out_ptr"}
 
     def _check_names(self, names) -> None:
         for nm in names:
@@ -279,6 +282,96 @@ class Kernel:
         Generated only: no AMD GPU, no ROCm here, so it has never been compiled or run."""
         return self.to_c(cuda=True, reduce=reduce, hip=True)
 
+    # ------------------------------------------------------------------ Triton (generated only: no Triton install, no
+    # NVIDIA/AMD/Intel GPU for it to target here; never loaded by triton.jit, never executed)
+    TL_MATH = {"sqrt": "tl.sqrt", "sin": "tl.sin", "cos": "tl.cos", "exp": "tl.exp", "log": "tl.log", "floor": "tl.math.floor"}
+
+    def _expr_triton(self, e, env) -> str:
+        t = lambda x: self.type_of(x, env)
+        rec = lambda x: self._expr_triton(x, env)
+        tof = lambda x: rec(x) if t(x) == "float" else f"({rec(x)}).to(tl.float32)"
+        if isinstance(e, ast.Constant):
+            return repr(float(e.value)) if isinstance(e.value, float) else str(e.value)
+        if isinstance(e, ast.Name):
+            return e.id
+        if isinstance(e, ast.UnaryOp):
+            if isinstance(e.op, ast.Not):
+                return f"({rec(e.operand)} == 0)"
+            return f"(-{rec(e.operand)})" if isinstance(e.op, ast.USub) else rec(e.operand)
+        if isinstance(e, ast.BinOp):
+            a, b = e.left, e.right
+            if isinstance(e.op, ast.Div):
+                return f"({tof(a)} / {tof(b)})"
+            if isinstance(e.op, ast.FloorDiv):
+                return f"({tof(a)} / {tof(b)}).to(tl.int32)"          # truncates toward zero (a cast), like the C back ends; Triton's own // floors
+            op = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Mod: "%"}[type(e.op)]
+            if t(e) == "float":
+                return f"({tof(a)} {op} {tof(b)})"
+            return f"({rec(a)} {op} {rec(b)})"                        # int %: trusted to match C, like the CUDA back end trusts its compiler
+        if isinstance(e, ast.Compare):
+            op = {ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.Eq: "==", ast.NotEq: "!="}[type(e.ops[0])]
+            a, b = e.left, e.comparators[0]
+            if "float" in (t(a), t(b)):
+                return f"({tof(a)} {op} {tof(b)})"
+            return f"({rec(a)} {op} {rec(b)})"
+        if isinstance(e, ast.BoolOp):
+            op = " & " if isinstance(e.op, ast.And) else " | "       # tensors have no short-circuit and/or: boolify, then bitwise-combine
+            return "(" + op.join(f"({rec(v)} != 0)" for v in e.values) + ")"
+        fn, args = e.func.id, e.args
+        if fn in self.TL_MATH:
+            return f"{self.TL_MATH[fn]}({tof(args[0])})"
+        if fn == "int":
+            return f"({tof(args[0])}).to(tl.int32)" if t(args[0]) == "float" else rec(args[0])
+        if fn == "float":
+            return f"({rec(args[0])}).to(tl.float32)"
+        if fn == "abs":
+            return f"tl.abs({rec(args[0])})"
+        if fn in ("min", "max"):
+            fname = "tl.minimum" if fn == "min" else "tl.maximum"
+            return f"{fname}({tof(args[0])}, {tof(args[1])})" if t(e) == "float" else f"{fname}({rec(args[0])}, {rec(args[1])})"
+        raise KernelError("internal: unsupported expression in Triton code generation")
+
+    def _stmts_triton(self, stmts, env, ind) -> list[str]:
+        out = []
+        cast = lambda name, v: (lambda e: e if self.type_of(v, env) == env[name] else
+                                 (f"({e}).to(tl.float32)" if env[name] == "float" else f"({e}).to(tl.int32)"))(self._expr_triton(v, env))
+        for s in stmts:
+            if isinstance(s, ast.Assign):
+                out.append(f"{ind}{s.targets[0].id} = {cast(s.targets[0].id, s.value)}")
+            elif isinstance(s, ast.AugAssign):
+                op = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*"}[type(s.op)]
+                v = s.target.id
+                out.append(f"{ind}{v} = {v} {op} {cast(v, s.value)}")
+            elif isinstance(s, ast.While):
+                out.append(f"{ind}while {self._expr_triton(s.test, env)} != 0:")
+                out += self._stmts_triton(s.body, env, ind + "    ") or [ind + "    pass"]
+            elif isinstance(s, ast.If):
+                out.append(f"{ind}if {self._expr_triton(s.test, env)} != 0:")
+                out += self._stmts_triton(s.body, env, ind + "    ") or [ind + "    pass"]
+                if s.orelse:
+                    out.append(f"{ind}else:")
+                    out += self._stmts_triton(s.orelse, env, ind + "    ")
+            elif isinstance(s, ast.For):
+                out.append(f"{ind}for {s.target.id} in range({self._expr_triton(s.iter.args[0], env)}):")
+                out += self._stmts_triton(s.body, env, ind + "    ") or [ind + "    pass"]
+        return out
+
+    def to_triton(self) -> str:
+        """Triton (github.com/openai/triton, a Python GPU kernel language, now co-maintained across several GPU
+        vendors) source: one `tl.program_id` per output pixel, the same "one thread per pixel" shape as the CUDA
+        back end. GENERATED ONLY: Triton needs an NVIDIA, AMD, or Intel GPU (plus the `triton` package) to actually
+        trace and compile a kernel; none is available here, so this source has never been passed to `triton.jit`,
+        never compiled, never run. No reduction variant: Triton's own cross-program reduction (atomics or a second
+        pass) does not map onto the single-pass threadgroup/shared-memory shape used by `to_metal`/`to_cuda_c`."""
+        env = self._env()
+        body = self._stmts_triton(self.body, env, "    ")
+        ret = self._expr_triton(self.ret, env)
+        sig = ", ".join(["out_ptr", "n"] + [p for p, _ in self.params])
+        lines = ["import triton", "import triton.language as tl", "", "", "@triton.jit", f"def {self.name}({sig}):",
+                  "    j = tl.program_id(axis=0)", "    i = tl.program_id(axis=1)"] + body
+        lines.append(f"    tl.store(out_ptr + i * n + j, ({ret}).to(tl.uint32))")
+        return "\n".join(lines) + "\n"
+
     def _expr_py(self, e, env) -> str:
         t = lambda x: self.type_of(x, env)
         rec = lambda x: self._expr_py(x, env)
@@ -370,7 +463,7 @@ class Kernel:
         if device == "metal":
             from ..fabric import metal
             return metal.run_kernel(self, n, params, reduce=True)
-        if device in ("cuda", "hip"):
+        if device in ("cuda", "hip", "triton"):
             raise KernelError(f"the {device} back end only generates source; it has never been run on that hardware")
         raise KernelError(f"unknown device '{device}'")
 
@@ -385,8 +478,9 @@ class Kernel:
         if device == "metal":
             from ..fabric import metal
             return metal.run_kernel(self, n, params)
-        if device == "cuda":
-            raise KernelError("the CUDA back end only generates source (to_cuda_c); it has never been run on NVIDIA hardware")
+        if device in ("cuda", "hip", "triton"):
+            raise KernelError(f"the {device} back end only generates source (to_{'cuda_c' if device == 'cuda' else device}); "
+                              f"it has never been run on {'NVIDIA' if device == 'cuda' else 'AMD' if device == 'hip' else 'any Triton-targeted'} hardware")
         raise KernelError(f"unknown device '{device}'")
 
     def _run_cpu(self, n, params, reduce: bool = False):

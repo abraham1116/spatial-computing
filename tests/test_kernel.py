@@ -14,6 +14,8 @@ def test_generated_sources_have_expected_shape():
     assert "kernel void mandelbrot" in msl and "thread_position_in_grid" in msl
     assert '__global__ void mandelbrot' in cu and "blockIdx" in cu
     assert "while" in msl and "while" in cu
+    tl_src = mandelbrot.to_triton()
+    assert "@triton.jit" in tl_src and "def mandelbrot(" in tl_src and "tl.program_id" in tl_src and "while" in tl_src
 
 
 def test_cpu_matches_plain_python_for_collatz():
@@ -73,6 +75,28 @@ def test_unsupported_constructs_are_refused():
 def test_cuda_backend_refuses_to_pretend():
     with pytest.raises(KernelError):
         mandelbrot.run("cuda", 8, iters=10)
+
+
+def test_triton_backend_refuses_to_pretend_and_has_no_reduction():
+    for dev in ("run", "reduce"):
+        with pytest.raises(KernelError, match="triton"):
+            getattr(mandelbrot, dev)("triton", 8, iters=10)
+    with pytest.raises(TypeError):
+        collatz.to_triton(reduce=True)
+
+
+def test_triton_source_handles_ints_floats_and_control_flow_syntactically():
+    src = collatz.to_triton()
+    assert "import triton" in src and "import triton.language as tl" in src
+    assert "tl.store(out_ptr + i * n + j" in src and ".to(tl.uint32)" in src
+    assert ").to(tl.int32)" in src                                      # the // floor-vs-truncate cast
+    compile(src, "<triton collatz>", "exec")                            # at least syntactically valid Python
+    msl = mandelbrot.to_triton()
+    assert "while" in msl and "tl.program_id" in msl
+    compile(msl, "<triton mandelbrot>", "exec")
+    w = waves.to_triton()
+    assert "tl.sin" in w and "tl.cos" in w
+    compile(w, "<triton waves>", "exec")
 
 
 def test_library_complete():
@@ -135,3 +159,8 @@ def test_names_that_would_clash_with_generated_code_are_refused():
         @kernel
         def bad2(i: int, j: int, n: int, total: int):
             return 1
+    with pytest.raises(KernelError, match="reserved"):
+        @kernel
+        def bad3(i: int, j: int, n: int):
+            tl = 1
+            return tl

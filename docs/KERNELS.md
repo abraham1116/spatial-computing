@@ -1,6 +1,6 @@
 # Portable kernels
 
-One kernel, written once in a small typed subset of Python, runs on the CPU (Numba), on a Metal GPU (generated Metal Shading Language), and is emitted as CUDA C for NVIDIA. It does not translate or run CUDA code and uses nothing from NVIDIA: the source language is ours and each back end is generated from its syntax tree. Same idea as Triton or SYCL, at a much smaller scale.
+One kernel, written once in a small typed subset of Python, runs on the CPU (Numba), on a Metal GPU (generated Metal Shading Language), and is emitted as CUDA C, HIP, and **Triton** source. It does not translate or run CUDA code and uses nothing from NVIDIA: the source language is ours and each back end is generated from its syntax tree. Same idea as Triton or SYCL, at a much smaller scale — and Triton itself is one of the back ends we generate for, not something we run: see "Triton" below.
 
 ## Why not ZLUDA
 ZLUDA (Rust, dual Apache-2.0 / MIT) runs unmodified CUDA programs on non-NVIDIA GPUs, in practice AMD ones. We did not use it:
@@ -30,9 +30,12 @@ def collatz(i: int, j: int, n: int, limit: int):
 ```python
 kernel.run("cpu", 512, limit=1000)       # Numba
 kernel.run("metal", 512, limit=1000)     # compiled at run time
-print(kernel.to_metal()); print(kernel.to_cuda_c())
+print(kernel.to_metal()); print(kernel.to_cuda_c()); print(kernel.to_hip()); print(kernel.to_triton())
 ```
 Library: `mandelbrot`, `collatz` (integer), `waves` (sin/cos). Planner families: `pk_mandel`, `pk_collatz`.
+
+## Triton
+`to_triton()` emits a `@triton.jit` kernel: one Triton "program" per output pixel (`tl.program_id(axis=0/1)` for column/row), the same one-thread-per-pixel shape as the CUDA back end. **Generated only, like CUDA and HIP: this source has never been passed to `triton.jit`, never compiled, never run** — there is no NVIDIA, AMD, or Intel GPU here for Triton to target, and no `triton` package installed. `KernelError` names the device when `run()`/`reduce()` is asked for `"triton"`. Known gaps, left honest rather than silently wrong: integer `//` is generated as a cast through float32 (truncates toward zero, matching this language's C semantics) because Triton's own `//` floors like Python's; `and`/`or` become `&`/`|` after boolifying each side, since tensors have no short-circuit evaluation; there is no reduction variant (`to_triton` has no `reduce=` argument), since Triton's own cross-program reduction does not map onto the single-pass threadgroup shape the other back ends use.
 
 ## Measured (benchmarks/bench_kernel.py, 2017 MacBook Pro, Intel Iris Plus 640)
 - Integer kernel: CPU and Metal outputs are **bit-identical**, including 32-bit overflow.
@@ -48,7 +51,7 @@ Library: `mandelbrot`, `collatz` (integer), `waves` (sin/cos). Planner families:
 - Names that would clash with the generated code (`out`, `partial`, `total`, `_sp_*`...) are refused.
 
 ## Limits
-- **CUDA C and HIP are generated and never compiled or run** (no NVIDIA hardware, no NVRTC here). The `cuda` device refuses to run and says so.
+- **CUDA C, HIP, and Triton are generated and never compiled or run** (no NVIDIA, AMD, or Intel GPU, no NVRTC, no `triton` package here). The `cuda`, `hip`, and `triton` devices refuse to run and say so.
 - Two kernel shapes: a 2-D per-element map and a whole-grid sum. Shared memory is used only inside the built-in reduction; you cannot write your own tiled kernel, use tensor cores, or other reductions (min, max, histogram).
 - Work scales as n² in the planner's model; data-dependent kernels (collatz) are only roughly proportional, which is why misses happen near the crossover.
 - Integer `%` and `//` follow C (truncation), not Python (floor), for negative values.
