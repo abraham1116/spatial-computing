@@ -1,4 +1,4 @@
-"""Kernels written in the portable language. Each runs unchanged on CPU and Metal; CUDA C is generated."""
+"""Kernels written in the portable language. Each runs unchanged on CPU and Metal; CUDA C, HIP, and Triton are generated."""
 from .dsl import kernel
 
 
@@ -43,4 +43,26 @@ def waves(i: int, j: int, n: int, terms: int):
     return int((s + 8.0) * 1000.0)
 
 
-LIBRARY = {"mandelbrot": mandelbrot, "collatz": collatz, "waves": waves}
+@kernel
+def batch_score(i: int, j: int, n: int, signals: int):
+    """A batch-scoring kernel: element (i, j) is one of n*n independent items, scored by combining
+    `signals` weighted features through a logistic sum — the same shape as scoring a transaction for
+    fraud/credit risk, ranking a search or ad result, flagging an anomaly, or filtering content, whichever
+    software already does that scoring in a batch or a stream. The features and weights here are SYNTHETIC
+    (no real data, no trained model): this demonstrates that the planner places and measures a batch-scoring
+    job exactly like it places Mandelbrot or Collatz, not a validated scoring model for any one domain.
+    Returns the score quantised to [0, 10000] (hundredths of a percent)."""
+    idx = i * n + j
+    x1 = float(idx % 2000) / 20.0 - 50.0
+    x2 = float(i) / float(n) - 0.5
+    z = 0.0
+    k = 0
+    while k < signals:
+        w = sin(float(k + 1) * 0.37) * 1.3
+        z += w * (x1 / (float(k) + 1.0) + x2)
+        k += 1
+    p = 1.0 / (1.0 + exp(-z))
+    return int(p * 10000.0)
+
+
+LIBRARY = {"mandelbrot": mandelbrot, "collatz": collatz, "waves": waves, "batch_score": batch_score}

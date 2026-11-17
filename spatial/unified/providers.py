@@ -36,6 +36,8 @@ FAMILIES = {
     # but has no run path here, so it is not offered as an option.
     "pk_mandel": dict(variants={"cpu": "pk_mandel_cpu", "gpu_metal": "pk_mandel_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "pk_collatz": dict(variants={"cpu": "pk_collatz_cpu", "gpu_metal": "pk_collatz_metal"}, scale="n", exp=2.0, min=8, exact=True),
+    # batch scoring (fraud/risk/ranking/anomaly-shaped): same "one job, several devices" idea, a different work shape
+    "pk_batch_score": dict(variants={"cpu": "pk_batch_score_cpu", "gpu_metal": "pk_batch_score_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "heat": dict(variants={"numpy": "heat_numpy", "numba": "heat_numba"}, scale="steps", exp=1.0, min=2, exact=False),
     "nbody": dict(variants={"cpu": "nbody"}, scale="steps", exp=1.0, min=2, exact=False),
     "hologram": dict(variants={"cpu": "hologram_peak"}, scale="n", exp=2.0, min=32, exact=True),
@@ -50,7 +52,7 @@ def _same(a, b, exact: bool, tol: float = 1e-6) -> bool:
 
 def _variant_available(workload: str) -> str | None:
     """None if the variant can run here, else why not."""
-    if workload in ("mandel_f32_metal", "pk_mandel_metal", "pk_collatz_metal"):
+    if workload in ("mandel_f32_metal", "pk_mandel_metal", "pk_collatz_metal", "pk_batch_score_metal"):
         from ..fabric import metal
         return None if metal.available() else "no Metal GPU (macOS with swiftc is required)"
     if workload == "mandel_f32_cuda":

@@ -4,7 +4,7 @@ import pytest
 
 from spatial.fabric import metal
 from spatial.kernel import KernelError, kernel
-from spatial.kernel.library import LIBRARY, collatz, mandelbrot, waves
+from spatial.kernel.library import LIBRARY, batch_score, collatz, mandelbrot, waves
 
 needs_metal = pytest.mark.skipif(not metal.available(), reason="no Metal")
 
@@ -46,6 +46,8 @@ def test_float_kernels_agree_within_tolerance():
     assert np.mean(a != b) < 0.01                 # float32 chaos at the set's boundary: a few pixels may differ
     w1, w2 = waves.run("cpu", 64, terms=8), waves.run("metal", 64, terms=8)
     assert np.abs(w1.astype(np.int64) - w2.astype(np.int64)).max() <= 3     # GPU sin/cos differ in the last bits
+    r1, r2 = batch_score.run("cpu", 64, signals=16), batch_score.run("metal", 64, signals=16)
+    assert np.abs(r1.astype(np.int64) - r2.astype(np.int64)).max() <= 5
 
 
 def test_unsupported_constructs_are_refused():
@@ -100,7 +102,16 @@ def test_triton_source_handles_ints_floats_and_control_flow_syntactically():
 
 
 def test_library_complete():
-    assert set(LIBRARY) == {"mandelbrot", "collatz", "waves"}
+    assert set(LIBRARY) == {"mandelbrot", "collatz", "waves", "batch_score"}
+
+
+def test_batch_score_is_a_plausible_probability_and_matches_cpu_metal():
+    out = batch_score.run("cpu", 64, signals=16)
+    assert out.min() >= 0 and out.max() <= 10000 and out.std() > 0           # quantised probability, not a constant
+    tl = batch_score.to_triton()
+    assert "@triton.jit" in tl and "while" in tl and "tl.exp" in tl
+    compile(tl, "<triton batch_score>", "exec")
+
 
 
 def test_planner_offers_portable_kernel_families():

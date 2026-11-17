@@ -9,8 +9,10 @@ from spatial.compute import workloads
 from spatial.unified import Job, Objective, Planner
 
 CASES = [("pk_mandel", {"n": 64, "iters": 200}), ("pk_mandel", {"n": 512, "iters": 300}), ("pk_mandel", {"n": 2048, "iters": 400}),
-         ("pk_collatz", {"n": 64, "limit": 500}), ("pk_collatz", {"n": 512, "limit": 1000}), ("pk_collatz", {"n": 1536, "limit": 2000})]
-WL = {"pk_mandel": {"cpu": "pk_mandel_cpu", "gpu_metal": "pk_mandel_metal"}, "pk_collatz": {"cpu": "pk_collatz_cpu", "gpu_metal": "pk_collatz_metal"}}
+         ("pk_collatz", {"n": 64, "limit": 500}), ("pk_collatz", {"n": 512, "limit": 1000}), ("pk_collatz", {"n": 1536, "limit": 2000}),
+         ("pk_batch_score", {"n": 64, "signals": 16}), ("pk_batch_score", {"n": 512, "signals": 32}), ("pk_batch_score", {"n": 2048, "signals": 64})]
+WL = {"pk_mandel": {"cpu": "pk_mandel_cpu", "gpu_metal": "pk_mandel_metal"}, "pk_collatz": {"cpu": "pk_collatz_cpu", "gpu_metal": "pk_collatz_metal"},
+      "pk_batch_score": {"cpu": "pk_batch_score_cpu", "gpu_metal": "pk_batch_score_metal"}}
 
 
 def real(wname, params):

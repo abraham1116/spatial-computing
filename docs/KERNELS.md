@@ -2,6 +2,8 @@
 
 One kernel, written once in a small typed subset of Python, runs on the CPU (Numba), on a Metal GPU (generated Metal Shading Language), and is emitted as CUDA C, HIP, and **Triton** source. It does not translate or run CUDA code and uses nothing from NVIDIA: the source language is ours and each back end is generated from its syntax tree. Same idea as Triton or SYCL, at a much smaller scale — and Triton itself is one of the back ends we generate for, not something we run: see "Triton" below.
 
+The library is not only scientific kernels: `batch_score` is the same per-element placement problem applied to a batch-scoring shape (fraud/risk, ranking, recommendation, anomaly detection — any software that scores many independent items). Software and hardware are the same placement problem to the planner; it does not care what the numbers mean.
+
 ## Why not ZLUDA
 ZLUDA (Rust, dual Apache-2.0 / MIT) runs unmodified CUDA programs on non-NVIDIA GPUs, in practice AMD ones. We did not use it:
 - It needs an AMD GPU with ROCm (Linux or Windows). Reports mention work towards Intel GPUs; nothing we could test on macOS. The reference machine is an Intel Mac with Intel graphics and Metal: it cannot run it at all.
@@ -32,7 +34,7 @@ kernel.run("cpu", 512, limit=1000)       # Numba
 kernel.run("metal", 512, limit=1000)     # compiled at run time
 print(kernel.to_metal()); print(kernel.to_cuda_c()); print(kernel.to_hip()); print(kernel.to_triton())
 ```
-Library: `mandelbrot`, `collatz` (integer), `waves` (sin/cos). Planner families: `pk_mandel`, `pk_collatz`.
+Library: `mandelbrot`, `collatz` (integer), `waves` (sin/cos), `batch_score` (fraud/risk/ranking/anomaly-shaped batch scoring, synthetic signals and weights, no trained model). Planner families: `pk_mandel`, `pk_collatz`, `pk_batch_score`.
 
 ## Triton
 `to_triton()` emits a `@triton.jit` kernel: one Triton "program" per output pixel (`tl.program_id(axis=0/1)` for column/row), the same one-thread-per-pixel shape as the CUDA back end. **Generated only, like CUDA and HIP: this source has never been passed to `triton.jit`, never compiled, never run** — there is no NVIDIA, AMD, or Intel GPU here for Triton to target, and no `triton` package installed. `KernelError` names the device when `run()`/`reduce()` is asked for `"triton"`. Known gaps, left honest rather than silently wrong: integer `//` is generated as a cast through float32 (truncates toward zero, matching this language's C semantics) because Triton's own `//` floors like Python's; `and`/`or` become `&`/`|` after boolifying each side, since tensors have no short-circuit evaluation; there is no reduction variant (`to_triton` has no `reduce=` argument), since Triton's own cross-program reduction does not map onto the single-pass threadgroup shape the other back ends use.

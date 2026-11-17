@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.0
+- Kernel DSL: `batch_score`, a batch-scoring kernel (planner family `pk_batch_score`) — the same per-element placement problem as `mandelbrot`/`collatz`, applied to a batch-scoring shape (fraud/risk, ranking, recommendation, anomaly detection: any software that scores many independent items in a batch or a stream). Synthetic signals and weights, no trained model, no real data: it demonstrates that the planner places and measures a batch-scoring job exactly like it places a scientific kernel, on CPU and Metal, generated for CUDA/HIP/Triton too. Added to the console's curated job catalogue (`pk_batch_score_cpu`).
+- Positioning: the planner's "one job, lowest measured cost" placement is not scientific-kernel-only; it is the same placement problem for any software that scores items in batch, independent of what domain the numbers represent.
+- 260 tests (was 259).
+
 ## 0.19.0
 - Kernel DSL: Triton back end (`to_triton()`), generated only, like CUDA and HIP: no NVIDIA, AMD, or Intel GPU and no `triton` package here, so this source has never been passed to `triton.jit`, compiled, or run. One Triton "program" per output pixel, same shape as the CUDA back end. Integer `//` truncates toward zero via a float32 cast (Triton's own `//` floors like Python); `and`/`or` become `&`/`|` after boolifying each side (tensors have no short-circuit evaluation); no reduction variant (Triton's cross-program reduction does not map onto the single-pass shared-memory shape the other back ends use). `run()`/`reduce()` refuse `"triton"` honestly, the same way they already refused `"cuda"`/`"hip"`; `"hip"` now gets the same honest message from `run()` too (it previously fell through to a generic "unknown device"). `tl`, `triton`, `out_ptr` added to the reserved names.
 - 259 tests (was 257).

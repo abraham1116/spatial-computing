@@ -164,6 +164,15 @@ def pk_collatz_metal(n: int, limit: int) -> int:
     return _pk("collatz", "metal", n, limit=limit)
 
 
+def pk_batch_score_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a batch-scoring workload (fraud/risk/ranking-shaped), on the CPU."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_batch_score_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
 def montecarlo_pi(samples: int, seed: int = 0) -> float:
     rng = np.random.default_rng(seed)
     inside = 0
@@ -257,6 +266,8 @@ REGISTRY = {
     "pk_mandel_metal": pk_mandel_metal,
     "pk_collatz_cpu": pk_collatz_cpu,
     "pk_collatz_metal": pk_collatz_metal,
+    "pk_batch_score_cpu": pk_batch_score_cpu,
+    "pk_batch_score_metal": pk_batch_score_metal,
     "heat_numpy": heat_numpy,
     "heat_numba": heat_numba,
     "nbody": nbody,

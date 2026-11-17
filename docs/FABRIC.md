@@ -36,7 +36,7 @@ Same Mandelbrot job in float32 on the CPU and on the integrated GPU; every optio
 - [KERNELS.md](KERNELS.md): write a kernel once; CPU, Metal and generated CUDA C. [INTERCONNECT.md](INTERCONNECT.md): collectives between workers.
 
 ## Limits
-- Two hand-written job families (`mandel_f32`) plus the portable-kernel families (`pk_mandel`, `pk_collatz`). The planner and the fleet already take any family registered in `workloads.py`.
+- Two hand-written job families (`mandel_f32`) plus the portable-kernel families (`pk_mandel`, `pk_collatz`, `pk_batch_score`). The planner and the fleet already take any family registered in `workloads.py`.
 - The NVIDIA path is unproven until test A2 runs on a real GPU.
 - Estimates are per machine and per probe; a different GPU needs its own probes (the planner does this at each plan).
 - No memory-transfer model yet (host-to-device copies) beyond what the probes happen to include.

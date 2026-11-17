@@ -31,6 +31,7 @@ CATALOG = {
     "montecarlo_pi": dict(title="Monte Carlo pi", doc="Estimate pi by random sampling (CPU-bound, embarrassingly parallel).", params={"samples": (1_000_000, 1000, 50_000_000)}),
     "mandel_numba_parallel": dict(title="Mandelbrot (multi-core)", doc="Iteration counts of the Mandelbrot set on a grid, Numba on all cores.", params={"n": (600, 16, 3000), "iters": (200, 10, 2000)}),
     "pk_mandel_cpu": dict(title="Portable kernel: Mandelbrot", doc="The same kernel source that also runs on a Metal GPU, on the CPU.", params={"n": (512, 16, 2048), "iters": (200, 10, 2000)}),
+    "pk_batch_score_cpu": dict(title="Portable kernel: batch scoring", doc="Fraud/risk/ranking/anomaly-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "matmul": dict(title="Matrix multiply", doc="Dense float64 matrix product of size n.", params={"n": (600, 16, 1500)}),
     "heat_numba": dict(title="Heat diffusion", doc="2-D heat diffusion from a hot square (simulation engine, Numba).", params={"n": (200, 16, 800), "steps": (500, 1, 5000)}),
     "nbody": dict(title="N-body", doc="Leapfrog N-body integration; returns the relative energy drift.", params={"bodies": (100, 2, 300), "steps": (400, 1, 2000)}),
