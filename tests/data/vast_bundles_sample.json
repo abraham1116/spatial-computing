@@ -1,0 +1,114 @@
+{
+  "offers": [
+    {
+      "gpu_name": "RTX 4090D",
+      "num_gpus": 2,
+      "gpu_frac": 0.25,
+      "dph_total": 0.21481481481481482,
+      "dph_base": 0.21333333333333335,
+      "reliability": 0.9927109,
+      "geolocation": "Hubei, CN",
+      "cuda_max_good": 12.4,
+      "gpu_ram": 24564
+    },
+    {
+      "gpu_name": "RTX 5080",
+      "num_gpus": 2,
+      "gpu_frac": 1.0,
+      "dph_total": 0.26814814814814814,
+      "dph_base": 0.26666666666666666,
+      "reliability": 0.9972935,
+      "geolocation": "Yunnan, CN",
+      "cuda_max_good": 13.0,
+      "gpu_ram": 16303
+    },
+    {
+      "gpu_name": "RTX PRO 6000 Max-Q",
+      "num_gpus": 2,
+      "gpu_frac": 1.0,
+      "dph_total": 1.602222222222222,
+      "dph_base": 1.5999999999999999,
+      "reliability": 0.9911343,
+      "geolocation": "Michigan, US",
+      "cuda_max_good": 13.0,
+      "gpu_ram": 97887
+    },
+    {
+      "gpu_name": "RTX 5090",
+      "num_gpus": 1,
+      "gpu_frac": 0.25,
+      "dph_total": 0.42888888888888893,
+      "dph_base": 0.4266666666666667,
+      "reliability": 0.9913862,
+      "geolocation": "California, US",
+      "cuda_max_good": 13.0,
+      "gpu_ram": 32607
+    },
+    {
+      "gpu_name": "RTX PRO 6000 WS",
+      "num_gpus": 1,
+      "gpu_frac": 1.0,
+      "dph_total": 0.7355555555555556,
+      "dph_base": 0.7333333333333334,
+      "reliability": 0.9958554,
+      "geolocation": "Arizona, US",
+      "cuda_max_good": 13.2,
+      "gpu_ram": 97887
+    },
+    {
+      "gpu_name": "RTX PRO 5000",
+      "num_gpus": 2,
+      "gpu_frac": 0.25,
+      "dph_total": 1.1214814814814815,
+      "dph_base": 1.12,
+      "reliability": 0.9882596,
+      "geolocation": "China, CN",
+      "cuda_max_good": 13.3,
+      "gpu_ram": 73415
+    },
+    {
+      "gpu_name": "RTX 4090",
+      "num_gpus": 1,
+      "gpu_frac": 0.125,
+      "dph_total": 0.1214814814814815,
+      "dph_base": 0.12000000000000001,
+      "reliability": 0.9977055,
+      "geolocation": ", CN",
+      "cuda_max_good": 13.0,
+      "gpu_ram": 24564
+    },
+    {
+      "gpu_name": "RTX 3090",
+      "num_gpus": 2,
+      "gpu_frac": 1.0,
+      "dph_total": 0.1748148148148148,
+      "dph_base": 0.17333333333333334,
+      "reliability": 0.9991145,
+      "geolocation": "Poland, PL",
+      "cuda_max_good": 12.2,
+      "gpu_ram": 24576
+    },
+    {
+      "gpu_name": "H100 NVL",
+      "num_gpus": 1,
+      "gpu_frac": 1.0,
+      "dph_total": 2.336,
+      "dph_base": 2.3,
+      "reliability": 0.998,
+      "geolocation": "Iowa, US",
+      "cuda_max_good": 12.6,
+      "gpu_ram": 94000
+    },
+    {
+      "gpu_name": "H100 NVL",
+      "num_gpus": 1,
+      "gpu_frac": 1.0,
+      "dph_total": 1.5,
+      "dph_base": 1.4,
+      "reliability": 0.2,
+      "geolocation": "Unknown",
+      "cuda_max_good": 12.6,
+      "gpu_ram": 94000
+    }
+  ]
+}

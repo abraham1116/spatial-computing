@@ -239,6 +239,33 @@ def cmd_devices(a):
     return 0
 
 
+def cmd_market(a):
+    from .market import MarketError, cheapest, fetch_offers, spread_vs
+    try:
+        offers = fetch_offers()
+    except MarketError as e:
+        print(f"spatial: {e}", file=sys.stderr)
+        return 1
+    if a.neocloud_usd_per_hour is not None:
+        r = spread_vs(offers, a.gpu, a.neocloud_usd_per_hour, a.min_reliability)
+        if r is None:
+            print(f"spatial: no Vast.ai offer for {a.gpu!r} at reliability >= {a.min_reliability} right now", file=sys.stderr)
+            return 1
+        o = r["offer"]
+        print(f"cheapest {a.gpu} on Vast.ai right now: {r['market_usd_h']:.3f} $/h (reliability {o.reliability:.3f}, {o.geolocation})")
+        print(f"your neocloud reference: {r['neocloud_usd_h']:.3f} $/h")
+        print(f"spread: {r['spread_usd_h']:+.3f} $/h ({r['spread_pct']:+.1f} %)")
+        return 0
+    c = cheapest(offers, a.gpu, a.min_reliability)
+    if c is None:
+        print(f"spatial: no Vast.ai offer for {a.gpu!r} at reliability >= {a.min_reliability} right now", file=sys.stderr)
+        return 1
+    print(f"{c.gpu_name}: {c.usd_per_hour_per_gpu:.3f} $/h per whole GPU (listing {c.usd_per_hour:.3f} $/h at frac {c.gpu_frac:g}), "
+          f"reliability {c.reliability:.3f}, {c.geolocation}")
+    print(f"({len(offers)} live offers read from Vast.ai's public marketplace just now; no account, no money spent)")
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -313,6 +340,11 @@ def main(argv=None):
     p.add_argument("--execute", action="store_true", help="run the chosen option and compare with the estimate")
     p.set_defaults(fn=cmd_optimize)
     sub.add_parser("devices", help="compute devices the planner can use on this machine (CPU, Metal GPU, NVIDIA GPU)").set_defaults(fn=cmd_devices)
+    p = sub.add_parser("market", help="live GPU prices from Vast.ai's public marketplace (read-only, no account, no money spent)")
+    p.add_argument("--gpu", default="H100", help="substring to match in the GPU name, e.g. H100, RTX 4090, A100")
+    p.add_argument("--min-reliability", type=float, default=0.5, help="Vast.ai's own 0..1 host score; a low-reliability offer is excluded by default")
+    p.add_argument("--neocloud-usd-per-hour", type=float, default=None, help="your reference 'neocloud' price for this GPU: if given, prints the arbitrage spread instead of just the price")
+    p.set_defaults(fn=cmd_market)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")
