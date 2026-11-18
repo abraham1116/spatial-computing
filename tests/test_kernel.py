@@ -124,7 +124,7 @@ def test_planner_offers_portable_kernel_families():
     assert ex.result == int(collatz.run("cpu", 64, limit=100).astype("uint64").sum())
 
 
-@pytest.mark.parametrize("vertical", ["rtb", "credit", "claims", "alerts", "moderation", "telecom"])
+@pytest.mark.parametrize("vertical", ["rtb", "credit", "claims", "alerts", "moderation", "telecom", "health", "supplychain", "maintenance", "recommendation", "recruiting", "grid"])
 def test_vertical_families_are_the_same_kernel_as_batch_score_under_a_market_name(vertical):
     """rtb/credit/claims/alerts/moderation/telecom are presentation names for ONE kernel (batch_score):
     same math, same code, no per-vertical model. A result that differs would mean someone duplicated and

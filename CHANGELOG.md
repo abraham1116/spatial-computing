@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.0
+- Kernel DSL: six more named planner families and console catalogue entries over `batch_score` (`pk_health`, `pk_supplychain`, `pk_maintenance`, `pk_recommendation`, `pk_recruiting`, `pk_grid`) — healthcare claims/diagnostics triage, supply-chain demand/logistics risk, predictive-maintenance sensor anomalies, e-commerce recommendation relevance, HR candidate screening, energy-grid load/anomaly scoring. Same pattern as the six 0.22.0 verticals: no per-vertical model, no duplicated logic, tested bit-for-bit identical to `pk_batch_score`. This closes out the 12-market software-side list from the private business research (notes 14/15): every market identified there now has a named, tested, runnable preset.
+- 12 verticals total now, all delegating to the one `batch_score` kernel (0.20.0): `pk_rtb`, `pk_credit`, `pk_claims`, `pk_alerts`, `pk_moderation`, `pk_telecom`, `pk_health`, `pk_supplychain`, `pk_maintenance`, `pk_recommendation`, `pk_recruiting`, `pk_grid`.
+- 246 tests (was 240).
+
 ## 0.26.0
 - `spatial.market`: `--vertical cloud_gaming` (`VERTICALS["cloud_gaming"]`: RTX 4070/4080/4090/5070/5080/5090) — the software side of the consoles/game-streaming market, same mechanism as `render`. Not a console chip, never will be: this is where to place a streamed game session at the lowest measured cost. Confirmed live: cheapest reliable card was an RTX 5090 at 0.213 $/h.
 - Tests parametrized over both verticals (`render`, `cloud_gaming`); a new test checks neither preset ever names a datacenter chip (H100/A100/B200) by mistake.

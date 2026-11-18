@@ -42,6 +42,12 @@ FAMILIES = {
     "pk_alerts": dict(variants={"cpu": "pk_alerts_cpu", "gpu_metal": "pk_alerts_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "pk_moderation": dict(variants={"cpu": "pk_moderation_cpu", "gpu_metal": "pk_moderation_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
     "pk_telecom": dict(variants={"cpu": "pk_telecom_cpu", "gpu_metal": "pk_telecom_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_health": dict(variants={"cpu": "pk_health_cpu", "gpu_metal": "pk_health_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_supplychain": dict(variants={"cpu": "pk_supplychain_cpu", "gpu_metal": "pk_supplychain_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_maintenance": dict(variants={"cpu": "pk_maintenance_cpu", "gpu_metal": "pk_maintenance_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_recommendation": dict(variants={"cpu": "pk_recommendation_cpu", "gpu_metal": "pk_recommendation_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_recruiting": dict(variants={"cpu": "pk_recruiting_cpu", "gpu_metal": "pk_recruiting_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
+    "pk_grid": dict(variants={"cpu": "pk_grid_cpu", "gpu_metal": "pk_grid_metal"}, scale="n", exp=2.0, min=8, exact=False, tol=1e-3),
 }
 
 
@@ -51,7 +57,7 @@ def _same(a, b, exact: bool, tol: float = 1e-6) -> bool:
 
 def _variant_available(workload: str) -> str | None:
     """None if the variant can run here, else why not."""
-    if workload in ("mandel_f32_metal", "pk_mandel_metal", "pk_collatz_metal", "pk_batch_score_metal", "pk_rtb_metal", "pk_credit_metal", "pk_claims_metal", "pk_alerts_metal", "pk_moderation_metal", "pk_telecom_metal"):
+    if workload in ("mandel_f32_metal", "pk_mandel_metal", "pk_collatz_metal", "pk_batch_score_metal", "pk_rtb_metal", "pk_credit_metal", "pk_claims_metal", "pk_alerts_metal", "pk_moderation_metal", "pk_telecom_metal", "pk_health_metal", "pk_supplychain_metal", "pk_maintenance_metal", "pk_recommendation_metal", "pk_recruiting_metal", "pk_grid_metal"):
         from ..fabric import metal
         return None if metal.available() else "no Metal GPU (macOS with swiftc is required)"
     if workload == "mandel_f32_cuda":

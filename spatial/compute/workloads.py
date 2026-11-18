@@ -233,6 +233,72 @@ def pk_telecom_metal(n: int, signals: int) -> int:
     return _pk("batch_score", "metal", n, signals=signals)
 
 
+def pk_health_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a healthcare claims/diagnostics triage score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_health_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
+def pk_supplychain_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a supply-chain demand-forecast/logistics-risk score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_supplychain_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
+def pk_maintenance_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): a predictive-maintenance sensor anomaly score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_maintenance_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
+def pk_recommendation_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): an e-commerce recommendation relevance score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_recommendation_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
+def pk_recruiting_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): an HR resume/candidate screening score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_recruiting_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
+def pk_grid_cpu(n: int, signals: int) -> int:
+    """Portable kernel (spatial.kernel): an energy-grid load/anomaly score, on the CPU. SAME kernel as pk_batch_score (`batch_score`
+    in spatial.kernel.library), only the name and docs differ: synthetic signals, no trained model,
+    no real data for this vertical. See docs/KERNELS.md."""
+    return _pk("batch_score", "cpu", n, signals=signals)
+
+
+def pk_grid_metal(n: int, signals: int) -> int:
+    return _pk("batch_score", "metal", n, signals=signals)
+
+
 def montecarlo_pi(samples: int, seed: int = 0) -> float:
     rng = np.random.default_rng(seed)
     inside = 0
@@ -288,6 +354,18 @@ REGISTRY = {
     "pk_moderation_metal": pk_moderation_metal,
     "pk_telecom_cpu": pk_telecom_cpu,
     "pk_telecom_metal": pk_telecom_metal,
+    "pk_health_cpu": pk_health_cpu,
+    "pk_health_metal": pk_health_metal,
+    "pk_supplychain_cpu": pk_supplychain_cpu,
+    "pk_supplychain_metal": pk_supplychain_metal,
+    "pk_maintenance_cpu": pk_maintenance_cpu,
+    "pk_maintenance_metal": pk_maintenance_metal,
+    "pk_recommendation_cpu": pk_recommendation_cpu,
+    "pk_recommendation_metal": pk_recommendation_metal,
+    "pk_recruiting_cpu": pk_recruiting_cpu,
+    "pk_recruiting_metal": pk_recruiting_metal,
+    "pk_grid_cpu": pk_grid_cpu,
+    "pk_grid_metal": pk_grid_metal,
 }
 if HAVE_NUMBA:
     REGISTRY["mandel_numba"] = mandel_numba

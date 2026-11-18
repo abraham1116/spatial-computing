@@ -38,6 +38,12 @@ CATALOG = {
     "pk_alerts_cpu": dict(title="Portable kernel: Security alert score", doc="SIEM-alert-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "pk_moderation_cpu": dict(title="Portable kernel: Content moderation score", doc="Content-moderation-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "pk_telecom_cpu": dict(title="Portable kernel: Telecom fraud/billing score", doc="Telecom-fraud/billing-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_health_cpu": dict(title="Portable kernel: Healthcare claims/diagnostics score", doc="Healthcare-claims/diagnostics-triage-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_supplychain_cpu": dict(title="Portable kernel: Supply-chain risk score", doc="Supply-chain demand-forecast/logistics-risk-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_maintenance_cpu": dict(title="Portable kernel: Predictive maintenance score", doc="Sensor-anomaly/predictive-maintenance-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_recommendation_cpu": dict(title="Portable kernel: E-commerce recommendation score", doc="Recommendation-relevance-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_recruiting_cpu": dict(title="Portable kernel: Candidate screening score", doc="HR resume/candidate-screening-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
+    "pk_grid_cpu": dict(title="Portable kernel: Energy grid anomaly score", doc="Energy-grid load/anomaly-shaped batch scoring (synthetic signals, no real model) on the CPU.", params={"n": (512, 16, 2048), "signals": (16, 1, 200)}),
     "matmul": dict(title="Matrix multiply", doc="Dense float64 matrix product of size n.", params={"n": (600, 16, 1500)}),
     "sha256_chain": dict(title="SHA-256 chain", doc="Hash-bound workload: memory bandwidth and SHA throughput.", params={"rounds": (200, 1, 2000)}),
 }
