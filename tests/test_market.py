@@ -62,20 +62,27 @@ def test_cheapest_among_matches_any_of_several_gpu_names():
     assert cheapest_among(offers, ("no such gpu",)) is None
 
 
-def test_render_vertical_is_the_same_mechanism_as_cheapest_among():
+@pytest.mark.parametrize("vertical", ["render", "cloud_gaming"])
+def test_vertical_is_the_same_mechanism_as_cheapest_among(vertical):
     offers = parse_offers(FIXTURE)
-    assert "render" in VERTICALS and len(VERTICALS["render"]) > 1
-    direct = cheapest_among(offers, VERTICALS["render"])
-    via_name = cheapest_for(offers, "render")
-    assert direct == via_name       # cheapest_for("render") is NOT a different algorithm, just this preset
+    assert vertical in VERTICALS and len(VERTICALS[vertical]) > 1
+    direct = cheapest_among(offers, VERTICALS[vertical])
+    via_name = cheapest_for(offers, vertical)
+    assert direct == via_name       # cheapest_for(vertical) is NOT a different algorithm, just this preset
     with pytest.raises(MarketError, match="unknown vertical"):
         cheapest_for(offers, "no-such-vertical")
 
 
-def test_spread_for_render_matches_spread_among_the_same_preset():
+def test_cloud_gaming_and_render_verticals_both_target_gaming_tier_cards_not_datacenter_chips():
+    for name in VERTICALS["cloud_gaming"] + VERTICALS["render"]:
+        assert "RTX" in name and "H100" not in name and "A100" not in name and "B200" not in name
+
+
+@pytest.mark.parametrize("vertical", ["render", "cloud_gaming"])
+def test_spread_for_matches_spread_among_the_same_preset(vertical):
     offers = parse_offers(FIXTURE)
-    a = spread_among(offers, VERTICALS["render"], neocloud_usd_per_hour=1.5)
-    b = spread_for(offers, "render", neocloud_usd_per_hour=1.5)
+    a = spread_among(offers, VERTICALS[vertical], neocloud_usd_per_hour=1.5)
+    b = spread_for(offers, vertical, neocloud_usd_per_hour=1.5)
     assert a == b
     with pytest.raises(MarketError, match="unknown vertical"):
         spread_for(offers, "no-such-vertical", 1.5)
@@ -102,7 +109,8 @@ def test_fetch_offers_is_a_real_live_call_with_plausible_prices():
 
 
 @needs_live_market
-def test_render_vertical_finds_a_real_live_offer():
-    c = cheapest_for(_LIVE_OFFERS, "render")
+@pytest.mark.parametrize("vertical", ["render", "cloud_gaming"])
+def test_vertical_finds_a_real_live_offer(vertical):
+    c = cheapest_for(_LIVE_OFFERS, vertical)
     if c is not None:                                        # a real marketplace can genuinely have none in stock right now
         assert c.usd_per_hour_per_gpu > 0 and c.reliability >= 0.5

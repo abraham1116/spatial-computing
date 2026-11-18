@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.26.0
+- `spatial.market`: `--vertical cloud_gaming` (`VERTICALS["cloud_gaming"]`: RTX 4070/4080/4090/5070/5080/5090) — the software side of the consoles/game-streaming market, same mechanism as `render`. Not a console chip, never will be: this is where to place a streamed game session at the lowest measured cost. Confirmed live: cheapest reliable card was an RTX 5090 at 0.213 $/h.
+- Tests parametrized over both verticals (`render`, `cloud_gaming`); a new test checks neither preset ever names a datacenter chip (H100/A100/B200) by mistake.
+- 240 tests (was 236).
+
 ## 0.25.0
 - `spatial.market`: `--vertical render` (`VERTICALS["render"]`, `cheapest_among()`/`spread_among()`/`cheapest_for()`/`spread_for()`) applies the same GPU-arbitrage mechanism to 3D rendering/VFX render-farm cards (RTX 4090/5090/4080/5080, RTX PRO 6000/5000, RTX A6000, RTX 6000 Ada) instead of one datacenter chip — the consumer-GPU market NVIDIA also sells into, reached here without owning any hardware. Confirmed live on 17 Nov 2026: cheapest reliable render card was an RTX 5090 at 0.213 $/h. Same pattern as `pk_rtb`/`pk_credit`/... over `batch_score`: a preset name over one mechanism, zero duplicated logic (tested: `cheapest_for("render")` returns exactly `cheapest_among(VERTICALS["render"])`).
 - Live-market test stabilized: one real network call per test module instead of two in quick succession (was flaky on a shared runner).

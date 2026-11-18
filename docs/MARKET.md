@@ -23,10 +23,17 @@ spread_for(offers, "render", neocloud_usd_per_hour=1.5)
 
 Same pattern as the `pk_rtb`/`pk_credit`/... presets over `batch_score` (`spatial.kernel`): a
 name over the SAME mechanism (`cheapest_among`/`spread_among`), never a different algorithm —
-only the list of GPU names differs. Today: `VERTICALS["render"]` groups the cards 3D rendering
-and VFX render farms are commonly priced against (RTX 4090/5090/4080/5080, RTX PRO 6000/5000,
-RTX A6000, RTX 6000 Ada) — consumer/prosumer cards, not the datacenter chips (H100/A100/B200)
-the rest of this module defaults to.
+only the list of GPU names differs.
+
+- `VERTICALS["render"]`: 3D rendering / VFX render farms — RTX 4090/5090/4080/5080, RTX PRO
+  6000/5000, RTX A6000, RTX 6000 Ada.
+- `VERTICALS["cloud_gaming"]`: game streaming rigs — RTX 4070/4080/4090/5070/5080/5090. This is
+  the software side of the "consoles" market (placing a streamed game session), **not a console
+  chip** and never will be; this project does not manufacture hardware. It is the same placement
+  problem — the lowest measured cost — applied to that one market.
+
+Both lists are consumer/prosumer cards, never the datacenter chips (H100/A100/B200) the rest of
+this module defaults to.
 
 ## What this proves, and what it does not
 

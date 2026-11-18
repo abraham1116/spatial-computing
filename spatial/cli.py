@@ -351,7 +351,7 @@ def main(argv=None):
     sub.add_parser("devices", help="compute devices the planner can use on this machine (CPU, Metal GPU, NVIDIA GPU)").set_defaults(fn=cmd_devices)
     p = sub.add_parser("market", help="live GPU prices from Vast.ai's public marketplace (read-only, no account, no money spent)")
     p.add_argument("--gpu", default="H100", help="substring to match in the GPU name, e.g. H100, RTX 4090, A100 (ignored if --vertical is given)")
-    p.add_argument("--vertical", choices=["render"], help="a preset list of interchangeable GPUs for a market instead of one chip (currently: render = 3D rendering/VFX render-farm cards)")
+    p.add_argument("--vertical", choices=["render", "cloud_gaming"], help="a preset list of interchangeable GPUs for a market instead of one chip (render = 3D rendering/VFX render-farm cards; cloud_gaming = game-streaming rig cards)")
     p.add_argument("--min-reliability", type=float, default=0.5, help="Vast.ai's own 0..1 host score; a low-reliability offer is excluded by default")
     p.add_argument("--neocloud-usd-per-hour", type=float, default=None, help="your reference 'neocloud' price for this GPU: if given, prints the arbitrage spread instead of just the price")
     p.set_defaults(fn=cmd_market)

@@ -108,11 +108,16 @@ VERTICALS: dict[str, tuple[str, ...]] = {
     # 3D rendering / VFX render farms: the cards render engines (Octane, Redshift, V-Ray) are
     # commonly benchmarked and sold against. Not the datacenter chips (H100/A100/B200).
     "render": ("RTX 4090", "RTX 5090", "RTX 4080", "RTX 5080", "RTX PRO 6000", "RTX PRO 5000", "RTX A6000", "RTX 6000 Ada"),
+    # Cloud gaming / game streaming (the software side of the "consoles" market, see note in
+    # docs/MARKET.md): the gaming-tier cards a streaming rig needs (not the workstation RTX PRO
+    # line, not the datacenter chips). This is NOT a console chip and never will be; it is where
+    # to place a streamed game session at the lowest measured cost.
+    "cloud_gaming": ("RTX 4070", "RTX 4080", "RTX 4090", "RTX 5070", "RTX 5080", "RTX 5090"),
 }
 
 
 def cheapest_for(offers: list[Offer], vertical: str, min_reliability: float = 0.5) -> Offer | None:
-    """`vertical` is a key of VERTICALS (currently: "render")."""
+    """`vertical` is a key of VERTICALS (currently: "render", "cloud_gaming")."""
     if vertical not in VERTICALS:
         raise MarketError(f"unknown vertical {vertical!r}; known: {', '.join(VERTICALS)}")
     return cheapest_among(offers, VERTICALS[vertical], min_reliability)
