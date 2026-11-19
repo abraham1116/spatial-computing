@@ -293,6 +293,25 @@ def cmd_automotive(a):
     return 0
 
 
+def cmd_verify(a):
+    from .kernel.library import LIBRARY
+    from .verify import VerificationError, verify_kernel
+    kernel = LIBRARY[a.family]
+    params = json.loads(a.params)
+    devices = a.devices.split(",")
+    try:
+        c = verify_kernel(kernel, devices, a.n, tolerance=a.tolerance, exact=a.exact, **params)
+    except VerificationError as e:
+        print(f"spatial: {e}", file=sys.stderr)
+        return 1
+    print(f"{'AGREE' if c.agreed else 'DISAGREE'}: {c.n_results} results ({', '.join(devices)}), "
+          f"max abs diff {c.max_abs_diff:g} -- {c.reason}")
+    if not c.agreed:
+        print("spatial: redundant execution did not agree; do not trust this result", file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -376,6 +395,14 @@ def main(argv=None):
     p = sub.add_parser("automotive", help="place a task graph on a declared in-vehicle chip catalogue (software only, no real automotive silicon here)")
     p.add_argument("--file", required=True, help="JSON: {\"chips\":[{\"name\",\"flops_per_s\",\"power_w\",\"supports_npu\"}], \"tasks\":[{\"name\",\"flops\",\"needs_npu\",\"after\"}]}")
     p.set_defaults(fn=cmd_automotive)
+    p = sub.add_parser("verify", help="redundant-execution check: run a kernel on 2+ devices and compare (not cryptographic proof, see docs/VERIFY.md)")
+    p.add_argument("--family", default="batch_score", choices=["mandelbrot", "collatz", "waves", "batch_score"])
+    p.add_argument("--n", type=int, default=64)
+    p.add_argument("--params", default="{}", help="JSON kernel parameters, e.g. '{\"signals\":16}'")
+    p.add_argument("--devices", default="cpu,metal", help="comma list, e.g. cpu,metal")
+    p.add_argument("--tolerance", type=float, default=0.0, help="max absolute difference allowed (ignored if --exact)")
+    p.add_argument("--exact", action="store_true", help="require a bit-exact match (integer kernels)")
+    p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.29.0
+- New `spatial.verify` (`docs/VERIFY.md`): redundant-execution verification. Runs the same
+  kernel on 2+ devices and compares the results, exact (bit-for-bit) or within a stated
+  tolerance — the same comparison this project's own kernel tests already made ad hoc between
+  CPU and Metal, now a reusable, documented primitive (`consensus()`, `verify_kernel()`).
+  `spatial verify --family collatz --devices cpu,metal --exact`.
+- This is the first piece of what `docs/MARKET.md` already said was missing ("it does not
+  prove we can capture the spread"): trusting a result computed on cheap or untrusted hardware.
+  Honest about scope: not cryptographic (no zkML, no TEE attestation), not collusion-proof (two
+  wrong answers that match still pass), and only exercised here against this project's own CPU
+  and Metal back ends — no real rented or untrusted provider tested. 2026's actual production
+  answer for untrusted GPU markets is TEEs or redundant execution/sampling, not full
+  cryptographic proof of GPU floating-point execution (research-stage, reported 373x prover
+  overhead for generic zkML frameworks); redundant execution is the piece buildable in pure
+  software with zero new dependency.
+- 270 tests (was 258).
+
 ## 0.28.0
 - New `spatial.automotive.placement` (`docs/AUTOMOTIVE.md`): topological placement of a task
   graph onto a declared in-vehicle chip catalogue (flops/s, power, NPU support), minimising

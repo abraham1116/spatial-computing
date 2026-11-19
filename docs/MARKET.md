@@ -45,7 +45,10 @@ live spread, not a cited blog figure.
 **It does not prove we can capture that spread.** Reading a price is free and instant; actually
 renting that GPU, running a real job on it, and reselling the result is a separate, later step
 that needs an account on the marketplace, spends real money, and needs the user's explicit
-go-ahead each time — nothing in this module does any of that.
+go-ahead each time — nothing in this module does any of that. `spatial.verify`
+([docs/VERIFY.md](VERIFY.md)) is the first piece of what trusting that result would take
+(redundant-execution comparison), not the whole answer — it has not been exercised against a
+real rented, untrusted provider either.
 
 ## Limits
 
