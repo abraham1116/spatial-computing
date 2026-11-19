@@ -275,6 +275,24 @@ def cmd_market(a):
     return 0
 
 
+def cmd_automotive(a):
+    from .automotive import Chip, PlacementError, Task, makespan_s, place, total_energy_j
+    with open(a.file) as f:
+        cat = json.load(f)
+    try:
+        chips = tuple(Chip(c["name"], c["flops_per_s"], c["power_w"], c.get("supports_npu", False)) for c in cat["chips"])
+        tasks = tuple(Task(t["name"], t["flops"], t.get("needs_npu", False), tuple(t.get("after", []))) for t in cat["tasks"])
+        placements = place(tasks, chips)
+    except (PlacementError, KeyError) as e:
+        print(f"spatial: {type(e).__name__}: {e}", file=sys.stderr)
+        return 1
+    for p in placements:
+        print(f"{p.task} -> {p.chip} [{p.start_s:.4f}s .. {p.finish_s:.4f}s]")
+    print(f"makespan: {makespan_s(placements):.4f}s, energy: {total_energy_j(placements, chips):.4f}J "
+          f"(declared chip specs, not measured on real automotive silicon)")
+    return 0
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -355,6 +373,9 @@ def main(argv=None):
     p.add_argument("--min-reliability", type=float, default=0.5, help="Vast.ai's own 0..1 host score; a low-reliability offer is excluded by default")
     p.add_argument("--neocloud-usd-per-hour", type=float, default=None, help="your reference 'neocloud' price for this GPU: if given, prints the arbitrage spread instead of just the price")
     p.set_defaults(fn=cmd_market)
+    p = sub.add_parser("automotive", help="place a task graph on a declared in-vehicle chip catalogue (software only, no real automotive silicon here)")
+    p.add_argument("--file", required=True, help="JSON: {\"chips\":[{\"name\",\"flops_per_s\",\"power_w\",\"supports_npu\"}], \"tasks\":[{\"name\",\"flops\",\"needs_npu\",\"after\"}]}")
+    p.set_defaults(fn=cmd_automotive)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")

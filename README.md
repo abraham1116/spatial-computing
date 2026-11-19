@@ -76,6 +76,7 @@ st.put(0, b"..." * 1000); st.get(0); print(st.stats())
 | Runtime Engine (inspect binaries, route, micro-VM, WASI, containers incl. ARM64 via emulation) | operational prototype | `tests/test_runtime.py`, `benchmarks/bench_runtime.py` |
 | Portable kernels (one source, CPU/Metal/CUDA/HIP/Triton; market-vertical presets) | first components | `tests/test_kernel.py`, `benchmarks/bench_kernel.py` |
 | Live GPU market prices (`spatial market`, read-only, no account) | first components | `tests/test_market.py`, [docs/MARKET.md](docs/MARKET.md) |
+| In-vehicle multi-chip placement (`spatial automotive`, declared chip specs, no real silicon) | first components | `tests/test_automotive.py`, [docs/AUTOMOTIVE.md](docs/AUTOMOTIVE.md) |
 | AI, Intelligence | first components (toy model) | `tests/test_engines.py`, `tests/test_domains.py` |
 
 Measured on the reference machine (AC power): Numba JIT ×31.6 over pure Python with an identical result; 0.88 s to boot an isolated Linux micro-VM on macOS; −75 % local RAM for a skewed-access dataset at 107× the mean access latency. Full table and conditions: [docs/RESULTATS.fr.md](docs/RESULTATS.fr.md).

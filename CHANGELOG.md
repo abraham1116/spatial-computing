@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.28.0
+- New `spatial.automotive.placement` (`docs/AUTOMOTIVE.md`): topological placement of a task
+  graph onto a declared in-vehicle chip catalogue (flops/s, power, NPU support), minimising
+  finish time while respecting dependencies and NPU-only requirements — the same "one task,
+  several devices, lowest cost" idea the planner already applies to cloud devices, applied
+  instead to the several heterogeneous chips a single vehicle runs today. Software only: no
+  automotive silicon here to run anything on (same honesty as the generated-only CUDA/HIP/Triton
+  kernel back ends), chip numbers are declared inputs, never measured by this module, no safety
+  certification claim. Real documented gap behind it: DAVOS (arXiv 2601.05072, 2026) — today's
+  vehicle stacks make scheduling/placement decisions independently, with no joint mechanism.
+  `spatial automotive --file vehicle.json` (JSON chip + task-graph catalogue).
+- Private research note 16 (`spatial-computing-private/business/16_...md`): why the three
+  silicon markets this project never touches (console chips, consumer-GPU manufacturing,
+  automotive ADAS chips) were reviewed for a differentiating *software* angle instead of a
+  hardware one; build-farm/devkit/driver-validation angles were weak or already covered by
+  `spatial.market`'s `render`/`cloud_gaming` verticals, the automotive multi-chip placement gap
+  was the one with a real citable gap and a direct fit to code we already have.
+- 258 tests (was 246).
+
 ## 0.27.0
 - Kernel DSL: six more named planner families and console catalogue entries over `batch_score` (`pk_health`, `pk_supplychain`, `pk_maintenance`, `pk_recommendation`, `pk_recruiting`, `pk_grid`) — healthcare claims/diagnostics triage, supply-chain demand/logistics risk, predictive-maintenance sensor anomalies, e-commerce recommendation relevance, HR candidate screening, energy-grid load/anomaly scoring. Same pattern as the six 0.22.0 verticals: no per-vertical model, no duplicated logic, tested bit-for-bit identical to `pk_batch_score`. This closes out the 12-market software-side list from the private business research (notes 14/15): every market identified there now has a named, tested, runnable preset.
 - 12 verticals total now, all delegating to the one `batch_score` kernel (0.20.0): `pk_rtb`, `pk_credit`, `pk_claims`, `pk_alerts`, `pk_moderation`, `pk_telecom`, `pk_health`, `pk_supplychain`, `pk_maintenance`, `pk_recommendation`, `pk_recruiting`, `pk_grid`.
