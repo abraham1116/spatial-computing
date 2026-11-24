@@ -54,7 +54,9 @@ def _digest(arr) -> str:
 def screen(executors: dict, *, clock=time.perf_counter, straggler_factor: float = 2.0,
            straggler_min_gap_s: float = 0.05) -> ScreenReport:
     """Run every executor once and compare. Needs 2+ executors; 3+ to say WHICH one is wrong (with two that
-    disagree, nobody can tell). A majority must hold strictly more than half of the executors that ran."""
+    disagree, nobody can tell). A majority must hold strictly more than half of the executors that ran.
+    Stragglers are judged within a group of 3+ executors sharing the same `.kind` attribute on their callable
+    (unset = one shared group)."""
     if len(executors) < 2:
         raise VerificationError("need at least 2 executors to screen")
     raw = []
@@ -88,9 +90,13 @@ def screen(executors: dict, *, clock=time.perf_counter, straggler_factor: float 
             outliers.append(name)
         results.append(ExecResult(name, status, s, d, err))
     stragglers = []
-    if len(oks) >= 3:
-        med = statistics.median(s for _, _, s, _ in oks)
-        stragglers = [n for n, _, s, _ in oks if s > straggler_factor * med and s - med >= straggler_min_gap_s]
+    groups: dict = {}
+    for n, _, s, _ in oks:
+        groups.setdefault(getattr(executors[n], "kind", None), []).append((n, s))
+    for g in groups.values():                                  # a CPU is not a straggler against GPUs: judge within a kind
+        if len(g) >= 3:
+            med = statistics.median(s for _, s in g)
+            stragglers += [n for n, s in g if s > straggler_factor * med and s - med >= straggler_min_gap_s]
     if not oks:
         reason = "every executor failed"
     elif majority is None and len(counts) > 1:
@@ -115,9 +121,14 @@ def kernel_executors(kernel, devices, n: int, **params) -> dict:
             kernel.run(d, 8, **params)
         except Exception:
             pass                                              # surfaces as an error result in the real run
+    def make(d):
+        def run():
+            return kernel.run(d, n, **params)
+        run.kind = d                                          # screen() judges stragglers only among the same kind
+        return run
     out = {}
     for i, d in enumerate(devices):
-        out[d if list(devices).count(d) == 1 else f"{d}#{i}"] = (lambda d=d: kernel.run(d, n, **params))
+        out[d if list(devices).count(d) == 1 else f"{d}#{i}"] = make(d)
     return out
 
 

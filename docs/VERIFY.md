@@ -77,8 +77,10 @@ report.healthy, report.outliers, report.stragglers, report.reason
 - Needs 3+ executors to say *which* one is wrong; with two that disagree, nobody can tell
   (`outliers` stays empty and the reason says so). A majority must hold strictly more than half of the executors that ran.
 - An executor that raises is reported (`errors`), never propagated.
-- Stragglers: slower than 2x the median **and** at least 50 ms slower, with 3+ results. Only meaningful between
-  executors of the same kind (a CPU against a GPU is not a straggler); a single probe is a crude measurement.
+- Stragglers: slower than 2x the median **and** at least 50 ms slower, judged only within a group of 3+ executors
+  of the same kind (the `.kind` attribute of the callable, set to the device name for kernel runs; a CPU against a
+  GPU is not a straggler: that rule shipped wrong in the first 0.30.0 commit and was caught by CI on macOS).
+  A single probe is a crude measurement.
 - Integer kernels (`collatz`) are the right known-answer test: CPU and Metal are bit-identical on them.
 
 **What it proves**: the voting and flagging logic, checked with injected faults (`tests/test_screen.py`), and that

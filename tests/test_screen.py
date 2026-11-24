@@ -91,6 +91,25 @@ def test_tiny_timing_differences_are_not_stragglers():
     assert r.healthy and r.stragglers == ()
 
 
+def tagged(kind):
+    def run():
+        return good()
+    run.kind = kind
+    return run
+
+
+def test_a_slow_gpu_is_not_a_straggler_against_fast_cpus():
+    """The CI failure on macOS: Metal slower than the median of two CPU runs is a different kind of device."""
+    r = screen({"cpu#0": tagged("cpu"), "cpu#1": tagged("cpu"), "metal": tagged("metal")}, clock=FakeClock(0.005, 0.005, 0.5))
+    assert r.healthy and r.stragglers == ()
+
+
+def test_stragglers_are_judged_within_their_own_kind():
+    ex = {"c0": tagged("cpu"), "c1": tagged("cpu"), "c2": tagged("cpu"), "g0": tagged("gpu")}
+    r = screen(ex, clock=FakeClock(1.0, 1.1, 5.0, 9.0))
+    assert r.stragglers == ("c2",)
+
+
 def test_stragglers_need_three_executors():
     r = screen({"a": good, "b": good}, clock=FakeClock(1.0, 9.0))
     assert r.healthy and r.stragglers == ()

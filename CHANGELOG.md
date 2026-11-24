@@ -14,7 +14,9 @@
   runs and one Metal run of the integer `collatz` kernel on this Mac agree bit for bit.
 - Site: the docs status line now reads the version from the code, and a test checks the printed test count against
   pytest's collected total (a stale count had shipped twice).
-- 288 tests (was 270).
+- Fix caught by CI on macOS before release: stragglers are judged only among executors of the same kind (a Metal run
+  slower than two CPU runs is not a straggler). Locally it had passed by 5 ms of margin.
+- 290 tests (was 270).
 
 ## 0.29.0
 - New `spatial.verify` (`docs/VERIFY.md`): redundant-execution verification. Runs the same

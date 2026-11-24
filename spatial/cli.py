@@ -330,6 +330,7 @@ def cmd_screen(a):
             out = real().copy()
             out.flat[0] ^= 1                                  # one flipped bit
             return out
+        faulty.kind = getattr(real, "kind", None)
         ex[name] = faulty
         print(f"SIMULATED fault injected into '{name}' (a flipped bit; not a real hardware fault)")
     try:
