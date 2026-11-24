@@ -312,6 +312,37 @@ def cmd_verify(a):
     return 0
 
 
+def cmd_screen(a):
+    from .fabric import metal
+    from .kernel.library import LIBRARY
+    from .verify import VerificationError, kernel_executors, screen
+    kernel = LIBRARY[a.family]
+    if a.devices == "auto":
+        devices = ["cpu", "cpu", "metal" if metal.available() else "cpu"]
+    else:
+        devices = a.devices.split(",")
+    ex = kernel_executors(kernel, devices, a.n, **json.loads(a.params))
+    if a.simulate_fault is not None:
+        name = list(ex)[a.simulate_fault]
+        real = ex[name]
+
+        def faulty(real=real):
+            out = real().copy()
+            out.flat[0] ^= 1                                  # one flipped bit
+            return out
+        ex[name] = faulty
+        print(f"SIMULATED fault injected into '{name}' (a flipped bit; not a real hardware fault)")
+    try:
+        r = screen(ex)
+    except VerificationError as e:
+        print(f"spatial: {e}", file=sys.stderr)
+        return 1
+    for x in r.results:
+        print(f"{x.name:10s} {x.status:13s} {x.seconds * 1000:8.1f} ms  {x.digest[:12] or x.error}")
+    print(("HEALTHY: " if r.healthy else "UNHEALTHY: ") + r.reason)
+    return 0 if r.healthy else 1
+
+
 def cmd_token(a):
     from .core import auth
     if a.action == "init":
@@ -403,6 +434,13 @@ def main(argv=None):
     p.add_argument("--tolerance", type=float, default=0.0, help="max absolute difference allowed (ignored if --exact)")
     p.add_argument("--exact", action="store_true", help="require a bit-exact match (integer kernels)")
     p.set_defaults(fn=cmd_verify)
+    p = sub.add_parser("screen", help="fleet screening: same known-answer kernel on every executor, majority vote, flag the outlier and the straggler (see docs/VERIFY.md)")
+    p.add_argument("--family", default="collatz", choices=["mandelbrot", "collatz", "waves", "batch_score"], help="collatz is integer and bit-exact: the best known-answer test")
+    p.add_argument("--n", type=int, default=64)
+    p.add_argument("--params", default='{"limit":300}', help="JSON kernel parameters")
+    p.add_argument("--devices", default="auto", help="comma list (e.g. cpu,cpu,metal), or auto")
+    p.add_argument("--simulate-fault", type=int, default=None, metavar="INDEX", help="demo only: flip one bit in the output of the executor at INDEX")
+    p.set_defaults(fn=cmd_screen)
     p = sub.add_parser("agent", help="run a fleet agent: measure this machine, report to a hub, run allow-listed tasks")
     p.add_argument("--hub", required=True, help="host:port of the hub")
     p.add_argument("--token-file", required=True, help="shared secret file, or a scoped token with fleet:report,fleet:work")

@@ -3,4 +3,4 @@
 Status of every engine is declared in spatial.core.registry and must be backed
 by a test or benchmark before being set to OPERATIONAL.
 """
-__version__ = "0.29.0"
+__version__ = "0.30.0"

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.30.0
+- New `spatial.verify.screen` / `spatial screen` (`docs/VERIFY.md`): fleet screening. The same known-answer job
+  runs on every executor (a callable returning an array: a local device, a remote node, a rented GPU); the
+  majority wins, the odd one out is named as an outlier, a crashing executor is reported instead of raised, and
+  an executor much slower than its peers is flagged as a straggler. Needs 3+ executors to name the faulty one; with
+  two that disagree it says nobody can tell. This is the mechanism large GPU fleets use against silent data
+  corruption and stragglers (Llama 3: 419 unexpected interruptions in 54 days, ~78 % hardware-related; stragglers
+  wasted 10.4 % of GPU hours in a production cluster study), reduced to a small vendor-neutral core.
+- Honest scope: every fault in the tests is injected, and the CLI's `--simulate-fault` says so on screen; no real
+  hardware fault was observed here, nothing ran on NVIDIA or AMD hardware, and a few known-answer kernels do not cover
+  the data-, voltage- and temperature-dependent space where real corruption hides. What was measured for real: two CPU
+  runs and one Metal run of the integer `collatz` kernel on this Mac agree bit for bit.
+- Site: the docs status line now reads the version from the code, and a test checks the printed test count against
+  pytest's collected total (a stale count had shipped twice).
+- 288 tests (was 270).
+
 ## 0.29.0
 - New `spatial.verify` (`docs/VERIFY.md`): redundant-execution verification. Runs the same
   kernel on 2+ devices and compares the results, exact (bit-for-bit) or within a stated

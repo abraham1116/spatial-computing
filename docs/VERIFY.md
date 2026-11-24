@@ -56,6 +56,40 @@ kernels, same numbers already measured in `docs/KERNELS.md`).
 - **No availability or SLA guarantee.** A disagreement is detected after both runs finish; this
   does not make a flaky or slow provider fast or reliable.
 
+## Fleet screening (`spatial screen`, since 0.30.0)
+
+The same idea applied to a fleet: run one known-answer job on every executor, take the majority, flag
+the odd one out and any executor much slower than its peers. This is the mechanism large GPU fleets use
+against silent data corruption (periodic known-answer screening, outliers against the fleet baseline)
+and against stragglers; an executor is any callable returning an array (a local device, a remote node,
+a rented GPU).
+
+```bash
+spatial screen                                   # collatz on cpu, cpu, metal (or cpu x3 without Metal)
+spatial screen --simulate-fault 2                # demo: flips one bit in executor 2, which is then named
+```
+```python
+from spatial.verify import screen, screen_kernel
+report = screen({"gpu0": run0, "gpu1": run1, "gpu2": run2})   # callables returning arrays
+report.healthy, report.outliers, report.stragglers, report.reason
+```
+
+- Needs 3+ executors to say *which* one is wrong; with two that disagree, nobody can tell
+  (`outliers` stays empty and the reason says so). A majority must hold strictly more than half of the executors that ran.
+- An executor that raises is reported (`errors`), never propagated.
+- Stragglers: slower than 2x the median **and** at least 50 ms slower, with 3+ results. Only meaningful between
+  executors of the same kind (a CPU against a GPU is not a straggler); a single probe is a crude measurement.
+- Integer kernels (`collatz`) are the right known-answer test: CPU and Metal are bit-identical on them.
+
+**What it proves**: the voting and flagging logic, checked with injected faults (`tests/test_screen.py`), and that
+three real executors on this Mac (two CPU runs, one Metal run) agree bit for bit.
+
+**What it does not prove**: no real GPU fault has ever been observed here. Real silent corruption depends on data,
+voltage and temperature, so the space of inputs that would expose it is exponentially large (NVIDIA/OCP white
+paper); a few known-answer kernels find gross or systematic miscomputation, not rare faults. Never run on NVIDIA
+or AMD hardware. The comparison of results is only as independent as the executors: three runs on the same
+faulty chip agree with each other.
+
 ## Limits
 
 - Exact mode requires identical shapes and, for integers, bit-for-bit equality; it is not
