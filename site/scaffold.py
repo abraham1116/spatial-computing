@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 REPO = "https://github.com/abraham1116/spatial-computing"
+TEST_COUNT = 272     # checked against pytest's collected total by tests/test_site_claims.py
 E = html.escape
 
 OUT: dict[str, str] = {}

@@ -49,12 +49,12 @@ def docs():
 <a href="roadmap.html"><b>Feuille de route</b><span>Ce qui est construit, ce qui demande matériel ou personnes.</span></a>
 <a href="results.html"><b>Résultats</b><span>Tous les chiffres mesurés et leurs conditions.</span></a>
 </div>
-<div class="callout"><b>Statut</b>Version 0.28.0. Quatre moteurs sont opérationnels et testés (258 tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine ou un GPU de centre de données. Voir <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Statut</b>Version @@V@@. Quatre moteurs sont opérationnels et testés (@@N@@ tests) sur un seul Mac et en CI sous Linux. Rien n'a été prouvé sur une seconde machine ou un GPU de centre de données. Voir <a href="limits.html">Limitations</a>.</div>
 <h2>Principes</h2>
 <ul><li><b>Une mesure avant toute affirmation.</b> Chaque exécution produit une <code>Measurement</code> ; les échecs sont conservés.</li>
 <li><b>Résultat vérifié.</b> Une stratégie plus rapide n'est retenue que si elle calcule la même chose que la référence.</li>
 <li><b>Refus explicites.</b> Ce que la machine ne peut pas faire est dit avec la raison, jamais simulé.</li>
-<li><b>Aucune exposition réseau implicite.</b> Tout écoute en boucle locale par défaut.</li></ul>''',
+<li><b>Aucune exposition réseau implicite.</b> Tout écoute en boucle locale par défaut.</li></ul>'''.replace("@@V@@", __import__("spatial").__version__).replace("@@N@@", str(S.TEST_COUNT)),
         [("Première commande", f'<span class="k">$ spatial audit</span>\n<span class="d">{out_block("audit", 7)}</span>')])
 
     doc("quickstart", "Démarrage rapide", "De zéro à un premier job. Deux voies : la console (comptes, clés, jobs) ou la ligne de commande seule.",

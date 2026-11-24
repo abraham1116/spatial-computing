@@ -46,12 +46,12 @@ def docs():
 <a href="roadmap.html"><b>Roadmap</b><span>What is built, what needs hardware or people.</span></a>
 <a href="results.html"><b>Results</b><span>Every measured number and its conditions.</span></a>
 </div>
-<div class="callout"><b>Status</b>Version 0.28.0. Four engines are operational and tested (258 tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine or a data-center GPU. See <a href="limits.html">Limitations</a>.</div>
+<div class="callout"><b>Status</b>Version @@V@@. Four engines are operational and tested (@@N@@ tests) on a single Mac and in CI on Linux. Nothing has been proven on a second machine or a data-center GPU. See <a href="limits.html">Limitations</a>.</div>
 <h2>Principles</h2>
 <ul><li><b>A measurement before any claim.</b> Every run produces a <code>Measurement</code>; failures are kept.</li>
 <li><b>Verified result.</b> A faster strategy is kept only if it computes the same thing as the reference.</li>
 <li><b>Explicit refusals.</b> What a machine cannot do is stated with the reason, never faked.</li>
-<li><b>No implicit network exposure.</b> Everything listens on loopback by default.</li></ul>''',
+<li><b>No implicit network exposure.</b> Everything listens on loopback by default.</li></ul>'''.replace("@@V@@", __import__("spatial").__version__).replace("@@N@@", str(S.TEST_COUNT)),
         [("First command", f'<span class="k">$ spatial audit</span>\n<span class="d">{out_block("audit", 7)}</span>')])
 
     doc("quickstart", "Quickstart", "From zero to a first job. Two ways: the console (accounts, keys, jobs) or the command line alone.",
